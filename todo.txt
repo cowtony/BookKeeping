@@ -1,0 +1,8 @@
+Don't show every month as a column.
+But keep copy-to-clipboard as all months.
+
+BookKeeping:
+Add investment analysis function
+MAC dynamic library
+After adding a transaction, the list always goes to the top
+Separated bar chart

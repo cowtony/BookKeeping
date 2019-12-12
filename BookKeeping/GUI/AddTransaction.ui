@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AddTransaction</class>
+ <widget class="QMainWindow" name="AddTransaction">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>831</width>
+    <height>546</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Add Transaction</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../resources.qrc">
+    <normaloff>:/resource/AddTransaction.png</normaloff>:/resource/AddTransaction.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
+     <widget class="QGroupBox" name="groupBox">
+      <property name="maximumSize">
+       <size>
+        <width>300</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="title">
+       <string>Transaction Information</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0" colspan="2">
+        <widget class="QCalendarWidget" name="calendarWidget">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>160000</width>
+           <height>160000</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0" colspan="2">
+        <widget class="QLabel" name="label_Currency">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Currency:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0" colspan="2">
+        <widget class="QComboBox" name="comboBox_Currency">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" colspan="2">
+        <widget class="QLineEdit" name="lineEdit_Description">
+         <property name="maximumSize">
+          <size>
+           <width>16000</width>
+           <height>20</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QCheckBox" name="checkBox_RecursiveTransaction">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="text">
+          <string>Next Transaction</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QPushButton" name="pushButton_Insert">
+         <property name="text">
+          <string>INSERT</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QDateTimeEdit" name="dateTimeEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16000</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="displayFormat">
+          <string>yyyy-MM-dd HH:mm</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QPushButton" name="pushButton_Split">
+         <property name="text">
+          <string>Split Fill</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="label_transactionDateTime">
+         <property name="text">
+          <string>Transaction Date Time:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="QDateEdit" name="dateEdit_nextTransaction">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="displayFormat">
+          <string>yyyy-MM-dd</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2">
+        <widget class="QLabel" name="label_Description">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Description:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QSplitter" name="splitter">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <widget class="QTableWidget" name="tableWidget_Assets">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <column>
+        <property name="text">
+         <string>Category</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Asset Name</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Amount</string>
+        </property>
+       </column>
+      </widget>
+      <widget class="QTableWidget" name="tableWidget_Liabilities">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <column>
+        <property name="text">
+         <string>Category</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Liability Name</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Amount</string>
+        </property>
+       </column>
+      </widget>
+      <widget class="QTableWidget" name="tableWidget_Revenues">
+       <column>
+        <property name="text">
+         <string>Category</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Revenue Name</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Amount 1</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Amount 2</string>
+        </property>
+       </column>
+      </widget>
+      <widget class="QTableWidget" name="tableWidget_Expenses">
+       <column>
+        <property name="text">
+         <string>Category</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Expense Name</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Amount 1</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Amount 2</string>
+        </property>
+       </column>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>831</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
