@@ -29,10 +29,13 @@ private slots:
     void on_pushButtonExport_clicked();
     void on_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
 
+    void on_pushButtonShowMore_clicked();
+
 private:
     Ui::FinancialStatement *ui;
 
-    void setMoney(QTreeWidgetItem *item, const int &p_column, const Money &p_money);
+    void setMoney(QTreeWidgetItem* item, const int& column, const Money& money);
+    void setFont(const int& column, QTreeWidgetItem* item, const int& depth = -1);
     void display();
     QTreeWidgetItem* getAccountItem(const Account& account, const bool& create = false); // Get or create account item.
 
@@ -42,8 +45,6 @@ private:
     int m_viewSelection;  // -1: all, 0: person 0, 1: person 1
 
     QList<FinancialStat> m_records;
-    int m_startIndex = 0;
-    int m_length = 6;
 };
 
 #endif // FINANCIALSTATEMENT_H

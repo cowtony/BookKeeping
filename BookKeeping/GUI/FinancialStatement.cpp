@@ -57,9 +57,9 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, cons
   if (item->parent() != nullptr) {
     Money parentMoney(date, item->parent()->text(column));
 
-    if (item->text(0) == "Expense" || item->text(0) == "Liability") {
+    if (true && (item->text(0) == "Expense" || item->text(0) == "Liability")) {
       setMoney(item->parent(), column, parentMoney - difference);
-    } else if (item->text(0) == "Equity"){
+    } else if (true && item->text(0) == "Equity"){
       // do nothing.
     } else {
       setMoney(item->parent(), column, parentMoney + difference);
@@ -67,36 +67,47 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, cons
   }
 }
 
+void FinancialStatement::setFont(const int& column, QTreeWidgetItem* item, const int& depth) {
+  switch (depth) {
+    case 0:
+      item->setFont(column, m_financialStatementFont);
+      break;
+    case 1:
+      item->setFont(column, m_tableSumFont);
+      break;
+    case 2:
+      item->setFont(column, m_categorySumFont);
+      break;
+    case 3:
+      break;
+    default:
+      break;
+  }
+  if (column > 0) {
+    item->setTextAlignment(column, Qt::AlignRight);
+  }
+
+  for (int i = 0; i < item->childCount(); i++) {
+    setFont(column, item->child(i), depth + 1);
+  }
+}
+
 void FinancialStatement::display() {
   ui->treeWidget->clear();
   ui->treeWidget->header()->setDefaultAlignment(Qt::AlignCenter);
-  ui->treeWidget->setColumnCount(m_length + 1);
-  QStringList headerLabels("Name");
-  for (int i = m_startIndex; i < m_startIndex + m_length; i++) {
-    headerLabels << m_records.at(i).m_description;
-  }
-  ui->treeWidget->setHeaderLabels(headerLabels);
+  ui->treeWidget->setColumnCount(1);
+  ui->treeWidget->setHeaderLabels({"Name"});
 
-  for (int i = 0; i < m_length; i++) {
-    for (const Account& account : m_records.at(i + m_startIndex).getAccounts()) {
-      MoneyArray moneyArray = m_records.at(i + m_startIndex).getMoneyArray(account);
-      QTreeWidgetItem* accountItem = getAccountItem(account, true);
-      if (m_viewSelection == -1) {
-        setMoney(accountItem, i + 1, moneyArray.sum());
-      } else {
-        setMoney(accountItem, i + 1, moneyArray.getMoney(m_viewSelection));
-      }
-    }
-  }
+  on_pushButtonShowMore_clicked();  // Show the most recent month only.
   ui->treeWidget->expandToDepth(1);
 }
 
 QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, const bool& create) {
   // Find or create same financial statement item:
   QTreeWidgetItem *statementItem = nullptr;
-  for (QTreeWidgetItem *item : ui->treeWidget->findItems(" ", Qt::MatchContains, 0)) {
-    if (item->text(0) == account.getFinancialStatementName()) {
-      statementItem = item;
+  for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
+    if (ui->treeWidget->topLevelItem(i)->text(0) == account.getFinancialStatementName()) {
+      statementItem = ui->treeWidget->topLevelItem(i);
       break;
     }
   }
@@ -104,10 +115,6 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, cons
     if (create) {
       statementItem = new QTreeWidgetItem(ui->treeWidget, {account.getFinancialStatementName()});
       statementItem->setFont(0, m_financialStatementFont);
-      for (int column = 1; column < ui->treeWidget->columnCount(); column++) {
-        statementItem->setTextAlignment(column, Qt::AlignRight);
-        statementItem->setFont(column, m_financialStatementFont);
-      }
     } else {
       return nullptr;
     }
@@ -125,10 +132,6 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, cons
     if (create) {
       tableItem = new QTreeWidgetItem(statementItem, {account.getTableName()});
       tableItem->setFont(0, m_tableSumFont);
-      for (int column = 1; column < ui->treeWidget->columnCount(); column++) {
-        tableItem->setFont(column, m_tableSumFont);
-        tableItem->setTextAlignment(column, Qt::AlignRight);
-      }
     } else {
       return nullptr;
     }
@@ -145,10 +148,7 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, cons
   if (categoryItem == nullptr) {
     if (create) {
       categoryItem = new QTreeWidgetItem(tableItem, {account.m_category});
-      for (int column = 1; column < ui->treeWidget->columnCount(); column++) {
-        categoryItem->setFont(column, m_categorySumFont);
-        categoryItem->setTextAlignment(column, Qt::AlignRight);
-      }
+      categoryItem->setFont(0, m_categorySumFont);
     } else {
       return nullptr;
     }
@@ -165,9 +165,6 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, cons
   if (accountItem == nullptr) {
     if (create) {
       accountItem = new QTreeWidgetItem(categoryItem, {account.m_name});
-      for (int column = 1; column < ui->treeWidget->columnCount(); column++) {
-        accountItem->setTextAlignment(column, Qt::AlignRight);
-      }
     } else {
       return nullptr;
     }
@@ -317,3 +314,29 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem *item, int co
     }
     }
 }
+
+void FinancialStatement::on_pushButtonShowMore_clicked() {
+  int index = ui->treeWidget->columnCount() - 1;
+  if (index >= m_records.size()) {
+    return;
+  }
+
+  ui->treeWidget->setColumnCount(index + 2);
+  ui->treeWidget->headerItem()->setText(index + 1, m_records.at(index).m_description);
+
+  for (const Account& account : m_records.at(index).getAccounts()) {
+    MoneyArray moneyArray = m_records.at(index).getMoneyArray(account);
+    QTreeWidgetItem* accountItem = getAccountItem(account, true);
+    if (m_viewSelection == -1) {
+      setMoney(accountItem, index + 1, moneyArray.sum());
+    } else {
+      setMoney(accountItem, index + 1, moneyArray.getMoney(m_viewSelection));
+    }
+  }
+
+  // Must setFont after getAccountItem() because some item may not be created before that.
+  setFont(index + 1, ui->treeWidget->invisibleRootItem());
+
+  ui->treeWidget->resizeColumnToContents(index + 1);
+}
+

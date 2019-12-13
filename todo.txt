@@ -1,5 +1,5 @@
-Don't show every month as a column.
-But keep copy-to-clipboard as all months.
+keep copy-to-clipboard as all months.
+Plot all months
 
 BookKeeping:
 Add investment analysis function
