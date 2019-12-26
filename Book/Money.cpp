@@ -41,7 +41,7 @@ Money::Money(const QDate &date, QString p_money_s, const Currency_e &currency)
         qDebug() << Q_FUNC_INFO << p_money_s;
 }
 
-Currency_e Money::getCurrency() const
+Currency_e Money::currency() const
 {
     return m_currency;
 }
@@ -88,10 +88,9 @@ void Money::operator -=(const Money &money)
     *this = *this - money;
 }
 
-void Money::changeCurrency(const Currency_e &currency_e)
-{
-    m_amount  *= g_currency.getCurrencyRate(m_date, m_currency, currency_e);
-    m_currency = currency_e;
+void Money::changeCurrency(const Currency_e &currency_e) {
+  m_amount  *= g_currency.getCurrencyRate(m_date, m_currency, currency_e);
+  m_currency = currency_e;
 }
 
 QString Money::toString() const {
@@ -112,10 +111,10 @@ MoneyArray::MoneyArray(const QDate &date, const Currency_e &currency)
 }
 
 MoneyArray::MoneyArray(const QDate &date, const QString &p_money_s)
-  : m_date(date), m_currency(USD) {
+  : m_date(date) {
   for (const QString &moneyString : p_money_s.split(", ")) {
-    Money money(m_date, moneyString, m_currency);
-    m_currency = money.getCurrency();
+    Money money(m_date, moneyString);
+    changeCurrency(money.currency());
     push_back(money);
   }
 }
@@ -152,13 +151,10 @@ Money MoneyArray::getMoney(const int &index) const
 }
 
 void MoneyArray::push_back(Money money) {
-  if (m_amounts.size() == 0)
-  {
-     m_currency = money.getCurrency();
-     m_date = money.m_date;
-  } else
-     money.changeCurrency(m_currency);
-
+  if (m_amounts.isEmpty()) {
+    m_date = money.m_date;
+  }
+  money.changeCurrency(m_currency);
   m_amounts.push_back(money.m_amount);
 }
 
@@ -172,13 +168,16 @@ QString MoneyArray::toString() const
     return result.join(", ");
 }
 
-void MoneyArray::changeCurrency(const Currency_e &currency)
-{
-    double currencyRate = g_currency.getCurrencyRate(m_date, m_currency, currency);
-    for (double &amount : m_amounts)
-    {
-        amount *= currencyRate;
-    }
+Currency_e MoneyArray::currency() const {
+  return m_currency;
+}
+
+void MoneyArray::changeCurrency(const Currency_e& currency) {
+  double currencyRate = g_currency.getCurrencyRate(m_date, m_currency, currency);
+  m_currency = currency;
+  for (double& amount : m_amounts) {
+    amount *= currencyRate;
+  }
 }
 
 MoneyArray MoneyArray::operator +(const MoneyArray &moneyArray) const

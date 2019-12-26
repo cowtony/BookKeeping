@@ -74,12 +74,11 @@ double Currency::getCurrencyRate(const QDate& date, const Currency_e &fromSymbol
     return result;
 }
 
-void Currency::removeInvalidCurrency()
-{
-    QSqlQuery query("DELETE FROM Currency WHERE EUR IS NULL"
-                                           " OR USD IS NULL"
-                                           " OR CNY IS NULL"
-                                           " OR GBP IS NULL", m_database);
+void Currency::removeInvalidCurrency() {
+  QSqlQuery query("DELETE FROM Currency WHERE EUR IS NULL"
+                                         " OR USD IS NULL"
+                                         " OR CNY IS NULL"
+                                         " OR GBP IS NULL", m_database);
 }
 
 void Currency::onNetworkReply(QNetworkReply* reply)
@@ -103,9 +102,8 @@ void Currency::onNetworkReply(QNetworkReply* reply)
         if (!query.exec())
             qDebug() << Q_FUNC_INFO << query.lastError();
     }
-    else
-    {
-        qDebug() << Q_FUNC_INFO << "ErrorReply";
+    else {
+      qDebug() << Q_FUNC_INFO << "ErrorReply";
     }
     delete reply;
 }

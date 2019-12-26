@@ -28,7 +28,7 @@ CREATE TABLE [Log](
 
 CREATE TABLE [Log Time](
   [Date] TEXT PRIMARY KEY NOT NULL UNIQUE, 
-  [Seconds] INT64) WITHOUT ROWID;
+  [Seconds] INT) WITHOUT ROWID;
 
 CREATE TABLE [Revenue](
   [Category] TEXT NOT NULL DEFAULT undefined, 

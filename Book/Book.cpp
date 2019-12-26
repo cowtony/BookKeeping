@@ -9,7 +9,7 @@ Book::Book()
 
 Book::~Book()
 {
-    logEndTime();
+    logUsageTime();
     closeDatabase();
 }
 
@@ -110,43 +110,44 @@ bool Book::insertTransaction(const Transaction &t) const {
   }
 }
 
-QList<Transaction> Book::queryTransactions(const QDateTime &startTime, const QDateTime &endTime, const QString &description, const QList<Account> &accounts) const
-{
-    QList<Transaction> transactionList;
+QList<Transaction> Book::queryTransactions(const QDateTime &startTime, const QDateTime &endTime, const QString &description, const QList<Account>& accounts) const {
+  QList<Transaction> transactionList;
 
-    QString statement = "";
-    for (Account account : accounts)
-        if (!account.m_category.isEmpty())
-            statement += " AND (" + account.getTableName() + " LIKE \"%[" + account.m_category + "|" + account.m_name + ":%\")";
-
-    QSqlQuery query(m_database);
-    query.prepare("SELECT * FROM Transactions"
-                  " WHERE (Date BETWEEN :startDate AND :endDate)"
-                  " AND (Description LIKE :description)" +
-                  statement +
-                  " ORDER BY Date DESC"); // ASC, DESC
-
-    query.bindValue(":startDate", startTime.toString(DATE_TIME_FORMAT));
-    query.bindValue(":endDate",     endTime.toString(DATE_TIME_FORMAT));
-    query.bindValue(":description", "%" + description + "%");
-
-    if (!query.exec())
-        qDebug() << Q_FUNC_INFO << query.lastError();
-
-    while (query.next()) {
-        Transaction t;
-        t.m_dateTime              = query.value("Date").toDateTime();
-        t.m_description           = query.value("Description").toString();
-        t.stringToData(Account::Expense,   query.value("Expense").toString());
-        t.stringToData(Account::Revenue,   query.value("Revenue").toString());
-        t.stringToData(Account::Asset,     query.value("Asset").toString());
-        t.stringToData(Account::Liability, query.value("Liability").toString());
-
-//        if (!t.validation().isEmpty())   // uncomment this line for Validation mode
-        transactionList.push_back(t);
+  QString statement = "";
+  for (const Account& account : accounts) {
+    if (!account.m_category.isEmpty()) {
+      statement += " AND (" + account.getTableName() + " LIKE \"%[" + account.m_category + "|" + account.m_name + ":%\")";
     }
+  }
+  QSqlQuery query(m_database);
+  query.prepare("SELECT * FROM Transactions"
+                " WHERE (Date BETWEEN :startDate AND :endDate)"
+                " AND (Description LIKE :description)" +
+                statement +
+                " ORDER BY Date DESC"); // ASC, DESC
 
-    return transactionList;
+  query.bindValue(":startDate", startTime.toString(DATE_TIME_FORMAT));
+  query.bindValue(":endDate",     endTime.toString(DATE_TIME_FORMAT));
+  query.bindValue(":description", "%" + description + "%");
+
+  if (!query.exec()) {
+    qDebug() << Q_FUNC_INFO << query.lastError();
+    return {};
+  }
+
+  while (query.next()) {
+    Transaction t;
+    t.m_dateTime    = query.value("Date").toDateTime();
+    t.m_description = query.value("Description").toString();
+
+    t.stringToData(Account::Expense,   query.value(Account::TableName.value(Account::Expense)).toString());
+    t.stringToData(Account::Revenue,   query.value(Account::TableName.value(Account::Revenue)).toString());
+    t.stringToData(Account::Asset,     query.value(Account::TableName.value(Account::Asset)).toString());
+    t.stringToData(Account::Liability, query.value(Account::TableName.value(Account::Liability)).toString());
+    transactionList.push_back(t);
+  }
+
+  return transactionList;
 }
 
 QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const {
@@ -179,11 +180,8 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
       monthlySummary.clear(Account::Expense);
     }
 
-    // Add currency change only when the date changes.
-    if (monthlySummary.m_dateTime.date() != transaction.m_dateTime.date()) {
-      monthlySummary.changeDate(transaction.m_dateTime.date());
-    }
-
+    // TODO: next line increate the time from 5s to 9s.
+    monthlySummary.changeDate(transaction.m_dateTime.date());  // Must run this before set m_dateTime.
     monthlySummary.m_dateTime = transaction.m_dateTime;
     monthlySummary += transaction;
     monthlySummary.retainedEarnings += transaction.getRetainedEarnings();
@@ -496,7 +494,7 @@ QDateTime Book::getLastTransactionDateTime() const
     return dateTime;
 }
 
-void Book::logEndTime() {
+void Book::logUsageTime() {
   QSqlQuery query(m_database);
   query.prepare("SELECT * FROM [Log Time] WHERE Date = :d");
   query.bindValue(":d", m_startTime.date().toString("yyyy-MM-dd"));

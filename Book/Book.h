@@ -46,13 +46,14 @@ public:
 
 
 private:
-    QSqlDatabase m_database;
+  QSqlDatabase m_database;
 
-    QDateTime getFirstTransactionDateTime() const;
-    QDateTime getLastTransactionDateTime() const;
+  QDateTime getFirstTransactionDateTime() const;
+  QDateTime getLastTransactionDateTime() const;
 
   QDateTime m_startTime;
-  void logEndTime();
+  void logUsageTime();
+
   bool logging(const QString& query) const; // Log all the modifier actions
 };
 

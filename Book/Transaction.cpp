@@ -53,13 +53,15 @@ void Transaction::clear(const Account::TableType &tableType)
     (*this)[tableType].clear();
 }
 
-bool Transaction::accountExist(const Account &account) const
-{
-    if (contains(account.m_table))
-        if (value(account.m_table).contains(account.m_category))
-            if (value(account.m_table).value(account.m_category).contains(account.m_name))
-                return true;
-    return false;
+bool Transaction::accountExist(const Account &account) const {
+  if (contains(account.m_table)) {
+    if (value(account.m_table).contains(account.m_category)) {
+      if (value(account.m_table).value(account.m_category).contains(account.m_name)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 Money Transaction::getCheckSum() const {
@@ -102,23 +104,25 @@ QString Transaction::dataToString(const Account::TableType &tableType) const {
 }
 
 void Transaction::stringToData(const Account::TableType &tableType, const QString &data) {
-    if (data == "Empty" or data.isEmpty())
-        return;
+  if (data == "Empty" or data.isEmpty()) {
+    return;
+  }
 
-    for (QString accountInfo: data.split("; "))      // [Category|AccountName1: $1.23, $2.34]; [Category2|AccountName2: ¥3.21, ¥2.31]
-    {
-        accountInfo = accountInfo.mid(1, accountInfo.length() - 2); // Remove '[' and ']'
+  // [Category|AccountName1: $1.23, $2.34]; [Category2|AccountName2: ¥3.21, ¥2.31]
+  for (QString accountInfo: data.split("; ")) {
+    accountInfo = accountInfo.mid(1, accountInfo.length() - 2); // Remove '[' and ']'
 
-        QString cateNname = accountInfo.split(": ").at(0);
-        QString amounts   = accountInfo.split(": ").at(1);
-        QString category  = cateNname.split("|").at(0);
-        QString name      = cateNname.split("|").at(1);
+    QString cateNname = accountInfo.split(": ").at(0);
+    QString amounts   = accountInfo.split(": ").at(1);
+    QString category  = cateNname.split("|").at(0);
+    QString name      = cateNname.split("|").at(1);
 
-        Account account(tableType, category, name);
-        if (accountExist(account))
-            qDebug() << Q_FUNC_INFO << "Transaction has duplicated account" << m_dateTime;
-        addMoneyArray(account, MoneyArray(m_dateTime.date(), amounts));
+    Account account(tableType, category, name);
+    if (accountExist(account)) {
+      qDebug() << Q_FUNC_INFO << "Transaction has duplicated account" << m_dateTime;
     }
+    addMoneyArray(account, MoneyArray(m_dateTime.date(), amounts));
+  }
 }
 
 QList<Account> Transaction::getAccounts() const {
@@ -154,15 +158,15 @@ MoneyArray Transaction::getMoneyArray(const Account &account) const {
         return MoneyArray(m_dateTime.date(), USD);
 }
 
-void Transaction::addMoneyArray(const Account &account, const MoneyArray &moneyArray) {
+void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyArray) {
   if (account.m_table == Account::Equity) {
     qDebug() << Q_FUNC_INFO << "Transaction don't store equity, it's calculated by others.";
     return;
   }
 
-  if (!accountExist(account))
-    (*this)[account.m_table][account.m_category][account.m_name] = MoneyArray(moneyArray.m_date, moneyArray.m_currency);
-
+  if (!accountExist(account)) {
+    (*this)[account.m_table][account.m_category][account.m_name] = MoneyArray(moneyArray.m_date, moneyArray.currency());
+  }
   (*this)[account.m_table][account.m_category][account.m_name] += moneyArray;
 }
 
@@ -205,10 +209,13 @@ QList<Account> FinancialStat::getAccounts() const {
   return accounts;
 }
 
-// TODO: The calculation still has large error, figure out!
-void FinancialStat::changeDate(const QDate& newDate) {
-  MoneyArray before(m_dateTime.date(), currencyError.m_currency);
-  MoneyArray after(newDate, currencyError.m_currency);
+void FinancialStat::changeDate(const QDate& nextDate) {
+  // Skip when next transaction is the same day of current transaction.
+  if (m_dateTime.date() == nextDate) {
+    return;
+  }
+  MoneyArray before(m_dateTime.date(), currencyError.currency());
+  MoneyArray after(nextDate, currencyError.currency());
   for (const Account& account : Transaction::getAccounts(Account::Asset)) {
     before += getMoneyArray(account);
     after += getMoneyArray(account);
@@ -218,6 +225,5 @@ void FinancialStat::changeDate(const QDate& newDate) {
     after -= getMoneyArray(account);
   }
 
-  m_dateTime.setDate(newDate);  // Not very useful since the dateTime gonna change outside anyway.
   currencyError += after - before;
 }

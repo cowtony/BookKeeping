@@ -13,12 +13,11 @@
 
 enum Currency_e {EUR, USD, CNY, GBP};
 
-class CURRENCYSHARED_EXPORT Currency : public QObject
-{
-    Q_OBJECT
+class CURRENCYSHARED_EXPORT Currency : public QObject {
+  Q_OBJECT
 public:
-    Currency(QObject *parent = nullptr);
-    ~Currency();
+  Currency(QObject *parent = nullptr);
+  ~Currency();
 
     void openDatabase(const QString &p_dbPath = "Currency.db");
     void closeDatabase();
@@ -31,11 +30,11 @@ private slots:
     void onNetworkReply(QNetworkReply*);
 
 private:
-    QSqlDatabase m_database;
-    QNetworkAccessManager webCtrl;
-    QSet<QDate> requestedDate;
+  QSqlDatabase m_database;
+  QNetworkAccessManager webCtrl;
+  QSet<QDate> requestedDate;
 
-    void removeInvalidCurrency();
+  void removeInvalidCurrency();
 };
 
 CURRENCYSHARED_EXPORT extern Currency g_currency;

@@ -27,14 +27,15 @@ public:
     void operator +=(const Money &money);
     void operator -=(const Money &money);
 
-    Currency_e getCurrency() const;
     QString toString() const;
     Money round() const;
+
+    Currency_e currency() const;
     void changeCurrency(const Currency_e& currency_e);
 
 private:
-    Currency_e m_currency;
-    double getRoundedAmount() const;
+  Currency_e m_currency;
+  double getRoundedAmount() const;
 };
 
 class BOOKSHARED_EXPORT MoneyArray
@@ -43,15 +44,16 @@ public:
   explicit MoneyArray(const QDate &date = QDate(1990, 05, 25), const Currency_e &currency = USD);
   explicit MoneyArray(const QDate &date, const QString &p_money_s);
 
-    QDate           m_date;
-    QVector<double> m_amounts;
-    Currency_e      m_currency;
+  QDate           m_date;
+  QVector<double> m_amounts;
 
     bool isZero() const;
     Money sum() const;
     Money getMoney(const int &index) const;
     void push_back(Money money);
     QString toString() const;
+
+    Currency_e currency() const;
     void changeCurrency(const Currency_e& currency_e);
 
     MoneyArray operator -() const;
@@ -61,7 +63,8 @@ public:
     void       operator -=(const MoneyArray &moneyArray);
 
 private:
-    MoneyArray addMinus(MoneyArray moneyArray, double f(double, double)) const;
+  Currency_e m_currency;  // Make this private because change this value will cause m_amounts change as well.
+  MoneyArray addMinus(MoneyArray moneyArray, double f(double, double)) const;
 };
 
 
