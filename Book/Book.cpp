@@ -13,21 +13,16 @@ Book::~Book()
     closeDatabase();
 }
 
-bool Book::openDatabase(const QString& dbPath)
-{
-    QFileInfo fileInfo(dbPath);
-    if (fileInfo.exists())
-    {
-        m_database = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
-        m_database.setDatabaseName(fileInfo.absoluteFilePath());
-        if (!m_database.open())
-        {
-            qDebug() << Q_FUNC_INFO << "Error: connection with database fail";
-            return false;
-        }
+bool Book::openDatabase(const QString& dbPath) {
+  QFileInfo fileInfo(dbPath);
+  if (fileInfo.exists()) {
+    m_database = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
+    m_database.setDatabaseName(fileInfo.absoluteFilePath());
+    if (!m_database.open()) {
+      qDebug() << Q_FUNC_INFO << "Error: connection with database fail";
+      return false;
     }
-    else
-    {
+  } else {
         m_database = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
         m_database.setDatabaseName(dbPath);
         Q_INIT_RESOURCE(Book);
@@ -52,16 +47,16 @@ bool Book::openDatabase(const QString& dbPath)
             qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened";
             return false;
         }
-    }
-    QSqlQuery query("PRAGMA case_sensitive_like = false", m_database);
-    logStartTime();
-    return true;
+  }
+  QSqlQuery query("PRAGMA case_sensitive_like = false", m_database);
+  m_startTime = QDateTime::currentDateTime();
+  return true;
 }
 
-void Book::closeDatabase()
-{
-    if (m_database.isOpen())
-        m_database.close();
+void Book::closeDatabase() {
+  if (m_database.isOpen()) {
+    m_database.close();
+  }
 }
 
 bool Book::dateTimeExist(const QDateTime &dt) const
@@ -93,27 +88,26 @@ Transaction Book::getTransaction(const QDateTime &dt)
     return t;
 }
 
-bool Book::insertTransaction(const Transaction &t) const
-{
-    if (!t.validation().isEmpty()) return false;
+bool Book::insertTransaction(const Transaction &t) const {
+  if (!t.validation().isEmpty()) return false;
 
-    QSqlQuery query(m_database);
-    query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
-                                "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
-    query.bindValue(":dateTime",    t.m_dateTime.toString(DATE_TIME_FORMAT));
-    query.bindValue(":description", t.m_description);
-    query.bindValue(":expense",     t.dataToString(Account::Expense));
-    query.bindValue(":revenue",     t.dataToString(Account::Revenue));
-    query.bindValue(":asset",       t.dataToString(Account::Asset));
-    query.bindValue(":liability",   t.dataToString(Account::Liability));
+  QSqlQuery query(m_database);
+  query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
+                              "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
+  query.bindValue(":dateTime",    t.m_dateTime.toString(DATE_TIME_FORMAT));
+  query.bindValue(":description", t.m_description);
+  query.bindValue(":expense",     t.dataToString(Account::Expense));
+  query.bindValue(":revenue",     t.dataToString(Account::Revenue));
+  query.bindValue(":asset",       t.dataToString(Account::Asset));
+  query.bindValue(":liability",   t.dataToString(Account::Liability));
 
-    if (!query.exec())
-    {
-        qDebug() << Q_FUNC_INFO << "#Error Insert a transaction:" << query.lastError().text();
-        return false;
-    }
-
+  if (query.exec()) {
+    logging(query.lastQuery());  // TODO: get the binded string from query.
     return true;
+  } else {
+    qDebug() << Q_FUNC_INFO << "#Error Insert a transaction:" << query.lastError().text();
+    return false;
+  }
 }
 
 QList<Transaction> Book::queryTransactions(const QDateTime &startTime, const QDateTime &endTime, const QString &description, const QList<Account> &accounts) const
@@ -159,47 +153,56 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
   QSqlQuery query(m_database);
   query.prepare("SELECT * FROM Transactions WHERE Date <= :d ORDER BY Date ASC");
   query.bindValue(":d", endDateTime.toString(DATE_TIME_FORMAT));
-  if (!query.exec())
+  if (!query.exec()) {
     qDebug() << Q_FUNC_INFO << query.lastError();
+  }
 
   QList<FinancialStat> retSummarys;
-  FinancialStat cumSummary;
-  QDate month = QDate(getFirstTransactionDateTime().date().year(), getFirstTransactionDateTime().date().month(), 1).addMonths(1);
+  FinancialStat monthlySummary;
+  QDate month = QDate(getFirstTransactionDateTime().date().year(), getFirstTransactionDateTime().date().month(), 1);
 
   while (query.next()) {
-    Transaction tempTransaction;
-    tempTransaction.m_dateTime = query.value("Date").toDateTime();
+    Transaction transaction;
+    transaction.m_dateTime = query.value("Date").toDateTime();
+    transaction.stringToData(Account::Expense,   query.value("Expense")  .toString());
+    transaction.stringToData(Account::Revenue,   query.value("Revenue")  .toString());
+    transaction.stringToData(Account::Asset,     query.value("Asset")    .toString());
+    transaction.stringToData(Account::Liability, query.value("Liability").toString());
 
-    tempTransaction.stringToData(Account::Expense,   query.value("Expense")  .toString());
-    tempTransaction.stringToData(Account::Revenue,   query.value("Revenue")  .toString());
-    tempTransaction.stringToData(Account::Asset,     query.value("Asset")    .toString());
-    tempTransaction.stringToData(Account::Liability, query.value("Liability").toString());
+    // Use `while` instead of `if` in case there was no transaction for successive months.
+    while (transaction.m_dateTime.date() >= month.addMonths(1)) {
+      monthlySummary.m_description = month.toString("yyyy-MM");
+      retSummarys.push_front(monthlySummary);
 
-    while (tempTransaction.m_dateTime.date() >= month) {
-      cumSummary.m_description = month.addMonths(-1).toString("yyyy-MM");
-      retSummarys.push_front(cumSummary);
       month = month.addMonths(1);
-      cumSummary.clear(Account::Revenue);
-      cumSummary.clear(Account::Expense);
+      monthlySummary.clear(Account::Revenue);
+      monthlySummary.clear(Account::Expense);
     }
 
-    cumSummary += tempTransaction;
-    cumSummary.retainedEarnings += tempTransaction.getRetainedEarnings();
+    // Add currency change only when the date changes.
+    if (monthlySummary.m_dateTime.date() != transaction.m_dateTime.date()) {
+      monthlySummary.changeDate(transaction.m_dateTime.date());
+    }
+
+    monthlySummary.m_dateTime = transaction.m_dateTime;
+    monthlySummary += transaction;
+    monthlySummary.retainedEarnings += transaction.getRetainedEarnings();
   }
-  cumSummary.m_description = month.addMonths(-1).toString("yyyy-MM");
-  retSummarys.push_front(cumSummary);
+  monthlySummary.m_description = month.toString("yyyy-MM");
+  retSummarys.push_front(monthlySummary);
 
   return retSummarys;
 }
 
-void Book::removeTransaction(const QDateTime &dateTime) const
-{
-    QSqlQuery query(m_database);
-    query.prepare("DELETE FROM Transactions WHERE Date = :d");
-    query.bindValue(":d", dateTime.toString(DATE_TIME_FORMAT));
-
-    if (!query.exec())
-        qDebug() << Q_FUNC_INFO << query.lastError();
+void Book::removeTransaction(const QDateTime &dateTime) const {
+  QSqlQuery query(m_database);
+  query.prepare("DELETE FROM Transactions WHERE Date = :d");
+  query.bindValue(":d", dateTime.toString(DATE_TIME_FORMAT));
+  if (query.exec()) {
+    logging(query.executedQuery());
+  } else {
+    qDebug() << Q_FUNC_INFO << query.lastError();
+  }
 }
 
 bool Book::moveAccount(const Account &account, const Account &newAccount) const {
@@ -216,34 +219,40 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
         qDebug() << Q_FUNC_INFO << query.lastError();
         return false;
     }
-    // Update transactions
-    while (query.next())
-    {
-        QString l_newString = query.value(account.getTableName()).toString()
-                .replace("[" + account.m_category + "|" + account.m_name + ": ",
-                         "[" +   newAccount.m_category + "|" +   newAccount.m_name + ": ");
-        QSqlQuery query2(m_database);
-        query2.prepare("UPDATE Transactions SET " + account.getTableName() + " = :new WHERE Date = :d");
-        query2.bindValue(":d", query.value("Date").toString());
-        query2.bindValue(":new", l_newString);
-        if (!query2.exec())
-            qDebug() << Q_FUNC_INFO << query2.lastError();
+  // Update transactions
+  while (query.next()) {
+    QString l_newString = query.value(account.getTableName()).toString()
+                               .replace("[" + account.m_category + "|" + account.m_name + ": ",
+                                        "[" +   newAccount.m_category + "|" +   newAccount.m_name + ": ");
+    QSqlQuery query2(m_database);
+    query2.prepare("UPDATE Transactions SET " + account.getTableName() + " = :new WHERE Date = :d");
+    query2.bindValue(":d", query.value("Date").toString());
+    query2.bindValue(":new", l_newString);
+    if (query2.exec()) {
+      logging(query2.executedQuery());
+    } else {
+      qDebug() << Q_FUNC_INFO << query2.lastError();
     }
+  }
+
     // Update account
     query.prepare("DELETE FROM " + account.getTableName() + " WHERE Category = :c AND Name = :n");
     query.bindValue(":c", account.m_category);
     query.bindValue(":n", account.m_name);
     query.exec();
-    if (!query.exec())
-        qDebug() << Q_FUNC_INFO << query.lastError();
+    if (query.exec()) {
+      logging(query.executedQuery());
+    } else {
+      qDebug() << Q_FUNC_INFO << query.lastError();
+    }
 
     query.prepare("INSERT INTO [" + account.getTableName() + "] (Category, Name) VALUES (:c, :n)");
     query.bindValue(":c", newAccount.m_category);
     query.bindValue(":n", newAccount.m_name);
-    query.exec();
-    if (!query.exec()) // I don't know why this is keep saying failed but insert correctly
-        qDebug() << Q_FUNC_INFO << "Insert new account failed, might be rename the account and merge."
-                 << query.lastError() << account.m_category << account.m_name << newAccount.m_category << newAccount.m_name;
+    if (!query.exec()) {
+      qDebug() << Q_FUNC_INFO << "Insert new account failed, might be rename the account and merge."
+               << query.lastError() << account.m_category << account.m_name << newAccount.m_category << newAccount.m_name;
+    }
     // The reason not use UPDATE directly is considering the merge case
 
     return true;
@@ -487,23 +496,36 @@ QDateTime Book::getLastTransactionDateTime() const
     return dateTime;
 }
 
-void Book::logStartTime()
-{
-    QSqlQuery query(m_database);
-    query.prepare("INSERT INTO TimeLogging (Start, End) VALUES (:s, NULL)");
-    query.bindValue(":s", QDateTime::currentDateTime().toString(DATE_TIME_FORMAT));
-    query.exec();
+void Book::logEndTime() {
+  QSqlQuery query(m_database);
+  query.prepare("SELECT * FROM [Log Time] WHERE Date = :d");
+  query.bindValue(":d", m_startTime.date().toString("yyyy-MM-dd"));
+  query.exec();
+  int64_t seconds = 0;
+  if (query.next()) {
+    seconds = query.value("Seconds").toInt();
+  }
+  seconds += m_startTime.secsTo(QDateTime::currentDateTime());
+  query.prepare("INSERT OR REPLACE INTO [Log Time] (Date, Seconds) VALUES (:d, :s)");
+  query.bindValue(":d", m_startTime.date().toString("yyyy-MM-dd"));
+  query.bindValue(":s", seconds);
+  query.exec();
 }
 
-void Book::logEndTime()
-{
-    QSqlQuery query("SELECT MAX(Start) FROM TimeLogging", m_database);
-    QString s;
-    if (query.next())
-        s = query.value("MAX(Start)").toString();
+bool Book::logging(const QString& queryString) const {
+  QSqlQuery query(m_database);
+  query.prepare("INSERT INTO [Log] (Time, Query) VALUES (:t, :q)");
+  query.bindValue(":t", QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
+  query.bindValue(":q", queryString);
+  if (!query.exec()) {
+    return false;
+  }
 
-    query.prepare("UPDATE TimeLogging SET End = :e WHERE Start = :s");
-    query.bindValue(":e", QDateTime::currentDateTime().toString(DATE_TIME_FORMAT));
-    query.bindValue(":s", s);
-    query.exec();
+  // TODO: make this remove excessive log featuer working right.
+  query.prepare("DELETE FROM [Log] WHERE Time NOT IN (SELECT TOP 2 Time FROM [Log])");
+  if (!query.exec()) {
+    qDebug() << Q_FUNC_INFO << query.lastError();
+    return false;
+  }
+  return true;
 }

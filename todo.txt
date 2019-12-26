@@ -1,5 +1,11 @@
+Introduce currency changing lost and make sure equity = Net Asset
+Add small error when transaction has multiple currency
+
 keep copy-to-clipboard as all months.
 Plot all months
+
+Logging feature: only keep the recent 100 logs.
+Logging: how to show the recent string.
 
 BookKeeping:
 Add investment analysis function

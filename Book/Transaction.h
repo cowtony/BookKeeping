@@ -52,12 +52,18 @@ private:
 class BOOKSHARED_EXPORT FinancialStat : public Transaction
 {
 public:
+  explicit FinancialStat();
+
   MoneyArray retainedEarnings;
+
   MoneyArray getMoneyArray(const Account &account) const;
   QList<Account> getAccounts() const;
 
-private:
+  // Change date so that the currencyError is calculated and counted.
+  void changeDate(const QDate& newDate);
 
+private:
+  MoneyArray currencyError;
 };
 
 #endif // TRANSACTION_H

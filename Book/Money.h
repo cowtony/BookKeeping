@@ -40,9 +40,8 @@ private:
 class BOOKSHARED_EXPORT MoneyArray
 {
 public:
-    explicit MoneyArray();
-    explicit MoneyArray(const QDate &date, const QString &p_money_s);
-    explicit MoneyArray(const QDate &date, const Currency_e &currency);
+  explicit MoneyArray(const QDate &date = QDate(1990, 05, 25), const Currency_e &currency = USD);
+  explicit MoneyArray(const QDate &date, const QString &p_money_s);
 
     QDate           m_date;
     QVector<double> m_amounts;

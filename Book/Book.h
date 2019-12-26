@@ -51,8 +51,9 @@ private:
     QDateTime getFirstTransactionDateTime() const;
     QDateTime getLastTransactionDateTime() const;
 
-    void logStartTime();
-    void logEndTime();
+  QDateTime m_startTime;
+  void logEndTime();
+  bool logging(const QString& query) const; // Log all the modifier actions
 };
 
 BOOKSHARED_EXPORT extern Book g_book;

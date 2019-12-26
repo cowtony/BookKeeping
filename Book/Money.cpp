@@ -5,17 +5,15 @@
 
 /****************** Money ****************************/
 Money::Money(const QDate &date, const Currency_e& currency, const double& amount)
-    : m_date(date), m_amount(amount), m_currency(currency)
-{
+  : m_date(date), m_amount(amount), m_currency(currency) {
 }
 
 Money::Money(const QDate &date, QString p_money_s, const Currency_e &currency)
-    : m_date(date), m_amount(0.00), m_currency(currency)
-{
-    if (p_money_s.isEmpty())
-        return;
-
-    if (p_money_s.front() == '(' and p_money_s.back() == ')')
+  : m_date(date), m_amount(0.00), m_currency(currency) {
+  if (p_money_s.isEmpty()) {
+    return;
+  }
+  if (p_money_s.front() == '(' and p_money_s.back() == ')')
         p_money_s = "-" + p_money_s.mid(1, p_money_s.length() - 2);
 
     int sign = 1;
@@ -108,34 +106,26 @@ Money Money::round() const
 }
 
 /*************** Money Array ********************/
-MoneyArray::MoneyArray()
-{
-
-}
-
 MoneyArray::MoneyArray(const QDate &date, const Currency_e &currency)
-    : m_currency(currency), m_date(date)
-{
-    m_amounts.clear();
+  : m_date(date), m_currency(currency) {
+  m_amounts.clear();
 }
 
 MoneyArray::MoneyArray(const QDate &date, const QString &p_money_s)
-    : m_currency(USD), m_date(date)
-{
-    for (const QString &moneyString : p_money_s.split(", "))
-    {
-        Money money(m_date, moneyString, m_currency);
-        m_currency = money.getCurrency();
-        push_back(money);
-    }
+  : m_date(date), m_currency(USD) {
+  for (const QString &moneyString : p_money_s.split(", ")) {
+    Money money(m_date, moneyString, m_currency);
+    m_currency = money.getCurrency();
+    push_back(money);
+  }
 }
 
-MoneyArray MoneyArray::operator -() const
-{
-    MoneyArray moneyArray(*this);
-    for (int i = 0; i < m_amounts.size(); i++)
-        moneyArray.m_amounts[i] = -moneyArray.m_amounts.at(i);
-    return moneyArray;
+MoneyArray MoneyArray::operator -() const {
+  MoneyArray moneyArray(*this);
+  for (int i = 0; i < m_amounts.size(); i++) {
+    moneyArray.m_amounts[i] = -moneyArray.m_amounts.at(i);
+  }
+  return moneyArray;
 }
 
 bool MoneyArray::isZero() const

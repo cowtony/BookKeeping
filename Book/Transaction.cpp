@@ -1,13 +1,11 @@
 #include "Transaction.h"
 
-Transaction::Transaction()
-{
-    (*this)[Account::Expense];
-    (*this)[Account::Asset];
-    (*this)[Account::Revenue];
-    (*this)[Account::Liability];
-//    m_description.clear();
-//    m_dateTime = QDateTime();
+Transaction::Transaction() {
+  // Add four main table.
+  (*this)[Account::Expense];
+  (*this)[Account::Asset];
+  (*this)[Account::Revenue];
+  (*this)[Account::Liability];
 }
 
 Transaction Transaction::operator +(Transaction transaction) const
@@ -186,18 +184,40 @@ MoneyArray Transaction::getXXXContributedCapital() const
 }
 
 //////////////////// Financial Summary /////////////////////////////
-MoneyArray FinancialStat::getMoneyArray(const Account &account) const {
-    if (account == Account(Account::Equity, "Retained Earnings", "Retained Earnings"))
-        return retainedEarnings;
-    else if (account == Account(Account::Equity, "Contributed Capital", "Contributed Capital"))
-        return MoneyArray(m_dateTime.date(), USD);
+FinancialStat::FinancialStat() : Transaction() {}
 
-    return Transaction::getMoneyArray(account);
+MoneyArray FinancialStat::getMoneyArray(const Account &account) const {
+  if (account == Account(Account::Equity, "Retained Earnings", "Retained Earning")) {
+    return retainedEarnings;
+  } else if (account == Account(Account::Equity, "Retained Earnings", "Currency Error")) {
+    return currencyError;
+  } else if (account == Account(Account::Equity, "Contributed Capitals", "Contributed Capital")) {
+    return MoneyArray(m_dateTime.date(), USD); // Empty money array.
+  }
+  return Transaction::getMoneyArray(account);
 }
 
 QList<Account> FinancialStat::getAccounts() const {
   QList<Account> accounts = Transaction::getAccounts();
-  accounts.push_back(Account(Account::Equity, "Retained Earnings", "Retained Earnings"));
-  accounts.push_back(Account(Account::Equity, "Contributed Capital", "Contributed Capital"));
+  accounts.push_back(Account(Account::Equity, "Retained Earnings", "Retained Earning"));
+  accounts.push_back(Account(Account::Equity, "Retained Earnings", "Currency Error"));
+  accounts.push_back(Account(Account::Equity, "Contributed Capitals", "Contributed Capital"));
   return accounts;
+}
+
+// TODO: The calculation still has large error, figure out!
+void FinancialStat::changeDate(const QDate& newDate) {
+  MoneyArray before(m_dateTime.date(), currencyError.m_currency);
+  MoneyArray after(newDate, currencyError.m_currency);
+  for (const Account& account : Transaction::getAccounts(Account::Asset)) {
+    before += getMoneyArray(account);
+    after += getMoneyArray(account);
+  }
+  for (const Account& account : Transaction::getAccounts(Account::Liability)) {
+    before -= getMoneyArray(account);
+    after -= getMoneyArray(account);
+  }
+
+  m_dateTime.setDate(newDate);  // Not very useful since the dateTime gonna change outside anyway.
+  currencyError += after - before;
 }

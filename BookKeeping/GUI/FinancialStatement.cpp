@@ -36,7 +36,7 @@ void FinancialStatement::on_pushButton_Query_clicked() {
   display();
 }
 
-void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, const Money &money) {
+void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, const Money& money) {
   if (item == nullptr)
     return;
 
@@ -44,7 +44,7 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, cons
   QDate date = QDate::fromString(ui->treeWidget->headerItem()->text(column), "yyyy-MM");
   date = date.addMonths(1);
   date = date.addDays(-1);
-  Money difference = money - Money(date, item->text(column));
+  const Money difference = money - Money(date, item->text(column));
 
   item->setText(column, money.toString());
   if (money.m_amount < 0) {
@@ -55,11 +55,11 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, cons
 
   // Recursivly update parent sum:
   if (item->parent() != nullptr) {
-    Money parentMoney(date, item->parent()->text(column));
+    const Money parentMoney(date, item->parent()->text(column));
 
-    if (true && (item->text(0) == "Expense" || item->text(0) == "Liability")) {
+    if (item->text(0) == "Expense" || item->text(0) == "Liability") {
       setMoney(item->parent(), column, parentMoney - difference);
-    } else if (true && item->text(0) == "Equity"){
+    } else if (item->text(0) == "Equity") {
       // do nothing.
     } else {
       setMoney(item->parent(), column, parentMoney + difference);
@@ -173,10 +173,10 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, cons
   return accountItem;
 }
 
-void FinancialStatement::on_treeWidget_itemCollapsed(QTreeWidgetItem *item)
-{
-    for (int i = 0; i < ui->treeWidget->columnCount(); i++)
-        ui->treeWidget->resizeColumnToContents(i);
+void FinancialStatement::on_treeWidget_itemCollapsed(QTreeWidgetItem *item) {
+  for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
+    ui->treeWidget->resizeColumnToContents(i);
+  }
 }
 
 void FinancialStatement::on_treeWidget_itemExpanded(QTreeWidgetItem *item)
