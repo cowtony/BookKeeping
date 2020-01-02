@@ -1,5 +1,5 @@
 
-Sum up small error when transaction has multiple currency
+
 
 keep copy-to-clipboard as all months.
 

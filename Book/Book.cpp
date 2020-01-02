@@ -185,6 +185,7 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
     monthlySummary.m_dateTime = transaction.m_dateTime;
     monthlySummary += transaction;
     monthlySummary.retainedEarnings += transaction.getRetainedEarnings();
+    monthlySummary.transactionError += MoneyArray(transaction.getCheckSum());
   }
   monthlySummary.m_description = month.toString("yyyy-MM");
   retSummarys.push_front(monthlySummary);

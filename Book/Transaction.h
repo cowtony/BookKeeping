@@ -55,6 +55,7 @@ public:
   explicit FinancialStat();
 
   MoneyArray retainedEarnings;
+  MoneyArray transactionError;
 
   MoneyArray getMoneyArray(const Account &account) const;
   QList<Account> getAccounts() const;

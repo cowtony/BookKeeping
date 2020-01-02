@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>841</width>
+    <width>492</width>
     <height>717</height>
    </rect>
   </property>
@@ -19,13 +19,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="3">
-     <widget class="QPushButton" name="pushButtonExport">
-      <property name="text">
-       <string>Copy to ClipBoard</string>
-      </property>
-     </widget>
-    </item>
     <item row="0" column="0">
      <widget class="QGroupBox" name="groupBox">
       <property name="title">
@@ -57,6 +50,13 @@
      </widget>
     </item>
     <item row="0" column="1">
+     <widget class="QPushButton" name="pushButtonExport">
+      <property name="text">
+       <string>Copy to ClipBoard</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
        <widget class="QLabel" name="label_Date">
@@ -97,20 +97,20 @@
       </item>
      </layout>
     </item>
-    <item row="2" column="0" colspan="4">
+    <item row="1" column="1">
+     <widget class="QPushButton" name="pushButtonShowMore">
+      <property name="text">
+       <string>Show More</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0" colspan="2">
      <widget class="QTreeWidget" name="treeWidget">
       <column>
        <property name="text">
         <string>Account</string>
        </property>
       </column>
-     </widget>
-    </item>
-    <item row="0" column="2">
-     <widget class="QPushButton" name="pushButtonShowMore">
-      <property name="text">
-       <string>Show More</string>
-      </property>
      </widget>
     </item>
    </layout>
@@ -120,7 +120,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>841</width>
+     <width>492</width>
      <height>21</height>
     </rect>
    </property>

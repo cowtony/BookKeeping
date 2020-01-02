@@ -195,6 +195,8 @@ MoneyArray FinancialStat::getMoneyArray(const Account &account) const {
     return retainedEarnings;
   } else if (account == Account(Account::Equity, "Retained Earnings", "Currency Error")) {
     return currencyError;
+  } else if (account == Account(Account::Equity, "Retained Earnings", "Transaction Error")) {
+    return transactionError;
   } else if (account == Account(Account::Equity, "Contributed Capitals", "Contributed Capital")) {
     return MoneyArray(m_dateTime.date(), USD); // Empty money array.
   }
@@ -205,6 +207,7 @@ QList<Account> FinancialStat::getAccounts() const {
   QList<Account> accounts = Transaction::getAccounts();
   accounts.push_back(Account(Account::Equity, "Retained Earnings", "Retained Earning"));
   accounts.push_back(Account(Account::Equity, "Retained Earnings", "Currency Error"));
+  accounts.push_back(Account(Account::Equity, "Retained Earnings", "Transaction Error"));
   accounts.push_back(Account(Account::Equity, "Contributed Capitals", "Contributed Capital"));
   return accounts;
 }
