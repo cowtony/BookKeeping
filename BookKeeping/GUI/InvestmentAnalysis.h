@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include <QtCharts>
+
 #include "Money.h"
 
 namespace Ui {
@@ -20,6 +22,9 @@ public:
 private slots:
   void on_investmentTableWidget_cellClicked(int row, int column);
 
+  void on_startDateEdit_dateChanged(const QDate& date);
+  void on_axisX_rangeChanged(const QDateTime& start, const QDateTime& end);
+
 private:
   Ui::InvestmentAnalysis *ui;
 
@@ -29,7 +34,7 @@ private:
   static double getLog2DailyROI(const QList<Money>& history, const Money& gainOrLoss);
   static Money calculateGainOrLoss(const QList<Money>& history, const double& log2_dailyROI, const QDate& date);
   double calculateAROI(const QString& investmentName) const;
-  void plotInvestments(const QStringList& investments);
+  void plotInvestments();
 };
 
 #endif // INVESTMENTANALYSIS_H

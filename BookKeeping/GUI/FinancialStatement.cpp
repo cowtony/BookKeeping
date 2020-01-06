@@ -50,7 +50,7 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, cons
 
   item->setText(column, money.toString());
   if (money.m_amount < 0) {
-    item->setTextColor(column, QColor(Qt::red));
+    item->setTextColor(column, Qt::red);
   } else {
     item->setTextColor(column, QColor(Qt::black));
   }

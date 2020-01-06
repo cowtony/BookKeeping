@@ -70,6 +70,7 @@ void BarChart::show()
     m_barSeries->attachAxis(m_axisX);
     m_chart->addAxis(m_axisY, Qt::AlignLeft);
     m_barSeries->attachAxis(m_axisY);
+    m_axisY->applyNiceNumbers();
     m_chartView->setChart(m_chart);
     setCentralWidget(m_chartView);
     resize(1280, 600);
@@ -89,6 +90,7 @@ void BarChart::showStackedBarChart()
     m_chart->addAxis(m_axisY, Qt::AlignLeft);
     m_stackedBarSeries->attachAxis(m_axisY);
     m_lineSeries->attachAxis(m_axisY);
+    m_axisY->applyNiceNumbers();
 
     m_chartView->setChart(m_chart);
     setCentralWidget(m_chartView);

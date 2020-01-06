@@ -1,13 +1,10 @@
 
-
-
 keep copy-to-clipboard as all months.
 
 Logging feature: only keep the recent 100 logs.
 Logging: how to show the recent string.
 
 BookKeeping:
-Add investment analysis function
 MAC dynamic library
 After adding a transaction, the list always goes to the top
 Separated bar chart

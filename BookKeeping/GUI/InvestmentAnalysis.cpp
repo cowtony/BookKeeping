@@ -1,8 +1,6 @@
 #include "InvestmentAnalysis.h"
 #include "ui_InvestmentAnalysis.h"
 
-#include <QtCharts>
-
 #include "Book.h"
 
 InvestmentAnalysis::InvestmentAnalysis(QWidget *parent) :
@@ -28,7 +26,7 @@ InvestmentAnalysis::InvestmentAnalysis(QWidget *parent) :
     double AROI = (calculateAROI(investments.at(row)) - 1.0) * 100;
     QTableWidgetItem* roiItem = new QTableWidgetItem(QString::number(AROI, 'f', 2) + "%");
     if (AROI < 0) {
-      roiItem->setTextColor(QColor(Qt::red));
+      roiItem->setTextColor(Qt::red);
     }
     roiItem->setTextAlignment(Qt::AlignRight);
     ui->investmentTableWidget->setItem(row, 1, roiItem);
@@ -36,31 +34,13 @@ InvestmentAnalysis::InvestmentAnalysis(QWidget *parent) :
   ui->investmentTableWidget->resizeColumnsToContents();
 
   // Setup plot chart
-  QChart* chart = new QChart();
-  QChartView *chartView = new QChartView(chart, ui->chartViewWidget);
+  ui->startDateEdit->setDateTime(g_book.getFirstTransactionDateTime());
+  ui->chartView->setRenderHint(QPainter::Antialiasing);
+  ui->chartView->setRubberBand(QChartView::HorizontalRubberBand);
 }
 
 InvestmentAnalysis::~InvestmentAnalysis() {
   delete ui;
-}
-
-void InvestmentAnalysis::on_investmentTableWidget_cellClicked(int row, int column) {
-  QTableWidgetItem* item = ui->investmentTableWidget->item(row, 0);
-  if (item->checkState() == Qt::Unchecked) {
-    item->setCheckState(Qt::Checked);
-  } else if (item->checkState() == Qt::Checked) {
-    item->setCheckState(Qt::Unchecked);
-  } else {
-    return;
-  }
-
-  QStringList checkedItem;
-  for (int i = 0; i < ui->investmentTableWidget->rowCount(); i++) {
-    if (ui->investmentTableWidget->item(i, 0)->checkState() == Qt::Checked) {
-      checkedItem << ui->investmentTableWidget->item(i, 0)->text();
-    }
-  }
-  plotInvestments(checkedItem);
 }
 
 void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
@@ -159,14 +139,96 @@ double InvestmentAnalysis::calculateAROI(const QString& investmentName) const {
   return qPow(2.0, log2_AROI);
 }
 
-void InvestmentAnalysis::plotInvestments(const QStringList& investments) {
-  for (const QString& investmentName : investments) {
-    QLineSeries* lineSeries = new QLineSeries();
-    for (const QDate& date : m_data.value(investmentName).keys()) {
-      lineSeries->append(date.day(), m_data.value(investmentName).value(date));
-    }
-
-//    chart->addSeries(lineSeries);
-
+void InvestmentAnalysis::on_investmentTableWidget_cellClicked(int row, int column) {
+  QTableWidgetItem* item = ui->investmentTableWidget->item(row, 0);
+  if (item->checkState() == Qt::Unchecked) {
+    item->setCheckState(Qt::Checked);
+  } else if (item->checkState() == Qt::Checked) {
+    item->setCheckState(Qt::Unchecked);
+  } else {
+    return;
   }
+
+  plotInvestments();
 }
+
+void InvestmentAnalysis::on_startDateEdit_dateChanged(const QDate &date) {
+  plotInvestments();
+}
+
+void InvestmentAnalysis::on_axisX_rangeChanged(const QDateTime& start, const QDateTime& end) {
+  ui->startDateEdit->setDate(start.date());
+  plotInvestments();
+}
+
+void InvestmentAnalysis::plotInvestments() {
+  QChart* chart = new QChart;
+//  chart->setAnimationOptions(QChart::SeriesAnimations);
+
+  QDateTimeAxis* axisX = new QDateTimeAxis;
+  axisX->setTitleText("Date");
+  axisX->setTickCount(10);
+  axisX->setFormat("yyyy/MM/dd");
+  chart->addAxis(axisX, Qt::AlignBottom);
+
+  QValueAxis* axisY = new QValueAxis;
+  axisY->setTitleText("Log2(Rate of Return)");
+  axisY->setLabelFormat("%.2f");
+//  axisY->setLinePenColor(Qt::darkGray);
+//  axisY->setGridLineColor(Qt::darkGray);
+  chart->addAxis(axisY, Qt::AlignLeft);
+
+  QLogValueAxis* axisYlog = new QLogValueAxis;
+  axisYlog->setTitleText("Rate of Return");
+  axisYlog->setLabelFormat("%.0f%");
+
+//  axisYlog->setMinorTickCount(9);
+  axisYlog->setLinePenColor(Qt::darkGray);
+  axisYlog->setGridLineColor(Qt::darkGray);
+  chart->addAxis(axisYlog, Qt::AlignRight);
+
+  double minY = 1e12, maxY = -1e12;
+  for (int i = 0; i < ui->investmentTableWidget->rowCount(); i++) {
+    if (ui->investmentTableWidget->item(i, 0)->checkState() == Qt::Checked) {
+      QString investmentName = ui->investmentTableWidget->item(i, 0)->text();
+      QLineSeries* lineSeries = new QLineSeries();
+      lineSeries->setName(investmentName);
+
+      double value = 0;
+      QDate previousDate = ui->startDateEdit->date();
+      lineSeries->append(ui->startDateEdit->dateTime().toMSecsSinceEpoch(), value);  // Add first data point as begin.
+      for (const QDate& date : m_data.value(investmentName).keys()) {
+        if (date <= ui->startDateEdit->date()) {
+          continue;
+        }
+        value += previousDate.daysTo(date) * m_data.value(investmentName).value(date);
+        lineSeries->append(QDateTime(date).toMSecsSinceEpoch(), value);
+
+        minY = value < minY ? value : minY;
+        maxY = value > maxY ? value : maxY;
+        previousDate = date;
+      }
+      lineSeries->append(QDateTime::currentDateTime().toMSecsSinceEpoch(), value);  // Add last data point as current.
+
+      chart->addSeries(lineSeries);
+      // Attach axis must after chart->addSeries().
+      lineSeries->attachAxis(axisX);
+      lineSeries->attachAxis(axisY);
+    }
+  }
+
+  // Must connect this after everything done to avoid range change during append data, which is causeing recursive calling.
+  QObject::connect(axisX, &QDateTimeAxis::rangeChanged, this, &InvestmentAnalysis::on_axisX_rangeChanged);
+
+  double extra = (maxY - minY) * 0.05;
+  axisY->setRange(minY - extra, maxY + extra);
+  axisY->applyNiceNumbers();
+
+  int tickCount = 15;
+  int count = int(qLn(100) / qLn(2) / (maxY - minY) * tickCount);  // get the integer count value for: base ^ count = 100
+  axisYlog->setBase(qPow(100.0, 1.0 / count));
+  axisYlog->setRange(qPow(2.0, axisY->min()) * 100, qPow(2.0, axisY->max()) * 100);
+  ui->chartView->setChart(chart);
+}
+
+
