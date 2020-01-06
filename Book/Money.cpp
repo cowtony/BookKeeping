@@ -66,12 +66,22 @@ Money Money::operator +(Money money) const
     return money;
 }
 
-Money Money::operator -(Money money) const
-{
-    money.m_date = m_date > money.m_date? m_date : money.m_date;
-    money.changeCurrency(m_currency);
-    money.m_amount = m_amount - money.m_amount;
-    return money;
+Money Money::operator -(Money money) const {
+  money.m_date = m_date > money.m_date? m_date : money.m_date;
+  money.changeCurrency(m_currency);
+  money.m_amount = m_amount - money.m_amount;
+  return money;
+}
+
+Money Money::operator *(double rateOfReturn) const {
+  Money money = *this;
+  money.m_amount *= rateOfReturn;
+  return money;
+}
+
+bool Money::operator <(Money money) const {
+  money.changeCurrency(m_currency);
+  return m_amount < money.m_amount;
 }
 
 void Money::operator +=(const Money &money)

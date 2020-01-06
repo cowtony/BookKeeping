@@ -110,21 +110,28 @@ bool Book::insertTransaction(const Transaction &t) const {
   }
 }
 
-QList<Transaction> Book::queryTransactions(const QDateTime &startTime, const QDateTime &endTime, const QString &description, const QList<Account>& accounts) const {
+QList<Transaction> Book::queryTransactions(const QDateTime &startTime,
+                                           const QDateTime &endTime,
+                                           const QString &description,
+                                           const QList<Account>& accounts,
+                                           const bool& ascending,
+                                           const bool& accountUnion) const {
   QList<Transaction> transactionList;
 
-  QString statement = "";
+  QStringList statements;
   for (const Account& account : accounts) {
     if (!account.m_category.isEmpty()) {
-      statement += " AND (" + account.getTableName() + " LIKE \"%[" + account.m_category + "|" + account.m_name + ":%\")";
+      statements << "(" + account.getTableName() + " LIKE \"%[" + account.m_category + "|" + account.m_name + ":%\")";
     }
   }
+
   QSqlQuery query(m_database);
   query.prepare("SELECT * FROM Transactions"
                 " WHERE (Date BETWEEN :startDate AND :endDate)"
                 " AND (Description LIKE :description)" +
-                statement +
-                " ORDER BY Date DESC"); // ASC, DESC
+                QString(statements.empty()? "" : " AND ") +
+                statements.join(accountUnion? " OR " : " AND ") +
+                " ORDER BY Date " + (ascending? "ASC" : "DESC"));
 
   query.bindValue(":startDate", startTime.toString(DATE_TIME_FORMAT));
   query.bindValue(":endDate",     endTime.toString(DATE_TIME_FORMAT));
@@ -288,20 +295,19 @@ QStringList Book::getCategories(const Account::TableType &p_tableType) const {
     return l_categories;
 }
 
-QStringList Book::getAccountNames(const Account::TableType &p_tableType, const QString &p_category) const
-{
-    QStringList l_names;
-    QSqlQuery l_query(m_database);
-    l_query.prepare("SELECT Name FROM [" + Account::TableName.value(p_tableType) + "] WHERE Category = :c ORDER BY Name ASC");
-    l_query.bindValue(":c", p_category);
+QStringList Book::getAccountNames(const Account::TableType& tableType, const QString& category) const {
+  QStringList names;
+  QSqlQuery query(m_database);
+  query.prepare("SELECT Name FROM [" + Account::TableName.value(tableType) + "] WHERE Category = :c ORDER BY Name ASC");
+  query.bindValue(":c", category);
 
-    if (!l_query.exec())
-        qDebug() << Q_FUNC_INFO << l_query.lastError();
-    while (l_query.next())
-    {
-        l_names << l_query.value("Name").toString();
-    }
-    return l_names;
+  if (!query.exec()) {
+    qDebug() << Q_FUNC_INFO << query.lastError();
+  }
+  while (query.next()) {
+    names << query.value("Name").toString();
+  }
+  return names;
 }
 
 QStringList Book::getAccountNamesByLastUpdate(const Account::TableType &tableType, const QString &category, const QDateTime &dateTime) const {

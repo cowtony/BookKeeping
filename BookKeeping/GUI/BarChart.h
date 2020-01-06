@@ -31,7 +31,7 @@ private:
     QChart *m_chart;
     QBarCategoryAxis *m_axisX;
     QValueAxis *m_axisY;
-    QChartView *chartView;
+    QChartView *m_chartView;
 };
 
 #endif // BARCHART_H

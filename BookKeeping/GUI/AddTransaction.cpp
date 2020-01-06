@@ -1,7 +1,9 @@
 #include "AddTransaction.h"
 #include "ui_AddTransaction.h"
+
 #include <QDebug>
 #include <QMessageBox>
+
 #include "Book.h"
 
 AddTransaction::AddTransaction(QWidget *parent)

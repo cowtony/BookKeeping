@@ -11,3 +11,5 @@ Add investment analysis function
 MAC dynamic library
 After adding a transaction, the list always goes to the top
 Separated bar chart
+
+Use QtableView for displaying transaction

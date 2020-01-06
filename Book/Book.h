@@ -26,7 +26,12 @@ public:
     bool dateTimeExist(const QDateTime &dt) const;
     Transaction getTransaction(const QDateTime &dt);
     bool insertTransaction(const Transaction &t) const;
-    QList<Transaction> queryTransactions(const QDateTime &startTime, const QDateTime &endTime, const QString &description, const QList<Account> &accounts) const;
+    QList<Transaction> queryTransactions(const QDateTime& startTime,
+                                         const QDateTime& endTime,
+                                         const QString& description,
+                                         const QList<Account>& accounts,
+                                         const bool& ascending = true,
+                                         const bool& accountUnion = false) const;
     QList<FinancialStat> getSummaryByMonth(const QDateTime &p_endDateTime = QDateTime(QDate(2100, 12, 31))) const;
     void removeTransaction(const QDateTime &p_dateTime) const;
 

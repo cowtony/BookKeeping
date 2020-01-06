@@ -23,6 +23,8 @@ public:
   Money operator /(const int &val) const;
   Money operator +(Money money) const;
   Money operator -(Money money) const;
+  Money operator *(double rateOfReturn) const;
+  bool operator <(Money money) const;
   void operator +=(const Money &money);
   void operator -=(const Money &money);
 

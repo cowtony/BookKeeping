@@ -1,10 +1,13 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
+
 #include <QMessageBox>
 #include <QLineEdit>
+
 #include "Transaction.h"
 #include "AddTransaction.h"
 #include "Currency.h"
+#include "InvestmentAnalysis.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow),
     TableIndex({{2, Account::Expense}, {3, Account::Revenue}, {4, Account::Asset}, {5, Account::Liability}})
@@ -13,8 +16,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     g_book.openDatabase("Book.db");
     g_currency.openDatabase();
-
-    ui->actionIncome_Statement->setDisabled(true);
 
     accountManager     = new AccountManager(this);
     financialStatement = new FinancialStatement(this);
@@ -100,7 +101,7 @@ void MainWindow::displayTransactions()
     for (const Transaction& t : g_book.queryTransactions(QDateTime(startDate->date(), QTime(00, 00, 00)),
                                                          QDateTime(endDate->date(), QTime(23, 59, 59)),
                                                          static_cast<QLineEdit*>(ui->tableWidget_transactions->cellWidget(1, 1))->text(),
-                                                         filter))
+                                                         filter, false, false))
     {
         int row = ui->tableWidget_transactions->rowCount();
         if (row > 200) break;
@@ -224,21 +225,17 @@ QMap<QDateTime, QString> MainWindow::getSelectedTransactionInfos() const
     return transactionInfos;
 }
 
-void MainWindow::on_actionAdd_Transaction_triggered()
-{
-    AddTransaction *addTransaction = new AddTransaction(this);
-    addTransaction->setAttribute(Qt::WA_DeleteOnClose);
-    connect(addTransaction, &AddTransaction::insertTransactionFinished, this, &MainWindow::displayTransactions);
-    addTransaction->show();
+void MainWindow::on_actionAddTransaction_triggered() {
+  AddTransaction* addTransaction = new AddTransaction(this);
+  addTransaction->setAttribute(Qt::WA_DeleteOnClose);
+  connect(addTransaction, &AddTransaction::insertTransactionFinished, this, &MainWindow::displayTransactions);
+  addTransaction->show();
 }
 
 void MainWindow::accountCategoryChanged(const Account::TableType &tableType, const QString &category) {
-    QComboBox *nameComboBox = static_cast<QComboBox*>(ui->tableWidget_transactions->cellWidget(1, TableIndex.key(tableType)));
-    nameComboBox->clear();
-    nameComboBox->addItems(g_book.getAccountNames(tableType, category));
-}
-
-void MainWindow::on_actionIncome_Statement_triggered() {
+  QComboBox* nameComboBox = static_cast<QComboBox*>(ui->tableWidget_transactions->cellWidget(1, TableIndex.key(tableType)));
+  nameComboBox->clear();
+  nameComboBox->addItems(g_book.getAccountNames(tableType, category));
 }
 
 void MainWindow::on_actionAccountManager_triggered() {
@@ -246,22 +243,21 @@ void MainWindow::on_actionAccountManager_triggered() {
 }
 
 void MainWindow::on_actionFinancialStatement_triggered() {
+  // TODO: can I declare obj here instead of declare in class?
   financialStatement->on_pushButton_Query_clicked();
   financialStatement->show();
 }
 
-void MainWindow::closeEvent(QCloseEvent *event)
-{
-    QMainWindow::closeEvent(event);
-    // Do something on close here
+void MainWindow::on_actionInvestmentAnalysis_triggered() {
+  InvestmentAnalysis* investmentAnalysis = new InvestmentAnalysis(this);
+  investmentAnalysis->show();
 }
 
-
-void MainWindow::on_actionTransaction_Validation_triggered() {
+void MainWindow::on_actionTransactionValidation_triggered() {
   // Display validation message
   QString errorMessage = "";
   for (const Transaction& t : g_book.queryTransactions(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
-                                                       QDateTime(QDate(2200, 1, 1), QTime(0, 0, 0)), "", {})) {
+                                                       QDateTime(QDate(2200, 1, 1), QTime(0, 0, 0)), "", {}, false)) {
     if (!t.validation().empty()) {
       errorMessage += t.m_dateTime.toString("yyyy/MM/dd HH:mm:ss") + ": ";
       errorMessage += t.m_description + '\n';
@@ -278,4 +274,9 @@ void MainWindow::on_actionTransaction_Validation_triggered() {
   msgBox.setInformativeText(errorMessage);
   msgBox.setStandardButtons(QMessageBox::Ok);
   msgBox.exec();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+  QMainWindow::closeEvent(event);
+  // Do something on close here
 }

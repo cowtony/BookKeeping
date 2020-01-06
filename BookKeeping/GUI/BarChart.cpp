@@ -22,9 +22,9 @@ BarChart::BarChart(QWidget *parent) : QMainWindow(parent)
     m_axisY = new QValueAxis();
     m_axisY->setTitleText("US Dollar");
 
-    chartView = new QChartView();
-    chartView->setRenderHint(QPainter::Antialiasing);
-    chartView->setRubberBand(QChartView::HorizontalRubberBand);
+    m_chartView = new QChartView();
+    m_chartView->setRenderHint(QPainter::Antialiasing);
+    m_chartView->setRubberBand(QChartView::HorizontalRubberBand);
 }
 
 BarChart::~BarChart()
@@ -70,8 +70,8 @@ void BarChart::show()
     m_barSeries->attachAxis(m_axisX);
     m_chart->addAxis(m_axisY, Qt::AlignLeft);
     m_barSeries->attachAxis(m_axisY);
-    chartView->setChart(m_chart);
-    setCentralWidget(chartView);
+    m_chartView->setChart(m_chart);
+    setCentralWidget(m_chartView);
     resize(1280, 600);
 
     QMainWindow::show();
@@ -90,8 +90,8 @@ void BarChart::showStackedBarChart()
     m_stackedBarSeries->attachAxis(m_axisY);
     m_lineSeries->attachAxis(m_axisY);
 
-    chartView->setChart(m_chart);
-    setCentralWidget(chartView);
+    m_chartView->setChart(m_chart);
+    setCentralWidget(m_chartView);
     resize(1280, 600);
 
     QMainWindow::show();

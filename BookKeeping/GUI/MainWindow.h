@@ -22,10 +22,11 @@ protected:
     void closeEvent(QCloseEvent *event);
 
 private slots:
-    void on_actionAdd_Transaction_triggered();
-    void on_actionIncome_Statement_triggered();
+    void on_actionAddTransaction_triggered();
     void on_actionAccountManager_triggered();
     void on_actionFinancialStatement_triggered();
+    void on_actionInvestmentAnalysis_triggered();
+    void on_actionTransactionValidation_triggered();
 
     void on_pushButtonDeleteTransactions_clicked();
     void accountCategoryChanged(const Account::TableType &tableType, const QString &category);
@@ -35,7 +36,9 @@ private slots:
 
     void on_pushButton_MergeTransaction_clicked();
 
-    void on_actionTransaction_Validation_triggered();
+
+
+
 
 private:
     Ui::MainWindow *ui;

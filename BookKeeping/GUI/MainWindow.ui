@@ -158,11 +158,11 @@
     <property name="title">
      <string>Functions</string>
     </property>
-    <addaction name="actionAdd_Transaction"/>
+    <addaction name="actionAddTransaction"/>
     <addaction name="actionAccountManager"/>
     <addaction name="actionFinancialStatement"/>
-    <addaction name="actionIncome_Statement"/>
-    <addaction name="actionTransaction_Validation"/>
+    <addaction name="actionInvestmentAnalysis"/>
+    <addaction name="actionTransactionValidation"/>
    </widget>
    <addaction name="menuFunctions"/>
   </widget>
@@ -173,13 +173,13 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionAdd_Transaction"/>
+   <addaction name="actionAddTransaction"/>
    <addaction name="actionAccountManager"/>
    <addaction name="actionFinancialStatement"/>
-   <addaction name="actionIncome_Statement"/>
+   <addaction name="actionInvestmentAnalysis"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionAdd_Transaction">
+  <action name="actionAddTransaction">
    <property name="icon">
     <iconset resource="../resources.qrc">
      <normaloff>:/resource/AddTransaction.png</normaloff>:/resource/AddTransaction.png</iconset>
@@ -197,13 +197,16 @@
     <string>Account Editor</string>
    </property>
   </action>
-  <action name="actionIncome_Statement">
+  <action name="actionInvestmentAnalysis">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/resource/Income_Statement.png</normaloff>:/resource/Income_Statement.png</iconset>
+     <normaloff>:/resource/Investment_Analysis.png</normaloff>:/resource/Investment_Analysis.png</iconset>
    </property>
    <property name="text">
-    <string>Income Statement</string>
+    <string>Investment Analysis</string>
+   </property>
+   <property name="toolTip">
+    <string>Investment Analysis</string>
    </property>
   </action>
   <action name="actionFinancialStatement">
@@ -218,7 +221,7 @@
     <string>Financial Statement</string>
    </property>
   </action>
-  <action name="actionTransaction_Validation">
+  <action name="actionTransactionValidation">
    <property name="text">
     <string>Transaction Validation</string>
    </property>

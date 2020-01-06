@@ -35,6 +35,7 @@ INCLUDEPATH += Account \
 SOURCES += \
     GUI/BarChart.cpp \
     GUI/FinancialStatement.cpp \
+    GUI/InvestmentAnalysis.cpp \
     main.cpp \
     GUI/AddTransaction.cpp \
     GUI/MainWindow.cpp \
@@ -44,12 +45,14 @@ FORMS += \
     GUI/AccountManager.ui \
     GUI/AddTransaction.ui \
     GUI/FinancialStatement.ui \
+    GUI/InvestmentAnalysis.ui \
     GUI/MainWindow.ui
 
 HEADERS += \
     GUI/AddTransaction.h \
     GUI/BarChart.h \
     GUI/FinancialStatement.h \
+    GUI/InvestmentAnalysis.h \
     GUI/MainWindow.h \
     GUI/AccountManager.h
 

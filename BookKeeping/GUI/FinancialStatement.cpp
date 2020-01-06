@@ -1,7 +1,9 @@
 #include "FinancialStatement.h"
 #include "ui_FinancialStatement.h"
+
 #include <QtMath>
 #include <QClipboard>
+
 #include "Book.h"
 #include "BarChart.h"
 

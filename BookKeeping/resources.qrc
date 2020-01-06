@@ -3,6 +3,6 @@
         <file>resource/AddTransaction.png</file>
         <file>resource/Transactions.png</file>
         <file>resource/Balance_Sheet.png</file>
-        <file>resource/Income_Statement.png</file>
+        <file>resource/Investment_Analysis.png</file>
     </qresource>
 </RCC>
