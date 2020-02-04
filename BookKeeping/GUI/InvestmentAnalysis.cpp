@@ -65,11 +65,16 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   QMap<QDate, double> returnHistory; // Key: date, Value: log2(daily return) until date.
   QList<Money> transferHistory; // Store all the transfer activities since last summary.
   Money runningBalance(QDate(), USD, 0.00);
-  for (const Transaction& transaction : g_book.queryTransactions(QDateTime(), QDateTime::currentDateTime(), "", accounts, true, true)) {
+  const QDateTime start = QDateTime(QDate(1990, 05, 25), QTime());
+  for (const Transaction& transaction : g_book.queryTransactions(start, QDateTime::currentDateTime(), "", accounts, true, true)) {
     // Init to the first transaction date and set log(ROI) to 0.
     if (returnHistory.empty()) {
       returnHistory.insert(transaction.m_dateTime.date(), 0.00);
     }
+    if (investmentName == "33783 Vista Dr") {
+      qDebug() << transaction.m_dateTime << transaction.m_description;
+    }
+
     Money gainOrLoss = transaction.getMoneyArray(accounts.at(0)).sum();
     Money accountChange = transaction.getMoneyArray(accounts.at(1)).sum();
     Money transfer = accountChange - gainOrLoss;
@@ -77,7 +82,9 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
 
     // If has activity in revenue
     if (transaction.accountExist(accounts.at(0))) {
+      qDebug() << transferHistory.size() << gainOrLoss.m_amount;
       double log2_ROI = getLog2DailyROI(transferHistory, gainOrLoss); // Get the log2 return so that we can use + instead of * later.
+      qDebug() << 2;
       if (!returnHistory.contains(transaction.m_dateTime.date())) {
         returnHistory.insert(transaction.m_dateTime.date(), log2_ROI);
       } else /* The second revenue happened in the same day, which should always have 0 ROI. */ {

@@ -51,13 +51,15 @@ public:
   QDateTime getFirstTransactionDateTime() const;
   QDateTime getLastTransactionDateTime() const;
 
+  static QString getLastExecutedQuery(const QSqlQuery& query);
+
 private:
   QSqlDatabase m_database;
 
   QDateTime m_startTime;
   void logUsageTime();
 
-  bool logging(const QString& query) const; // Log all the modifier actions
+  bool logging(const QSqlQuery& query) const; // Log all the modifier actions
 };
 
 BOOKSHARED_EXPORT extern Book g_book;

@@ -102,7 +102,7 @@ bool Book::insertTransaction(const Transaction &t) const {
   query.bindValue(":liability",   t.dataToString(Account::Liability));
 
   if (query.exec()) {
-    logging(query.lastQuery());  // TODO: get the binded string from query.
+    logging(query);  // TODO: get the binded string from query.
     return true;
   } else {
     qDebug() << Q_FUNC_INFO << "#Error Insert a transaction:" << query.lastError().text();
@@ -144,8 +144,13 @@ QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
 
   while (query.next()) {
     Transaction t;
-    t.m_dateTime    = query.value("Date").toDateTime();
     t.m_description = query.value("Description").toString();
+    t.m_dateTime = query.value("Date").toDateTime();
+    // TODO: somehow several outbounded transaction will also be selected.
+    // This hard code is to remove them.
+    if (t.m_dateTime < startTime or t.m_dateTime > endTime) {
+      continue;
+    }
 
     t.stringToData(Account::Expense,   query.value(Account::TableName.value(Account::Expense)).toString());
     t.stringToData(Account::Revenue,   query.value(Account::TableName.value(Account::Revenue)).toString());
@@ -205,7 +210,7 @@ void Book::removeTransaction(const QDateTime &dateTime) const {
   query.prepare("DELETE FROM Transactions WHERE Date = :d");
   query.bindValue(":d", dateTime.toString(DATE_TIME_FORMAT));
   if (query.exec()) {
-    logging(query.executedQuery());
+    logging(query);
   } else {
     qDebug() << Q_FUNC_INFO << query.lastError();
   }
@@ -235,7 +240,7 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
     query2.bindValue(":d", query.value("Date").toString());
     query2.bindValue(":new", l_newString);
     if (query2.exec()) {
-      logging(query2.executedQuery());
+      logging(query2);
     } else {
       qDebug() << Q_FUNC_INFO << query2.lastError();
     }
@@ -247,7 +252,7 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
     query.bindValue(":n", account.m_name);
     query.exec();
     if (query.exec()) {
-      logging(query.executedQuery());
+      logging(query);
     } else {
       qDebug() << Q_FUNC_INFO << query.lastError();
     }
@@ -517,11 +522,11 @@ void Book::logUsageTime() {
   query.exec();
 }
 
-bool Book::logging(const QString& queryString) const {
+bool Book::logging(const QSqlQuery& query_log) const {
   QSqlQuery query(m_database);
   query.prepare("INSERT INTO [Log] (Time, Query) VALUES (:t, :q)");
   query.bindValue(":t", QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
-  query.bindValue(":q", queryString);
+  query.bindValue(":q", getLastExecutedQuery(query_log));
   if (!query.exec()) {
     return false;
   }
@@ -533,4 +538,17 @@ bool Book::logging(const QString& queryString) const {
     return false;
   }
   return true;
+}
+
+QString Book::getLastExecutedQuery(const QSqlQuery& query) {
+  QString str = query.lastQuery();
+  QMapIterator<QString, QVariant> it(query.boundValues());
+
+  it.toBack();
+
+  while (it.hasPrevious()) {
+    it.previous();
+    str.replace(it.key(), it.value().toString());
+  }
+  return str;
 }
