@@ -45,57 +45,61 @@ InvestmentAnalysis::~InvestmentAnalysis() {
 
 void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   // 1. Setup two related account from Asset & Revenue.
-  QList<Account> accounts;
-  accounts << Account(Account::Revenue, "Investment", investmentName);
+  Account asset(Account::Asset, "", investmentName);
+  Account revenue(Account::Revenue, "Investment", investmentName);
   for (const QString& categoryName : g_book.getCategories(Account::Asset)) {
     if (g_book.accountExist(Account(Account::Asset, categoryName, investmentName))) {
-      accounts << Account(Account::Asset, categoryName, investmentName);
+      if (!asset.m_category.isEmpty()) {
+        // TODO: make this an error message.
+        qDebug() << "Error! More than one account in asset has the investment name.";
+        return;
+      }
+      asset = Account(Account::Asset, categoryName, investmentName);
     }
-  }
-  if (accounts.size() != 2) {
-    // TODO: make this an error message.
-    qDebug() << "Error! No account or more than one account in asset has the investment name.";
-    for (auto account : accounts) {
-      qDebug() << account.getTableName() << account.m_category << account.m_name;
-    }
-    return;
   }
 
   // 2. Scan and analysis through all related transactions
   QMap<QDate, double> returnHistory; // Key: date, Value: log2(daily return) until date.
   QList<Money> transferHistory; // Store all the transfer activities since last summary.
-  Money runningBalance(QDate(), USD, 0.00);
+  Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), accountChange(QDate(), USD, 0.00);
   const QDateTime start = QDateTime(QDate(1990, 05, 25), QTime());
-  for (const Transaction& transaction : g_book.queryTransactions(start, QDateTime::currentDateTime(), "", accounts, true, true)) {
-    // Init to the first transaction date and set log(ROI) to 0.
+  QList<Transaction> transactions = g_book.queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
+  for (int i = 0; i < transactions.size(); i++) {
+    // Init the day before first transaction date and set log(ROI) to 0.
     if (returnHistory.empty()) {
-      returnHistory.insert(transaction.m_dateTime.date(), 0.00);
-    }
-    if (investmentName == "33783 Vista Dr") {
-      qDebug() << transaction.m_dateTime << transaction.m_description;
+      returnHistory.insert(transactions.at(i).m_dateTime.date().addDays(-1), 0.00);
     }
 
-    Money gainOrLoss = transaction.getMoneyArray(accounts.at(0)).sum();
-    Money accountChange = transaction.getMoneyArray(accounts.at(1)).sum();
-    Money transfer = accountChange - gainOrLoss;
+    gainOrLoss += transactions.at(i).getMoneyArray(revenue).sum();
+    accountChange += transactions.at(i).getMoneyArray(asset).sum();
     runningBalance += accountChange;
 
+    // Skip calculation if next transaction is in the same day.
+    if (i + 1 < transactions.size()) {
+      if (transactions.at(i + 1).m_dateTime.date() == transactions.at(i).m_dateTime.date()) {
+        continue;
+      }
+    }
+
     // If has activity in revenue
-    if (transaction.accountExist(accounts.at(0))) {
-      qDebug() << transferHistory.size() << gainOrLoss.m_amount;
+    if (transactions.at(i).accountExist(revenue)) {
       double log2_ROI = getLog2DailyROI(transferHistory, gainOrLoss); // Get the log2 return so that we can use + instead of * later.
-      qDebug() << 2;
-      if (!returnHistory.contains(transaction.m_dateTime.date())) {
-        returnHistory.insert(transaction.m_dateTime.date(), log2_ROI);
-      } else /* The second revenue happened in the same day, which should always have 0 ROI. */ {
-        if (log2_ROI != 0.0) {system("pause");}
+      if (!returnHistory.contains(transactions.at(i).m_dateTime.date())) {
+        returnHistory.insert(transactions.at(i).m_dateTime.date(), log2_ROI);
+      } else {
+        // We should never have duplicated date since it's merged in the begining.
+        qDebug() << "Duplicate date found!";
+        qDebug() << investmentName << transactions.at(i).m_dateTime << transactions.at(i).m_description;
+        system("pause");
       }
       transferHistory.clear();
       transferHistory << runningBalance;
     }
     else {
-      transferHistory << transfer;
+      transferHistory << accountChange - gainOrLoss;
     }
+    gainOrLoss = Money(QDate(), USD, 0.00);
+    accountChange = Money(QDate(), USD, 0.00);
   }
 
   m_data.insert(investmentName, returnHistory);
