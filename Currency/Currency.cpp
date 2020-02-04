@@ -36,7 +36,7 @@ void Currency::closeDatabase()
         m_database.close();
 }
 
-double Currency::getCurrencyRate(const QDate& date, const Currency_e &fromSymbol, const Currency_e &toSymbol)
+double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Currency_e toSymbol)
 {
     if (fromSymbol == toSymbol)
         return 1.0;

@@ -4,11 +4,11 @@
 #include "Currency.h"
 
 /****************** Money ****************************/
-Money::Money(const QDate& date, const Currency_e& currency, const double& amount)
+Money::Money(const QDate& date, Currency_e currency, double amount)
   : m_date(date), m_amount(amount), m_currency(currency) {
 }
 
-Money::Money(const QDate& date, QString money_str, const Currency_e& currency)
+Money::Money(const QDate& date, QString money_str, Currency_e currency)
   : m_date(date), m_amount(0.00), m_currency(currency) {
   if (money_str.isEmpty()) {
     return;
@@ -51,7 +51,7 @@ Money Money::operator -() const {
     return Money(m_date, m_currency, -m_amount);
 }
 
-Money Money::operator /(const int &val) const
+Money Money::operator /(int val) const
 {
     if (val == 0)
         qDebug() << Q_FUNC_INFO << val;
@@ -94,7 +94,7 @@ void Money::operator -=(const Money &money)
     *this = *this - money;
 }
 
-void Money::changeCurrency(const Currency_e &currency_e) {
+void Money::changeCurrency(Currency_e currency_e) {
   m_amount  *= g_currency.getCurrencyRate(m_date, m_currency, currency_e);
   m_currency = currency_e;
 }
@@ -111,7 +111,7 @@ Money Money::round() const
 }
 
 /*************** Money Array ********************/
-MoneyArray::MoneyArray(const QDate& date, const Currency_e& currency)
+MoneyArray::MoneyArray(const QDate& date, Currency_e currency)
   : Money(date, currency, 0.00) {
   m_amounts.clear();
 }
@@ -153,7 +153,7 @@ Money MoneyArray::sum() const {
   return money;
 }
 
-Money MoneyArray::getMoney(const int &index) const
+Money MoneyArray::getMoney(int index) const
 {
     Money money(m_date, m_currency, 0);
     if (index < m_amounts.size())
@@ -179,7 +179,7 @@ QString MoneyArray::toString() const
     return result.join(", ");
 }
 
-void MoneyArray::changeCurrency(const Currency_e& currency) {
+void MoneyArray::changeCurrency(Currency_e currency) {
   double currencyRate = g_currency.getCurrencyRate(m_date, m_currency, currency);
   m_currency = currency;
   for (double& amount : m_amounts) {

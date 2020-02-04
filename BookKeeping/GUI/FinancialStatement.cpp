@@ -38,7 +38,7 @@ void FinancialStatement::on_pushButton_Query_clicked() {
   display();
 }
 
-void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, const Money& money) {
+void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money& money) {
   if (item == nullptr)
     return;
 
@@ -69,7 +69,7 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, const int& column, cons
   }
 }
 
-void FinancialStatement::setFont(const int& column, QTreeWidgetItem* item, const int& depth) {
+void FinancialStatement::setFont(int column, QTreeWidgetItem* item, int depth) {
   switch (depth) {
     case 0:
       item->setFont(column, m_financialStatementFont);
@@ -104,7 +104,7 @@ void FinancialStatement::display() {
   ui->treeWidget->expandToDepth(1);
 }
 
-QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, const bool& create) {
+QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool create) {
   // Find or create same financial statement item:
   QTreeWidgetItem *statementItem = nullptr;
   for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
@@ -342,3 +342,8 @@ void FinancialStatement::on_pushButtonShowMore_clicked() {
   ui->treeWidget->resizeColumnToContents(index + 1);
 }
 
+void FinancialStatement::on_pushButton_clicked() {
+  while (ui->treeWidget->columnCount() <= m_records.size()) {
+    on_pushButtonShowMore_clicked();
+  }
+}

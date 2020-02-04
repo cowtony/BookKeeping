@@ -23,22 +23,22 @@ public:
     QString m_description;
 
     Transaction operator + (Transaction p_transaction) const;
-    void        operator +=(const Transaction &p_transaction);
+    void        operator +=(const Transaction& p_transaction);
 
     void clear();
-    void clear(const Account::TableType &tableType);
+    void clear(Account::TableType tableType);
 
-    MoneyArray getMoneyArray(const Account &account) const;
-    void       addMoneyArray(const Account &account, const MoneyArray &moneyArray);
-    void stringToData(const Account::TableType &tableType, const QString &data);
+    MoneyArray getMoneyArray(const Account& account) const;
+    void       addMoneyArray(const Account& account, const MoneyArray& moneyArray);
+    void stringToData(Account::TableType tableType, const QString& data);
 
-    bool accountExist(const Account &account) const;
+    bool accountExist(const Account& account) const;
     Money getCheckSum() const;
     QStringList validation() const;  // Return error message
-    QString dataToString(const Account::TableType &p_tableType) const;
+    QString dataToString(Account::TableType p_tableType) const;
 
     QList<Account> getAccounts() const;
-    QList<Account> getAccounts(const Account::TableType &tableType) const;
+    QList<Account> getAccounts(Account::TableType tableType) const;
 
     MoneyArray getRetainedEarnings() const;
     MoneyArray getXXXContributedCapital() const;  // not used yet
@@ -57,7 +57,7 @@ public:
   MoneyArray retainedEarnings;
   MoneyArray transactionError;
 
-  MoneyArray getMoneyArray(const Account &account) const;
+  MoneyArray getMoneyArray(const Account& account) const;
   QList<Account> getAccounts() const;
 
   // Change date so that the currencyError is calculated and counted.

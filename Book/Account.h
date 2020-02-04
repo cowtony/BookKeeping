@@ -15,8 +15,8 @@ struct BOOKSHARED_EXPORT Account
     typedef enum{Asset, Liability, Revenue, Expense, Equity} TableType;
     static const QMap<TableType, QString> TableName;
 
-    explicit Account(const TableType &table, const QString &category, const QString &name);
-    explicit Account(const QString &tableName, const QString &category, const QString &name);
+    explicit Account(TableType table, const QString& category, const QString& name);
+    explicit Account(const QString& tableName, const QString& category, const QString& name);
 
     TableType m_table;
     QString   m_category;
@@ -25,8 +25,8 @@ struct BOOKSHARED_EXPORT Account
     QString getTableName() const;
     QString getFinancialStatementName() const; // Income Statement, Balance Sheet, Cash Flow
 
-    bool operator  <(const Account &account) const;
-    bool operator ==(const Account &account) const;
+    bool operator  <(const Account& account) const;
+    bool operator ==(const Account& account) const;
 };
 
 #endif // ACCOUNT_H

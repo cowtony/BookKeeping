@@ -6,11 +6,11 @@ const QMap<Account::TableType, QString> Account::TableName = {{Asset, "Asset"},
                                                               {Expense, "Expense"},
                                                               {Equity, "Equity"}};
 
-Account::Account(const TableType &table, const QString &category, const QString &name) : m_table(table), m_category(category), m_name(name)
+Account::Account(TableType table, const QString& category, const QString& name) : m_table(table), m_category(category), m_name(name)
 {
 }
 
-Account::Account(const QString &tableName, const QString &category, const QString &name) : m_category(category), m_name(name)
+Account::Account(const QString& tableName, const QString& category, const QString& name) : m_category(category), m_name(name)
 {
     if (TableName.values().contains(tableName))
         m_table = TableName.key(tableName);

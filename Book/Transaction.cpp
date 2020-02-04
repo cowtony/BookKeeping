@@ -48,7 +48,7 @@ void Transaction::clear() {
     }
 }
 
-void Transaction::clear(const Account::TableType &tableType)
+void Transaction::clear(Account::TableType tableType)
 {
     (*this)[tableType].clear();
 }
@@ -91,7 +91,7 @@ QStringList Transaction::validation() const {
     return errorMessage;
 }
 
-QString Transaction::dataToString(const Account::TableType &tableType) const {
+QString Transaction::dataToString(Account::TableType tableType) const {
     QStringList retString;
     for (const Account &account : getAccounts(tableType))
     {
@@ -103,7 +103,7 @@ QString Transaction::dataToString(const Account::TableType &tableType) const {
     return retString.join("; ");
 }
 
-void Transaction::stringToData(const Account::TableType &tableType, const QString &data) {
+void Transaction::stringToData(Account::TableType tableType, const QString& data) {
   if (data == "Empty" or data.isEmpty()) {
     return;
   }
@@ -137,7 +137,7 @@ QList<Account> Transaction::getAccounts() const {
     return retAccounts;
 }
 
-QList<Account> Transaction::getAccounts(const Account::TableType &tableType) const
+QList<Account> Transaction::getAccounts(Account::TableType tableType) const
 {
     QList<Account> retAccounts;
     for (const QString &category : value(tableType).keys()) {

@@ -29,7 +29,7 @@ private slots:
     void on_actionTransactionValidation_triggered();
 
     void on_pushButtonDeleteTransactions_clicked();
-    void accountCategoryChanged(const Account::TableType &tableType, const QString &category);
+    void accountCategoryChanged(const Account::TableType &tableType, const QString& category);
     void displayTransactions();
     void on_tableWidget_transactions_cellDoubleClicked(int row, int column);
     void setCategoryComboBox();

@@ -31,13 +31,15 @@ private slots:
 
     void on_pushButtonShowMore_clicked();
 
+    void on_pushButton_clicked();
+
 private:
     Ui::FinancialStatement *ui;
 
-    void setMoney(QTreeWidgetItem* item, const int& column, const Money& money);
-    void setFont(const int& column, QTreeWidgetItem* item, const int& depth = -1);
+    void setMoney(QTreeWidgetItem* item, int column, const Money& money);
+    void setFont(int column, QTreeWidgetItem* item, int depth = -1);
     void display();
-    QTreeWidgetItem* getAccountItem(const Account& account, const bool& create = false); // Get or create account item.
+    QTreeWidgetItem* getAccountItem(const Account& account, bool create = false); // Get or create account item.
 
     static QFont m_financialStatementFont;
     static QFont m_tableSumFont;

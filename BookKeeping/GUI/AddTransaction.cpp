@@ -211,7 +211,7 @@ void AddTransaction::on_lineEdit_Description_editingFinished()
     ui->lineEdit_Description->setText(ui->lineEdit_Description->text().simplified());
 }
 
-void AddTransaction::onAccountCateChanged(QTableWidget* tableWidget, const int& row)
+void AddTransaction::onAccountCateChanged(QTableWidget* tableWidget, int row)
 {
     QComboBox* cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
     QComboBox* nameComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1));
@@ -260,7 +260,7 @@ void AddTransaction::onAccountCateChanged(QTableWidget* tableWidget, const int& 
     getTransaction();
 }
 
-void AddTransaction::onAccountNameChanged(QTableWidget* tableWidget, const int& row)
+void AddTransaction::onAccountNameChanged(QTableWidget* tableWidget, int row)
 {
 
 }

@@ -21,6 +21,7 @@ BarChart::BarChart(QWidget *parent) : QMainWindow(parent)
 
     m_axisY = new QValueAxis();
     m_axisY->setTitleText("US Dollar");
+    m_axisY->setLabelFormat("$%d");
 
     m_chartView = new QChartView();
     m_chartView->setRenderHint(QPainter::Antialiasing);

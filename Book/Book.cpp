@@ -110,12 +110,12 @@ bool Book::insertTransaction(const Transaction &t) const {
   }
 }
 
-QList<Transaction> Book::queryTransactions(const QDateTime &startTime,
-                                           const QDateTime &endTime,
-                                           const QString &description,
+QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
+                                           const QDateTime& endTime,
+                                           const QString& description,
                                            const QList<Account>& accounts,
-                                           const bool& ascending,
-                                           const bool& accountUnion) const {
+                                           bool ascending,
+                                           bool accountUnion) const {
   QList<Transaction> transactionList;
 
   QStringList statements;
@@ -282,7 +282,7 @@ Currency_e Book::getCurrencyType(const Account &account) const {
     }
 }
 
-QStringList Book::getCategories(const Account::TableType &p_tableType) const {
+QStringList Book::getCategories(Account::TableType p_tableType) const {
     QStringList l_categories;
     QSqlQuery l_query(m_database);
     l_query.prepare("SELECT DISTINCT Category FROM [" + Account::TableName.value(p_tableType) + "] ORDER BY Category ASC");
@@ -295,7 +295,7 @@ QStringList Book::getCategories(const Account::TableType &p_tableType) const {
     return l_categories;
 }
 
-QStringList Book::getAccountNames(const Account::TableType& tableType, const QString& category) const {
+QStringList Book::getAccountNames(Account::TableType tableType, const QString& category) const {
   QStringList names;
   QSqlQuery query(m_database);
   query.prepare("SELECT Name FROM [" + Account::TableName.value(tableType) + "] WHERE Category = :c ORDER BY Name ASC");
@@ -310,7 +310,7 @@ QStringList Book::getAccountNames(const Account::TableType& tableType, const QSt
   return names;
 }
 
-QStringList Book::getAccountNamesByLastUpdate(const Account::TableType &tableType, const QString &category, const QDateTime &dateTime) const {
+QStringList Book::getAccountNamesByLastUpdate(Account::TableType tableType, const QString& category, const QDateTime& dateTime) const {
     QMultiMap<QDateTime, QString> accountNamesByDate;
     for (const QString &accountName: getAccountNames(tableType, category))
     {

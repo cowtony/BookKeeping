@@ -10,11 +10,11 @@ class BarChart : public QMainWindow
 public:
     explicit BarChart(QWidget *parent = nullptr);
     ~BarChart();
-    void addBarSet(const QString &name, const QList<qreal> &data);
-    void addLine(const QString &name, const QList<qreal> &data);
-    void addBarSetToStackedBarSeries(const QString &name, const QList<qreal> &data);
-    void setAxisX(const QStringList &m_axisX);
-    void setTitle(const QString &title);
+    void addBarSet(const QString& name, const QList<qreal>& data);
+    void addLine(const QString& name, const QList<qreal>& data);
+    void addBarSetToStackedBarSeries(const QString& name, const QList<qreal> &data);
+    void setAxisX(const QStringList& m_axisX);
+    void setTitle(const QString& title);
 
     void show();
     void showStackedBarChart();

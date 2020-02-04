@@ -34,7 +34,7 @@ InvestmentAnalysis::InvestmentAnalysis(QWidget *parent) :
   ui->investmentTableWidget->resizeColumnsToContents();
 
   // Setup plot chart
-  ui->startDateEdit->setDateTime(g_book.getFirstTransactionDateTime());
+  on_resetButton_clicked();
   ui->chartView->setRenderHint(QPainter::Antialiasing);
   ui->chartView->setRubberBand(QChartView::HorizontalRubberBand);
 }
@@ -98,16 +98,14 @@ double InvestmentAnalysis::getLog2DailyROI(const QList<Money>& history, const Mo
   if (history.empty()) {
     return 0;  // This suppose never happen.
   }
-  if (history.first().m_amount < 0) {
-    return 0;  // Special handler for "牛荻红SPY".
-  }
+
   double min = -1.0, max = 1.0;
   double log2_dailyROI = 0.0;
   while (true) {
-    Money npv = calculateGainOrLoss(history, log2_dailyROI, gainOrLoss.m_date);
-    if (qFabs((npv - gainOrLoss).m_amount) < 0.001) {
+    Money gOrL = calculateGainOrLoss(history, log2_dailyROI, gainOrLoss.m_date);
+    if (qFabs((gOrL - gainOrLoss).m_amount) < 0.001) {
       return log2_dailyROI;
-    } else if (npv < gainOrLoss) {
+    } else if (gOrL < gainOrLoss) {
       min = log2_dailyROI;
     } else {
       max = log2_dailyROI;
@@ -116,9 +114,12 @@ double InvestmentAnalysis::getLog2DailyROI(const QList<Money>& history, const Mo
   }
 }
 
-Money InvestmentAnalysis::calculateGainOrLoss(const QList<Money>& history, const double& log2_dailyROI, const QDate& date) {
+Money InvestmentAnalysis::calculateGainOrLoss(const QList<Money>& history, double log2_dailyROI, const QDate& date) {
   Money ret(QDate(), USD, 0.00);
-  for (const Money& money : history) {
+  for (Money money : history) {
+    if (money.m_amount < 0) {
+      money.m_amount = -money.m_amount;
+    }
     ret += money * (qPow(2.0, log2_dailyROI * money.m_date.daysTo(date)) - 1.0);
   }
   return ret;
@@ -167,8 +168,10 @@ void InvestmentAnalysis::plotInvestments() {
 
   QDateTimeAxis* axisX = new QDateTimeAxis;
   axisX->setTitleText("Date");
-  axisX->setTickCount(10);
   axisX->setFormat("yyyy/MM/dd");
+  axisX->setTickCount(10);
+  axisX->setLinePenColor(Qt::darkGray);
+  axisX->setGridLineColor(Qt::darkGray);
   chart->addAxis(axisX, Qt::AlignBottom);
 
   QValueAxis* axisY = new QValueAxis;
@@ -231,4 +234,6 @@ void InvestmentAnalysis::plotInvestments() {
   ui->chartView->setChart(chart);
 }
 
-
+void InvestmentAnalysis::on_resetButton_clicked() {
+  ui->startDateEdit->setDateTime(g_book.getFirstTransactionDateTime());
+}
