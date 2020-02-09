@@ -61,7 +61,7 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   // 2. Scan and analysis through all related transactions
   QMap<QDate, double> returnHistory; // Key: date, Value: log2(daily return) until date.
   QList<Money> transferHistory; // Store all the transfer activities since last summary.
-  Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), accountChange(QDate(), USD, 0.00);
+  Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), balanceChange(QDate(), USD, 0.00);
   const QDateTime start = QDateTime(QDate(1990, 05, 25), QTime());
   QList<Transaction> transactions = g_book.queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
   for (int i = 0; i < transactions.size(); i++) {
@@ -71,8 +71,8 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
     }
 
     gainOrLoss += transactions.at(i).getMoneyArray(revenue).sum();
-    accountChange += transactions.at(i).getMoneyArray(asset).sum();
-    runningBalance += accountChange;
+    balanceChange += transactions.at(i).getMoneyArray(asset).sum();
+    runningBalance += balanceChange;
 
     // Skip calculation if next transaction is in the same day.
     if (i + 1 < transactions.size()) {
@@ -96,10 +96,10 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
       transferHistory << runningBalance;
     }
     else {
-      transferHistory << accountChange - gainOrLoss;
+      transferHistory << balanceChange - gainOrLoss;
     }
     gainOrLoss = Money(QDate(), USD, 0.00);
-    accountChange = Money(QDate(), USD, 0.00);
+    balanceChange = Money(QDate(), USD, 0.00);
   }
 
   m_data.insert(investmentName, returnHistory);

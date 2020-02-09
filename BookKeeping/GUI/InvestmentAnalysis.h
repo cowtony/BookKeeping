@@ -34,7 +34,9 @@ private:
 
   void analysisInvestment(const QString& investmentName);
   static double getLog2DailyROI(const QList<Money>& history, const Money& gainOrLoss);
-  static Money calculateGainOrLoss(const QList<Money>& history, double log2_dailyROI, const QDate& date);
+
+  static Money getNPV(const QList<Money>& history, double log2_dailyROI, const QDate& present);
+  static Money calculateGainOrLoss(const QList<Money>& history, double log2_dailyROI, const QDate& present);
   double calculateAROI(const QString& investmentName) const;
   void plotInvestments();
 };
