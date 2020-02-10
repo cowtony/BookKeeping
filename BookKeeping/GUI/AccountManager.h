@@ -40,13 +40,13 @@ signals:
     void categoryChanged();
 
 private:
-    Ui::AccountManager *ui;
+    Ui::AccountManager *ui_;
 
-    QStringList names;
+    QStringList names_;
 
-    const QFont m_tableFont    = QFont("Georgia",         12, 1, true);
-    const QFont m_categoryFont = QFont("Times New Roman", 12, 1, false);
-    const QFont m_accountFont  = QFont();
+    const QFont kTableFont    = QFont("Georgia",         12, 1, true);
+    const QFont kCategoryFont = QFont("Times New Roman", 12, 1, false);
+    const QFont kAccountFont  = QFont();
 };
 
 #endif // ACCOUNTMANAGER_H

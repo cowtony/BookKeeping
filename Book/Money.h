@@ -16,8 +16,8 @@ public:
   explicit Money(const QDate& date, Currency_e currency = USD, double amount = 0.00);
   explicit Money(const QDate& date, QString money_str, Currency_e currency = USD);  // Valid Input: 123.5 -123.5 (123.5) USD123.50 $123.50 -USD123.50 -$123.50 ($123.50)
 
-  QDate  m_date;
-  double m_amount;
+  QDate  date_;
+  double amount_;
 
   Money operator -() const;
   Money operator /(int val) const;
@@ -35,7 +35,7 @@ public:
   void changeCurrency(Currency_e currency_e);
 
 protected:
-  Currency_e m_currency; // Make this private because change this value will cause m_amounts change as well.
+  Currency_e currency_; // Making this private because change this value will cause m_amounts change as well.
 
 private:
   double getRoundedAmount() const;
@@ -48,7 +48,7 @@ public:
   explicit MoneyArray(const QDate& date, const QString& p_money_s);
   explicit MoneyArray(const Money& money);
 
-  QVector<double> m_amounts;
+  QVector<double> amounts_;
 
   bool isZero() const;
   Money sum() const;

@@ -11,7 +11,7 @@ Currency g_currency;
 
 Currency::Currency(QObject *parent) : QObject(parent)
 {
-    connect(&webCtrl, &QNetworkAccessManager::finished, this, &Currency::onNetworkReply);
+    connect(&webCtrl_, &QNetworkAccessManager::finished, this, &Currency::onNetworkReply);
 }
 
 Currency::~Currency()
@@ -21,19 +21,19 @@ Currency::~Currency()
 
 void Currency::openDatabase(const QString &dbPath)
 {
-    m_database = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
-    m_database.setDatabaseName(dbPath);
-    if (!m_database.open())
+    database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
+    database_.setDatabaseName(dbPath);
+    if (!database_.open())
     {
-        qDebug() << Q_FUNC_INFO << m_database.lastError();
+        qDebug() << Q_FUNC_INFO << database_.lastError();
     }
     removeInvalidCurrency();
 }
 
 void Currency::closeDatabase()
 {
-    if (m_database.isOpen())
-        m_database.close();
+    if (database_.isOpen())
+        database_.close();
 }
 
 double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Currency_e toSymbol)
@@ -43,7 +43,7 @@ double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Curre
 
     double result = 0.0 / 0.0;
 
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM Currency WHERE Date <= :d ORDER BY Date DESC");
     query.bindValue(":d", date.toString("yyyy-MM-dd"));
     if (!query.exec())
@@ -57,9 +57,9 @@ double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Curre
     else
         qDebug() << Q_FUNC_INFO << "Currency not found in date" << date;
 
-    if (!requestedDate.contains(date) and date < QDate::currentDate())
+    if (!requestedDate_.contains(date) and date < QDate::currentDate())
     {
-        requestedDate.insert(date);
+        requestedDate_.insert(date);
         QUrl url("http://data.fixer.io/api/"
                  + date.toString("yyyy-MM-dd") + "?"
 //                 "access_key=077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
@@ -68,7 +68,7 @@ double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Curre
         //       "&base=EUR"    // This is for paid user only
                  "&symbols=" + Symbol_3.values().join(','));
         qDebug() << Q_FUNC_INFO << "Requesting:" << url;
-        webCtrl.get(QNetworkRequest(url));
+        webCtrl_.get(QNetworkRequest(url));
     }
 
     return result;
@@ -78,7 +78,7 @@ void Currency::removeInvalidCurrency() {
   QSqlQuery query("DELETE FROM Currency WHERE EUR IS NULL"
                                          " OR USD IS NULL"
                                          " OR CNY IS NULL"
-                                         " OR GBP IS NULL", m_database);
+                                         " OR GBP IS NULL", database_);
 }
 
 void Currency::onNetworkReply(QNetworkReply* reply)
@@ -93,7 +93,7 @@ void Currency::onNetworkReply(QNetworkReply* reply)
         QJsonValue rates = jsonObject.value("rates");
         QJsonObject jsonRates = rates.toObject();
 
-        QSqlQuery query(m_database);
+        QSqlQuery query(database_);
         query.prepare("INSERT OR REPLACE INTO Currency (Date, " + Symbol_3.values().join(", ") + ") "
                                                "VALUES (:d, :" + Symbol_3.values().join(", :").toLower() + ")");
         query.bindValue(":d", dateTime.date().toString("yyyy-MM-dd"));

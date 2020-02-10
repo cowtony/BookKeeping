@@ -112,8 +112,8 @@ void MainWindow::displayTransactions()
         liabilitySum += t.getMoneyArray(Account(Account::Liability, cateComboBoxs.at(3)->currentText(), nameComboBoxs.at(3)->currentText()));
 
         ui->tableWidget_transactions->insertRow(row);
-        ui->tableWidget_transactions->setItem(row, 0, new QTableWidgetItem(t.m_dateTime.toString(DATE_TIME_FORMAT)));
-        ui->tableWidget_transactions->setItem(row, 1, new QTableWidgetItem(t.m_description));
+        ui->tableWidget_transactions->setItem(row, 0, new QTableWidgetItem(t.dateTime_.toString(DATE_TIME_FORMAT)));
+        ui->tableWidget_transactions->setItem(row, 1, new QTableWidgetItem(t.description_));
         ui->tableWidget_transactions->setItem(row, 2, new QTableWidgetItem(t.dataToString(Account::Expense).replace("; ", "\n")));
         ui->tableWidget_transactions->setItem(row, 3, new QTableWidgetItem(t.dataToString(Account::Revenue).replace("; ", "\n")));
         ui->tableWidget_transactions->setItem(row, 4, new QTableWidgetItem(t.dataToString(Account::Asset).replace("; ", "\n")));
@@ -259,8 +259,8 @@ void MainWindow::on_actionTransactionValidation_triggered() {
   for (const Transaction& t : g_book.queryTransactions(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
                                                        QDateTime(QDate(2200, 1, 1), QTime(0, 0, 0)), "", {}, false)) {
     if (!t.validation().empty()) {
-      errorMessage += t.m_dateTime.toString("yyyy/MM/dd HH:mm:ss") + ": ";
-      errorMessage += t.m_description + '\n';
+      errorMessage += t.dateTime_.toString("yyyy/MM/dd HH:mm:ss") + ": ";
+      errorMessage += t.description_ + '\n';
       errorMessage += "\t" + t.validation().join("; ") + "\n\n";
     }
   }

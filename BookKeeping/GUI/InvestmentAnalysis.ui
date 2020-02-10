@@ -40,7 +40,7 @@
       </column>
       <column>
        <property name="text">
-        <string>APR</string>
+        <string>DR</string>
        </property>
        <property name="font">
         <font>
@@ -51,7 +51,7 @@
       </column>
       <column>
        <property name="text">
-        <string>StdDev</string>
+        <string>APR</string>
        </property>
        <property name="font">
         <font>

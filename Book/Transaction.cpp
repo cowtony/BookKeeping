@@ -11,13 +11,13 @@ Transaction::Transaction() {
 Transaction Transaction::operator +(Transaction transaction) const
 {
     // dateTime is the maximum dateTime
-    transaction.m_dateTime = transaction.m_dateTime > m_dateTime? transaction.m_dateTime : m_dateTime;
+    transaction.dateTime_ = transaction.dateTime_ > dateTime_? transaction.dateTime_ : dateTime_;
 
     // merge description
-    if (m_description.contains(transaction.m_description))
-        transaction.m_description = m_description;
-    else if (!transaction.m_description.contains(m_description))
-        transaction.m_description = m_description + "; " + transaction.m_description;
+    if (description_.contains(transaction.description_))
+        transaction.description_ = description_;
+    else if (!transaction.description_.contains(description_))
+        transaction.description_ = description_ + "; " + transaction.description_;
 
     // Add up account
     for (const Account &account : getAccounts())
@@ -41,8 +41,8 @@ void Transaction::operator +=(const Transaction &t)
 }
 
 void Transaction::clear() {
-    m_dateTime = QDateTime();
-    m_description.clear();
+    dateTime_ = QDateTime();
+    description_.clear();
     for (const Account::TableType &tableType : keys()) {
         clear(tableType);
     }
@@ -65,7 +65,7 @@ bool Transaction::accountExist(const Account &account) const {
 }
 
 Money Transaction::getCheckSum() const {
-  Money sum(m_dateTime.date());
+  Money sum(dateTime_.date());
   for (const Account &account : getAccounts()) {
     if (account.m_table == Account::Expense or account.m_table == Account::Asset)
       sum += getMoneyArray(account).sum();
@@ -78,15 +78,15 @@ Money Transaction::getCheckSum() const {
 
 QStringList Transaction::validation() const {
     QStringList errorMessage;
-    if (m_description.isEmpty())
+    if (description_.isEmpty())
         errorMessage << "Description is empty.";
     if (value(Account::Asset).isEmpty() and
         value(Account::Expense).isEmpty() and
         value(Account::Revenue).isEmpty() and
         value(Account::Liability).isEmpty())
         errorMessage << "No account entries.";
-    if (qFabs(getCheckSum().m_amount) > 0.005)
-        errorMessage << "The sum of the transaction is not zero: " + QString::number(getCheckSum().m_amount);
+    if (qFabs(getCheckSum().amount_) > 0.005)
+        errorMessage << "The sum of the transaction is not zero: " + QString::number(getCheckSum().amount_);
 
     return errorMessage;
 }
@@ -119,9 +119,9 @@ void Transaction::stringToData(Account::TableType tableType, const QString& data
 
     Account account(tableType, category, name);
     if (accountExist(account)) {
-      qDebug() << Q_FUNC_INFO << "Transaction has duplicated account" << m_dateTime;
+      qDebug() << Q_FUNC_INFO << "Transaction has duplicated account" << dateTime_;
     }
-    addMoneyArray(account, MoneyArray(m_dateTime.date(), amounts));
+    addMoneyArray(account, MoneyArray(dateTime_.date(), amounts));
   }
 }
 
@@ -155,7 +155,7 @@ MoneyArray Transaction::getMoneyArray(const Account &account) const {
     if (accountExist(account))
         return value(account.m_table).value(account.m_category).value(account.m_name);
     else
-        return MoneyArray(m_dateTime.date(), USD);
+        return MoneyArray(dateTime_.date(), USD);
 }
 
 void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyArray) {
@@ -165,14 +165,14 @@ void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyA
   }
 
   if (!accountExist(account)) {
-    (*this)[account.m_table][account.m_category][account.m_name] = MoneyArray(moneyArray.m_date, moneyArray.currency());
+    (*this)[account.m_table][account.m_category][account.m_name] = MoneyArray(moneyArray.date_, moneyArray.currency());
   }
   (*this)[account.m_table][account.m_category][account.m_name] += moneyArray;
 }
 
 MoneyArray Transaction::getRetainedEarnings() const
 {
-    MoneyArray ret(m_dateTime.date(), USD);
+    MoneyArray ret(dateTime_.date(), USD);
     for (const Account &account : getAccounts(Account::Revenue))
         ret += getMoneyArray(account);
 
@@ -184,7 +184,7 @@ MoneyArray Transaction::getRetainedEarnings() const
 
 MoneyArray Transaction::getXXXContributedCapital() const
 {
-    return MoneyArray(m_dateTime.date(), USD);
+    return MoneyArray(dateTime_.date(), USD);
 }
 
 //////////////////// Financial Summary /////////////////////////////
@@ -198,7 +198,7 @@ MoneyArray FinancialStat::getMoneyArray(const Account &account) const {
   } else if (account == Account(Account::Equity, "Retained Earnings", "Transaction Error")) {
     return transactionError;
   } else if (account == Account(Account::Equity, "Contributed Capitals", "Contributed Capital")) {
-    return MoneyArray(m_dateTime.date(), USD); // Empty money array.
+    return MoneyArray(dateTime_.date(), USD); // Empty money array.
   }
   return Transaction::getMoneyArray(account);
 }
@@ -214,10 +214,10 @@ QList<Account> FinancialStat::getAccounts() const {
 
 void FinancialStat::changeDate(const QDate& nextDate) {
   // Skip when next transaction is the same day of current transaction.
-  if (m_dateTime.date() == nextDate) {
+  if (dateTime_.date() == nextDate) {
     return;
   }
-  MoneyArray before(m_dateTime.date(), currencyError.currency());
+  MoneyArray before(dateTime_.date(), currencyError.currency());
   MoneyArray after(nextDate, currencyError.currency());
   for (const Account& account : Transaction::getAccounts(Account::Asset)) {
     before += getMoneyArray(account);

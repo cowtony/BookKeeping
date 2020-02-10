@@ -19,8 +19,8 @@ class BOOKSHARED_EXPORT Transaction : protected QMap<Account::TableType, QMap<QS
 public:
     explicit Transaction();
 
-    QDateTime m_dateTime;
-    QString m_description;
+    QDateTime dateTime_;
+    QString description_;
 
     Transaction operator + (Transaction p_transaction) const;
     void        operator +=(const Transaction& p_transaction);

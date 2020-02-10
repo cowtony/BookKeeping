@@ -49,7 +49,7 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money
   const Money difference = money - Money(date, item->text(column));
 
   item->setText(column, money.toString());
-  if (money.m_amount < 0) {
+  if (money.amount_ < 0) {
     item->setTextColor(column, Qt::red);
   } else {
     item->setTextColor(column, QColor(Qt::black));
@@ -263,7 +263,7 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem *item, int co
         for (int col = 1; col < ui->treeWidget->columnCount(); col++)
         {
             xAxis.push_front(ui->treeWidget->headerItem()->text(col));
-            sum.push_front(Money(QDate(), item->text(col)).m_amount);
+            sum.push_front(Money(QDate(), item->text(col)).amount_);
         }
         barChart->setAxisX(xAxis);
         barChart->addLine(item->text(0), sum);
@@ -279,9 +279,9 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem *item, int co
                     continue;
                 if ((item->text(0) == "Income Statement" and item->child(index)->text(0) == "Expense") or
                     (item->text(0) == "Balance Sheet"    and item->child(index)->text(0) == "Liability"))
-                    data.push_front(-money.m_amount);
+                    data.push_front(-money.amount_);
                 else
-                    data.push_front(money.m_amount);
+                    data.push_front(money.amount_);
             }
             barChart->addBarSetToStackedBarSeries(item->child(index)->text(0), data);
         }
@@ -297,7 +297,7 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem *item, int co
 
         QStringList xAxis;
         for (int i = 0; i < m_records.size(); i++)
-            xAxis.push_front(m_records.at(i).m_description);
+            xAxis.push_front(m_records.at(i).description_);
         barChart->setAxisX(xAxis);
 
         QList<qreal> yAxis1;
@@ -305,8 +305,8 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem *item, int co
         Account account(pathway.at(1), pathway.at(2), pathway.at(3));
         for (int i = 0; i < m_records.size(); i++)
         {
-            yAxis1.push_front(m_records.at(i).getMoneyArray(account).getMoney(0).m_amount);
-            yAxis2.push_front(m_records.at(i).getMoneyArray(account).getMoney(1).m_amount);
+            yAxis1.push_front(m_records.at(i).getMoneyArray(account).getMoney(0).amount_);
+            yAxis2.push_front(m_records.at(i).getMoneyArray(account).getMoney(1).amount_);
         }
         barChart->addBarSet("Person 1", yAxis1);
         barChart->addBarSet("Person 2", yAxis2);
@@ -324,7 +324,7 @@ void FinancialStatement::on_pushButtonShowMore_clicked() {
   }
 
   ui->treeWidget->setColumnCount(index + 2);
-  ui->treeWidget->headerItem()->setText(index + 1, m_records.at(index).m_description);
+  ui->treeWidget->headerItem()->setText(index + 1, m_records.at(index).description_);
 
   for (const Account& account : m_records.at(index).getAccounts()) {
     MoneyArray moneyArray = m_records.at(index).getMoneyArray(account);

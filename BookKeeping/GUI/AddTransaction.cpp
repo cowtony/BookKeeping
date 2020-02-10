@@ -83,16 +83,16 @@ void AddTransaction::setTransaction(const Transaction &transaction)
     ui->pushButton_Insert->setText("Replace");
 
     // Date time
-    replacedDateTime = transaction.m_dateTime;
-    ui->dateTimeEdit->setDateTime(transaction.m_dateTime);
+    replacedDateTime = transaction.dateTime_;
+    ui->dateTimeEdit->setDateTime(transaction.dateTime_);
 
     // Description
-    if (transaction.m_description.contains("[R]"))
+    if (transaction.description_.contains("[R]"))
     {
         ui->checkBox_RecursiveTransaction->setChecked(true);
         ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));
     }
-    ui->lineEdit_Description->setText(QString(transaction.m_description).remove("[R]"));
+    ui->lineEdit_Description->setText(QString(transaction.description_).remove("[R]"));
 
     for (const Account &account : transaction.getAccounts())
     {
@@ -104,8 +104,8 @@ void AddTransaction::setTransaction(const Transaction &transaction)
 
 Transaction AddTransaction::getTransaction() {
   Transaction retTransaction;
-  retTransaction.m_dateTime = ui->dateTimeEdit->dateTime();
-  retTransaction.m_description = ui->lineEdit_Description->text();
+  retTransaction.dateTime_ = ui->dateTimeEdit->dateTime();
+  retTransaction.description_ = ui->lineEdit_Description->text();
 
   for (QTableWidget* tableWidget : {ui->tableWidget_Assets,
                                     ui->tableWidget_Expenses,
@@ -180,10 +180,10 @@ void AddTransaction::on_pushButton_Insert_clicked()
     g_book.insertTransaction(t);
     if (ui->checkBox_RecursiveTransaction->isChecked())
     {
-        t.m_dateTime = ui->dateEdit_nextTransaction->dateTime();
-        t.m_description = "[R]" + ui->lineEdit_Description->text();
-        while (g_book.dateTimeExist(t.m_dateTime))
-            t.m_dateTime = t.m_dateTime.addSecs(1);
+        t.dateTime_ = ui->dateEdit_nextTransaction->dateTime();
+        t.description_ = "[R]" + ui->lineEdit_Description->text();
+        while (g_book.dateTimeExist(t.dateTime_))
+            t.dateTime_ = t.dateTime_.addSecs(1);
         g_book.insertTransaction(t);
     }
 

@@ -30,9 +30,9 @@ private slots:
     void onNetworkReply(QNetworkReply*);
 
 private:
-  QSqlDatabase m_database;
-  QNetworkAccessManager webCtrl;
-  QSet<QDate> requestedDate;
+  QSqlDatabase database_;
+  QNetworkAccessManager webCtrl_;
+  QSet<QDate> requestedDate_;
 
   void removeInvalidCurrency();
 };

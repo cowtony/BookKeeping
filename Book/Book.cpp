@@ -78,8 +78,8 @@ Transaction Book::getTransaction(const QDateTime &dt)
     query.exec();
     if (query.next())
     {
-        t.m_dateTime = dt;
-        t.m_description = query.value("Description").toString();
+        t.dateTime_ = dt;
+        t.description_ = query.value("Description").toString();
         t.stringToData(Account::Expense,   query.value("Expense").toString());
         t.stringToData(Account::Revenue,   query.value("Revenue").toString());
         t.stringToData(Account::Asset,     query.value("Asset").toString());
@@ -94,8 +94,8 @@ bool Book::insertTransaction(const Transaction &t) const {
   QSqlQuery query(m_database);
   query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
                               "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
-  query.bindValue(":dateTime",    t.m_dateTime.toString(DATE_TIME_FORMAT));
-  query.bindValue(":description", t.m_description);
+  query.bindValue(":dateTime",    t.dateTime_.toString(DATE_TIME_FORMAT));
+  query.bindValue(":description", t.description_);
   query.bindValue(":expense",     t.dataToString(Account::Expense));
   query.bindValue(":revenue",     t.dataToString(Account::Revenue));
   query.bindValue(":asset",       t.dataToString(Account::Asset));
@@ -144,11 +144,11 @@ QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
 
   while (query.next()) {
     Transaction t;
-    t.m_description = query.value("Description").toString();
-    t.m_dateTime = query.value("Date").toDateTime();
+    t.description_ = query.value("Description").toString();
+    t.dateTime_ = query.value("Date").toDateTime();
     // TODO: somehow several outbounded transaction will also be selected.
     // This hard code is to remove them.
-    if (t.m_dateTime < startTime or t.m_dateTime > endTime) {
+    if (t.dateTime_ < startTime or t.dateTime_ > endTime) {
       continue;
     }
 
@@ -176,15 +176,15 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
 
   while (query.next()) {
     Transaction transaction;
-    transaction.m_dateTime = query.value("Date").toDateTime();
+    transaction.dateTime_ = query.value("Date").toDateTime();
     transaction.stringToData(Account::Expense,   query.value("Expense")  .toString());
     transaction.stringToData(Account::Revenue,   query.value("Revenue")  .toString());
     transaction.stringToData(Account::Asset,     query.value("Asset")    .toString());
     transaction.stringToData(Account::Liability, query.value("Liability").toString());
 
     // Use `while` instead of `if` in case there was no transaction for successive months.
-    while (transaction.m_dateTime.date() >= month.addMonths(1)) {
-      monthlySummary.m_description = month.toString("yyyy-MM");
+    while (transaction.dateTime_.date() >= month.addMonths(1)) {
+      monthlySummary.description_ = month.toString("yyyy-MM");
       retSummarys.push_front(monthlySummary);
 
       month = month.addMonths(1);
@@ -193,13 +193,13 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
     }
 
     // TODO: next line increate the time from 5s to 9s.
-    monthlySummary.changeDate(transaction.m_dateTime.date());  // Must run this before set m_dateTime.
-    monthlySummary.m_dateTime = transaction.m_dateTime;
+    monthlySummary.changeDate(transaction.dateTime_.date());  // Must run this before set m_dateTime.
+    monthlySummary.dateTime_ = transaction.dateTime_;
     monthlySummary += transaction;
     monthlySummary.retainedEarnings += transaction.getRetainedEarnings();
     monthlySummary.transactionError += MoneyArray(transaction.getCheckSum());
   }
-  monthlySummary.m_description = month.toString("yyyy-MM");
+  monthlySummary.description_ = month.toString("yyyy-MM");
   retSummarys.push_front(monthlySummary);
 
   return retSummarys;

@@ -23,13 +23,29 @@ InvestmentAnalysis::InvestmentAnalysis(QWidget *parent) :
     QTableWidgetItem* item = new QTableWidgetItem(investments.at(row));
     item->setCheckState(Qt::Unchecked);   // To Show the checkbox.
     ui->investmentTableWidget->setItem(row, 0, item);
-    double AROI = (calculateAROI(investments.at(row)) - 1.0) * 100;
-    QTableWidgetItem* roiItem = new QTableWidgetItem(QString::number(AROI, 'f', 2) + "%");
-    if (AROI < 0) {
-      roiItem->setTextColor(Qt::red);
+
+    // Set column 1: Discount Rate
+    double discount_rate = (discount_rates_.value(investments.at(row)) - 1.0) * 100;
+    QTableWidgetItem* discount_rate_item = new QTableWidgetItem(QString::number(discount_rate, 'f', 2) + "%");
+    if (discount_rate < 0) {
+      discount_rate_item->setTextColor(Qt::red);
     }
-    roiItem->setTextAlignment(Qt::AlignRight);
-    ui->investmentTableWidget->setItem(row, 1, roiItem);
+    discount_rate_item->setTextAlignment(Qt::AlignRight);
+    ui->investmentTableWidget->setItem(row, 1, discount_rate_item);
+
+    // Set column 2: APR.
+    double APR = 0;
+    if (return_histories_.contains(investments.at(row))) {
+      APR = (calculateAPR(return_histories_.value(investments.at(row))) - 1.0) * 100;
+    }
+    QTableWidgetItem* apr_item = new QTableWidgetItem(QString::number(APR, 'f', 2) + "%");
+    if (APR < 0) {
+      apr_item->setTextColor(Qt::red);
+    }
+    apr_item->setTextAlignment(Qt::AlignRight);
+    ui->investmentTableWidget->setItem(row, 2, apr_item);
+
+
   }
   ui->investmentTableWidget->resizeColumnsToContents();
 
@@ -60,105 +76,107 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
 
   // 2. Scan and analysis through all related transactions
   QMap<QDate, double> returnHistory; // Key: date, Value: log2(daily return) until date.
-  QList<Money> transferHistory; // Store all the transfer activities since last summary.
-  Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), accountChange(QDate(), USD, 0.00);
+  QList<Money> local_transfer_history; // Store all the transfer activities since last summary.
+  QList<Money> alltime_transfer_history;
+  Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), balanceChange(QDate(), USD, 0.00);
   const QDateTime start = QDateTime(QDate(1990, 05, 25), QTime());
   QList<Transaction> transactions = g_book.queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
   for (int i = 0; i < transactions.size(); i++) {
     // Init the day before first transaction date and set log(ROI) to 0.
     if (returnHistory.empty()) {
-      returnHistory.insert(transactions.at(i).m_dateTime.date().addDays(-1), 0.00);
+      returnHistory.insert(transactions.at(i).dateTime_.date().addDays(-1), 0.00);
     }
 
     gainOrLoss += transactions.at(i).getMoneyArray(revenue).sum();
-    accountChange += transactions.at(i).getMoneyArray(asset).sum();
-    runningBalance += accountChange;
+    balanceChange += transactions.at(i).getMoneyArray(asset).sum();
 
     // Skip calculation if next transaction is in the same day.
     if (i + 1 < transactions.size()) {
-      if (transactions.at(i + 1).m_dateTime.date() == transactions.at(i).m_dateTime.date()) {
+      if (transactions.at(i + 1).dateTime_.date() == transactions.at(i).dateTime_.date()) {
         continue;
       }
     }
+    runningBalance += balanceChange;
+    local_transfer_history   << balanceChange - gainOrLoss;
+    alltime_transfer_history << balanceChange - gainOrLoss;
 
     // If has activity in revenue
-    if (transactions.at(i).accountExist(revenue)) {
-      double log2_ROI = getLog2DailyROI(transferHistory, gainOrLoss); // Get the log2 return so that we can use + instead of * later.
-      if (!returnHistory.contains(transactions.at(i).m_dateTime.date())) {
-        returnHistory.insert(transactions.at(i).m_dateTime.date(), log2_ROI);
+    if (gainOrLoss.amount_ != 0.0) {
+      double log2_ROI = backCalculateNPV(local_transfer_history, runningBalance); // Get the log2 return so that we can use + instead of * later.
+      if (!returnHistory.contains(transactions.at(i).dateTime_.date())) {
+        returnHistory.insert(transactions.at(i).dateTime_.date(), log2_ROI);
       } else {
         // We should never have duplicated date since it's merged in the begining.
         qDebug() << "Duplicate date found!";
-        qDebug() << investmentName << transactions.at(i).m_dateTime << transactions.at(i).m_description;
+        qDebug() << investmentName << transactions.at(i).dateTime_ << transactions.at(i).description_;
         system("pause");
       }
-      transferHistory.clear();
-      transferHistory << runningBalance;
+      local_transfer_history.clear();
+      local_transfer_history << runningBalance;
     }
-    else {
-      transferHistory << accountChange - gainOrLoss;
-    }
+
     gainOrLoss = Money(QDate(), USD, 0.00);
-    accountChange = Money(QDate(), USD, 0.00);
+    balanceChange = Money(QDate(), USD, 0.00);
   }
 
-  m_data.insert(investmentName, returnHistory);
+  return_histories_.insert(investmentName, returnHistory);
+  discount_rates_.insert(investmentName, qPow(2.0, backCalculateNPV(alltime_transfer_history, runningBalance) * 365));
 }
 
-double InvestmentAnalysis::getLog2DailyROI(const QList<Money>& history, const Money& gainOrLoss) {
+double InvestmentAnalysis::backCalculateNPV(const QList<Money>& history, const Money& npv) {
   if (history.empty()) {
     return 0;  // This suppose never happen.
   }
 
-  double min = -1.0, max = 1.0;
+  const double kMin = -1.0, kMax= 1.0, kTolerance = 1.0e-8;
+  double min = kMin, max = kMax;
   double log2_dailyROI = 0.0;
+
+  // Find out if the NPV increase while ROI increase?
+  bool monotonic_increase = calculateNPV(history, 0.0, npv.date_) <
+                            calculateNPV(history, 0.1, npv.date_);
+
   while (true) {
-    Money gOrL = calculateGainOrLoss(history, log2_dailyROI, gainOrLoss.m_date);
-    if (qFabs((gOrL - gainOrLoss).m_amount) < 0.001) {
+    Money temp_npv = calculateNPV(history, log2_dailyROI, npv.date_);
+
+    // Return if found a accurate enough ROI.
+    if (qFabs((temp_npv - npv).amount_) < kTolerance) {
       return log2_dailyROI;
-    } else if (gOrL < gainOrLoss) {
-      min = log2_dailyROI;
-    } else {
+    }
+
+    if (temp_npv < npv xor monotonic_increase) {
       max = log2_dailyROI;
+    } else {
+      min = log2_dailyROI;
     }
     log2_dailyROI = (min + max) / 2;
+
+    // Special handle when ROI converge but still not meet NPV requirement.
+    // For example, Bitcoin has no previous transaction but the first one is recoreded as loss, which will resulted in a infinity ROI.
+    if (qFabs(log2_dailyROI - kMin) < kTolerance or qFabs(log2_dailyROI - kMax) < kTolerance) {
+      return log2_dailyROI;
+    }
   }
 }
 
-Money InvestmentAnalysis::getNPV(const QList<Money>& history, double log2_dailyROI, const QDate& present) {
+// The NPV may monotonic increase or DECREASE with ROI.
+// This is depends on how history is ordered and negative values inside.
+Money InvestmentAnalysis::calculateNPV(const QList<Money>& history, double log2_dailyROI, const QDate& present) {
   Money ret(QDate(), USD, 0.00);
   for (Money money : history) {
-    if (money.m_amount < 0) {
-      money.m_amount = -money.m_amount;
-    }
-    ret += money * (qPow(2.0, log2_dailyROI * money.m_date.daysTo(present)));
+    ret += money * (qPow(2.0, log2_dailyROI * money.date_.daysTo(present)));
   }
   return ret;
 }
 
-Money InvestmentAnalysis::calculateGainOrLoss(const QList<Money>& history, double log2_dailyROI, const QDate& present) {
-  Money ret(QDate(), USD, 0.00);
-  for (Money money : history) {
-    if (money.m_amount < 0) {
-      money.m_amount = -money.m_amount;
-    }
-    ret += money * (qPow(2.0, log2_dailyROI * money.m_date.daysTo(present))) - money;
-  }
-  return ret;
-}
-
-double InvestmentAnalysis::calculateAROI(const QString& investmentName) const {
-  if (!m_data.contains(investmentName)) {
-    return 0.0;
-  }
-  const QMap<QDate, double>& history = m_data.value(investmentName);
+double InvestmentAnalysis::calculateAPR(const QMap<QDate, double>& returnHistory) {
   double log2_AROI = 0.0;
   QDate previousDate(1990, 05, 25);
-  for (const QDate& date : history.keys()) {
-    log2_AROI += previousDate.daysTo(date) * history.value(date);
+  for (const QDate& date : returnHistory.keys()) {
+    log2_AROI += previousDate.daysTo(date) * returnHistory.value(date);
     previousDate = date;
   }
-  log2_AROI /= history.firstKey().daysTo(history.lastKey()) / 365.0;
+  log2_AROI /= returnHistory.firstKey().daysTo(returnHistory.lastKey()) / 365.0;
   return qPow(2.0, log2_AROI);
 }
 
@@ -222,11 +240,11 @@ void InvestmentAnalysis::plotInvestments() {
       double value = 0;
       QDate previousDate = ui->startDateEdit->date();
       lineSeries->append(ui->startDateEdit->dateTime().toMSecsSinceEpoch(), value);  // Add first data point as begin.
-      for (const QDate& date : m_data.value(investmentName).keys()) {
+      for (const QDate& date : return_histories_.value(investmentName).keys()) {
         if (date <= ui->startDateEdit->date()) {
           continue;
         }
-        value += previousDate.daysTo(date) * m_data.value(investmentName).value(date);
+        value += previousDate.daysTo(date) * return_histories_.value(investmentName).value(date);
         lineSeries->append(QDateTime(date).toMSecsSinceEpoch(), value);
 
         minY = value < minY ? value : minY;

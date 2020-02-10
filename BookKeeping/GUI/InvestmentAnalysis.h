@@ -30,14 +30,17 @@ private slots:
 private:
   Ui::InvestmentAnalysis *ui;
 
-  QMap<QString, QMap<QDate, double>> m_data;  // Key1: investment name, Value: (Key2: date, Value: log2(ROI) until date)
+  QMap<QString, double> discount_rates_;  // Value: annual discount rate
+  QMap<QString, QMap<QDate, double>> return_histories_;  // Key1: investment name, Value: (Key2: date, Value: log2(ROI) until date)
 
   void analysisInvestment(const QString& investmentName);
-  static double getLog2DailyROI(const QList<Money>& history, const Money& gainOrLoss);
 
-  static Money getNPV(const QList<Money>& history, double log2_dailyROI, const QDate& present);
-  static Money calculateGainOrLoss(const QList<Money>& history, double log2_dailyROI, const QDate& present);
-  double calculateAROI(const QString& investmentName) const;
+  // Returns the log2(daily_discount_rate) when reverse caluclate NPV.
+  static double backCalculateNPV(const QList<Money>& history, const Money& npv);
+  // Returns net present value.
+  static Money calculateNPV(const QList<Money>& history, double log2_dailyROI, const QDate& present);
+  static double calculateAPR(const QMap<QDate, double>& returnHistory);
+
   void plotInvestments();
 };
 
