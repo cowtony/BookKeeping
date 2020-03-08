@@ -36,18 +36,14 @@ private slots:
 
     void on_pushButton_MergeTransaction_clicked();
 
-
-
-
-
 private:
     Ui::MainWindow *ui;
 
     AccountManager     *accountManager;
     FinancialStatement *financialStatement;
 
-    QDateEdit *startDate;
-    QDateEdit *endDate;
+    QDateEdit* startDate_;
+    QDateEdit* endDate_;
 
     const QMap<int, Account::TableType> TableIndex;
 

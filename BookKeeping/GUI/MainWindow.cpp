@@ -23,17 +23,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Init table widget
     ui->tableWidget_transactions->setRowCount(2);
 
-    startDate = new QDateEdit();
-    startDate->setDate(QDate::currentDate().addMonths(-1));
-    startDate->setDisplayFormat("yyyy-MM-dd");
-    ui->tableWidget_transactions->setCellWidget(0, 0, startDate);
-    connect(startDate, SIGNAL(userDateChanged(const QDate&)), this, SLOT(displayTransactions()));
+    startDate_ = new QDateEdit();
+    startDate_->setDate(QDate::currentDate().addMonths(-1));
+    startDate_->setDisplayFormat("yyyy-MM-dd");
+    ui->tableWidget_transactions->setCellWidget(0, 0, startDate_);
+    connect(startDate_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(displayTransactions()));
 
-    endDate = new QDateEdit();
-    endDate->setDate(QDate(QDate::currentDate()));
-    endDate->setDisplayFormat("yyyy-MM-dd");
-    ui->tableWidget_transactions->setCellWidget(1, 0, endDate);
-    connect(endDate, SIGNAL(userDateChanged(const QDate&)), this, SLOT(displayTransactions()));
+    endDate_ = new QDateEdit();
+    endDate_->setDate(QDate(QDate::currentDate()));
+    endDate_->setDisplayFormat("yyyy-MM-dd");
+    ui->tableWidget_transactions->setCellWidget(1, 0, endDate_);
+    connect(endDate_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(displayTransactions()));
 
     for (const Account::TableType &tableType : TableIndex.values())
     {
@@ -93,13 +93,13 @@ void MainWindow::displayTransactions()
     if (!nameComboBoxs.at(3)->currentText().isEmpty())
         filter << Account(Account::Liability, cateComboBoxs.at(3)->currentText(), nameComboBoxs.at(3)->currentText());
 
-    MoneyArray expenseSum  (endDate->date(), USD);
-    MoneyArray revenueSum  (endDate->date(), USD);
-    MoneyArray assetSum    (endDate->date(), USD);
-    MoneyArray liabilitySum(endDate->date(), USD);
+    MoneyArray expenseSum  (endDate_->date(), USD);
+    MoneyArray revenueSum  (endDate_->date(), USD);
+    MoneyArray assetSum    (endDate_->date(), USD);
+    MoneyArray liabilitySum(endDate_->date(), USD);
 
-    for (const Transaction& t : g_book.queryTransactions(QDateTime(startDate->date(), QTime(00, 00, 00)),
-                                                         QDateTime(endDate->date(), QTime(23, 59, 59)),
+    for (const Transaction& t : g_book.queryTransactions(QDateTime(startDate_->date(), QTime(00, 00, 00)),
+                                                         QDateTime(endDate_->date(), QTime(23, 59, 59)),
                                                          static_cast<QLineEdit*>(ui->tableWidget_transactions->cellWidget(1, 1))->text(),
                                                          filter, false, false))
     {
@@ -235,7 +235,7 @@ void MainWindow::on_actionAddTransaction_triggered() {
 void MainWindow::accountCategoryChanged(const Account::TableType &tableType, const QString &category) {
   QComboBox* nameComboBox = static_cast<QComboBox*>(ui->tableWidget_transactions->cellWidget(1, TableIndex.key(tableType)));
   nameComboBox->clear();
-  nameComboBox->addItems(g_book.getAccountNames(tableType, category));
+  nameComboBox->addItems(g_book.getAccountNamesByLastUpdate(tableType, category, endDate_->dateTime()));
 }
 
 void MainWindow::on_actionAccountManager_triggered() {
