@@ -1,15 +1,12 @@
 #include "InvestmentAnalysis.h"
 #include "ui_InvestmentAnalysis.h"
 
-#include "Book.h"
-
-InvestmentAnalysis::InvestmentAnalysis(QWidget *parent) :
-  QMainWindow(parent),
-  ui(new Ui::InvestmentAnalysis) {
+InvestmentAnalysis::InvestmentAnalysis(std::shared_ptr<Book> book, QWidget *parent)
+    : QMainWindow(parent), ui(new Ui::InvestmentAnalysis), book_(book) {
   ui->setupUi(this);
 
   // Scan, analysis and save all investment product:
-  QStringList investments = g_book.getAccountNames(Account::Revenue, "Investment");
+  QStringList investments = book_->getAccountNames(Account::Revenue, "Investment");
   QApplication::setOverrideCursor(Qt::WaitCursor);
   for (const QString& investmentName : investments) {
     analysisInvestment(investmentName);
@@ -63,8 +60,8 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   // 1. Setup two related account from Asset & Revenue.
   Account asset(Account::Asset, "", investmentName);
   Account revenue(Account::Revenue, "Investment", investmentName);
-  for (const QString& categoryName : g_book.getCategories(Account::Asset)) {
-    if (g_book.accountExist(Account(Account::Asset, categoryName, investmentName))) {
+  for (const QString& categoryName : book_->getCategories(Account::Asset)) {
+    if (book_->accountExist(Account(Account::Asset, categoryName, investmentName))) {
       if (!asset.m_category.isEmpty()) {
         // TODO: make this an error message.
         qDebug() << "Error! More than one account in asset has the investment name.";
@@ -80,7 +77,7 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   QList<Money> alltime_transfer_history;
   Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), balanceChange(QDate(), USD, 0.00);
   const QDateTime start = QDateTime(QDate(1990, 05, 25), QTime());
-  QList<Transaction> transactions = g_book.queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
+  QList<Transaction> transactions = book_->queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
   for (int i = 0; i < transactions.size(); i++) {
     // Init the day before first transaction date and set log(ROI) to 0.
     if (returnHistory.empty()) {
@@ -275,5 +272,5 @@ void InvestmentAnalysis::plotInvestments() {
 }
 
 void InvestmentAnalysis::on_resetButton_clicked() {
-  ui->startDateEdit->setDateTime(g_book.getFirstTransactionDateTime());
+  ui->startDateEdit->setDateTime(book_->getFirstTransactionDateTime());
 }

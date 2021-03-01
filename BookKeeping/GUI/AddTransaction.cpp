@@ -6,24 +6,23 @@
 
 #include "Book.h"
 
-AddTransaction::AddTransaction(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::AddTransaction)
-{
-    ui->setupUi(this);
+AddTransaction::AddTransaction(std::shared_ptr<Book> book, QWidget *parent)
+    : QMainWindow(parent), ui(new Ui::AddTransaction), book_(book) {
+  ui->setupUi(this);
 
-    tableMap.insert(Account::Asset,     ui->tableWidget_Assets);
-    tableMap.insert(Account::Expense,   ui->tableWidget_Expenses);
-    tableMap.insert(Account::Revenue,   ui->tableWidget_Revenues);
-    tableMap.insert(Account::Liability, ui->tableWidget_Liabilities);
+  tableMap.insert(Account::Asset,     ui->tableWidget_Assets);
+  tableMap.insert(Account::Expense,   ui->tableWidget_Expenses);
+  tableMap.insert(Account::Revenue,   ui->tableWidget_Revenues);
+  tableMap.insert(Account::Liability, ui->tableWidget_Liabilities);
 
-    QPalette palette = ui->tableWidget_Revenues->palette();
-    palette.setColor(QPalette::Base, Qt::gray);
-    ui->tableWidget_Revenues->setPalette(palette);
-    ui->tableWidget_Liabilities->setPalette(palette);
+  QPalette palette = ui->tableWidget_Revenues->palette();
+  palette.setColor(QPalette::Base, Qt::gray);
+  ui->tableWidget_Revenues->setPalette(palette);
+  ui->tableWidget_Liabilities->setPalette(palette);
 
-    ui->comboBox_Currency->addItems(Currency::Symbol_3.values());
+  ui->comboBox_Currency->addItems(Currency::Symbol_3.values());
 
-    initialization();
+  initialization();
 }
 
 AddTransaction::~AddTransaction()
@@ -122,10 +121,10 @@ Transaction AddTransaction::getTransaction() {
 
       Account account(tableType, cateComboBox->currentText(), nameComboBox->currentText());
 
-      MoneyArray moneyArray(ui->dateTimeEdit->date(), g_book.getCurrencyType(account));
+      MoneyArray moneyArray(ui->dateTimeEdit->date(), book_->getCurrencyType(account));
       for (int col = 2; col < tableWidget->columnCount(); col++) {
         QLineEdit *lineEdit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
-        Money money(ui->dateTimeEdit->date(), lineEdit->text(), g_book.getCurrencyType(account));
+        Money money(ui->dateTimeEdit->date(), lineEdit->text(), book_->getCurrencyType(account));
         if (!lineEdit->text().isEmpty()) {
           lineEdit->setText(money.toString());
         }
@@ -144,7 +143,7 @@ void AddTransaction::on_pushButton_Insert_clicked()
     Transaction t = getTransaction();
     errorMsg << t.validation();
 
-    if (g_book.dateTimeExist(ui->dateTimeEdit->dateTime()))
+    if (book_->dateTimeExist(ui->dateTimeEdit->dateTime()))
     {
         if (ui->pushButton_Insert->text() != "Replace" or ui->dateTimeEdit->dateTime() != replacedDateTime)
             errorMsg << "Date Time already exist.";
@@ -169,7 +168,7 @@ void AddTransaction::on_pushButton_Insert_clicked()
         {
         case QMessageBox::Ok:
         {
-            g_book.removeTransaction(replacedDateTime);
+            book_->removeTransaction(replacedDateTime);
             break;
         }
         case QMessageBox::Cancel:
@@ -177,14 +176,14 @@ void AddTransaction::on_pushButton_Insert_clicked()
         }
     }
 
-    g_book.insertTransaction(t);
+    book_->insertTransaction(t);
     if (ui->checkBox_RecursiveTransaction->isChecked())
     {
         t.dateTime_ = ui->dateEdit_nextTransaction->dateTime();
         t.description_ = "[R]" + ui->lineEdit_Description->text();
-        while (g_book.dateTimeExist(t.dateTime_))
+        while (book_->dateTimeExist(t.dateTime_))
             t.dateTime_ = t.dateTime_.addSecs(1);
-        g_book.insertTransaction(t);
+        book_->insertTransaction(t);
     }
 
     emit insertTransactionFinished(this);
@@ -206,18 +205,16 @@ void AddTransaction::on_dateTimeEdit_dateTimeChanged(const QDateTime &dateTime_)
     ui->calendarWidget->setSelectedDate(dateTime_.date());
 }
 
-void AddTransaction::on_lineEdit_Description_editingFinished()
-{
-    ui->lineEdit_Description->setText(ui->lineEdit_Description->text().simplified());
+void AddTransaction::on_lineEdit_Description_editingFinished() {
+  ui->lineEdit_Description->setText(ui->lineEdit_Description->text().simplified());
 }
 
-void AddTransaction::onAccountCateChanged(QTableWidget* tableWidget, int row)
-{
+void AddTransaction::onAccountCateChanged(QTableWidget* tableWidget, int row) {
     QComboBox* cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
     QComboBox* nameComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1));
 
     nameComboBox->clear();
-    QStringList l_accountNamesByDate = g_book.getAccountNamesByLastUpdate(tableMap.key(tableWidget), cateComboBox->currentText(), ui->dateTimeEdit->dateTime());
+    QStringList l_accountNamesByDate = book_->getAccountNamesByLastUpdate(tableMap.key(tableWidget), cateComboBox->currentText(), ui->dateTimeEdit->dateTime());
     nameComboBox->addItems(l_accountNamesByDate);
     nameComboBox->setDisabled(cateComboBox->currentIndex() == 0);
 
@@ -295,7 +292,7 @@ void AddTransaction::on_pushButton_Split_clicked() {
     Transaction t = getTransaction();
     Money remain = - t.getCheckSum();
     Money split = (remain / (lastNode.m_sign * count));
-    split.changeCurrency(g_book.getCurrencyType(lastNode));
+    split.changeCurrency(book_->getCurrencyType(lastNode));
     lastNode.m_lineEdit->setText(split.toString());
     on_pushButton_Split_clicked();
   }
@@ -323,7 +320,7 @@ int AddTransaction::insertTableRow(QTableWidget *tableWidget)
     connect(cateComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, tableWidget, row](){ this->onAccountCateChanged(tableWidget, row); });
     connect(nameComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, tableWidget, row](){ this->onAccountNameChanged(tableWidget, row); });
     cateComboBox->addItem("");
-    cateComboBox->addItems(g_book.getCategories(tableMap.key(tableWidget)));
+    cateComboBox->addItems(book_->getCategories(tableMap.key(tableWidget)));
     return row;
 }
 

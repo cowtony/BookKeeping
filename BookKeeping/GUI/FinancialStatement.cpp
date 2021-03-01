@@ -4,14 +4,14 @@
 #include <QtMath>
 #include <QClipboard>
 
-#include "Book.h"
 #include "BarChart.h"
 
 QFont FinancialStatement::m_financialStatementFont = QFont("Times New Roman", 14, 1, false);
 QFont FinancialStatement::m_tableSumFont = QFont("Times New Roman", 12, 1, false);
 QFont FinancialStatement::m_categorySumFont;
 
-FinancialStatement::FinancialStatement(QWidget *parent) : QMainWindow(parent), ui(new Ui::FinancialStatement) {
+FinancialStatement::FinancialStatement(std::shared_ptr<Book> book, QWidget *parent)
+    : QMainWindow(parent), ui(new Ui::FinancialStatement), book_(book) {
   ui->setupUi(this);
 
   ui->dateTimeEdit->setDateTime(QDateTime::currentDateTime());
@@ -32,7 +32,7 @@ FinancialStatement::~FinancialStatement() {
 
 void FinancialStatement::on_pushButton_Query_clicked() {
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  m_records = g_book.getSummaryByMonth(ui->dateTimeEdit->dateTime());
+  m_records = book_->getSummaryByMonth(ui->dateTimeEdit->dateTime());
   QApplication::restoreOverrideCursor();
 
   display();

@@ -15,11 +15,12 @@ MainWindow::MainWindow(QWidget *parent)
     kTableIndex({{2, Account::Expense}, {3, Account::Revenue}, {4, Account::Asset}, {5, Account::Liability}}) {
   ui->setupUi(this);
 
-  g_book.openDatabase("Book.db");
+  book_ = std::make_shared<Book>("Book.db");
   g_currency.openDatabase();
-
-  account_manager_     = new AccountManager(this);
-  financial_statement_ = new FinancialStatement(this);
+  qDebug() << "-2";
+  account_manager_     = new AccountManager(book_, this);
+  qDebug() << "3";
+  financial_statement_ = new FinancialStatement(book_, this);
 
   // Init table widget
   ui->tableWidget_transactions->setRowCount(2);
@@ -36,16 +37,15 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableWidget_transactions->setCellWidget(1, 0, end_date_);
     connect(end_date_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(displayTransactions()));
 
-    for (const Account::TableType &tableType : kTableIndex.values())
-    {
-        QComboBox *cateComboBox = new QComboBox();
-        ui->tableWidget_transactions->setCellWidget(0, kTableIndex.key(tableType), cateComboBox);
-        connect(cateComboBox, &QComboBox::currentTextChanged, [this, tableType](const QString& newCate){ accountCategoryChanged(tableType, newCate); });
-//        connect(cateComboBox, &QComboBox::currentTextChanged, std::bind(&MainWindow::accountCategoryChanged, this, i, std::placeholders::_1));
+    for (const Account::TableType &tableType : kTableIndex.values()) {
+      QComboBox *cateComboBox = new QComboBox();
+      ui->tableWidget_transactions->setCellWidget(0, kTableIndex.key(tableType), cateComboBox);
+      connect(cateComboBox, &QComboBox::currentTextChanged, [this, tableType](const QString& newCate){ accountCategoryChanged(tableType, newCate); });
+//      connect(cateComboBox, &QComboBox::currentTextChanged, std::bind(&MainWindow::accountCategoryChanged, this, i, std::placeholders::_1));
 
-        QComboBox *nameComboBox = new QComboBox();
-        ui->tableWidget_transactions->setCellWidget(1, kTableIndex.key(tableType), nameComboBox);
-        connect(nameComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::displayTransactions);
+      QComboBox *nameComboBox = new QComboBox();
+      ui->tableWidget_transactions->setCellWidget(1, kTableIndex.key(tableType), nameComboBox);
+      connect(nameComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::displayTransactions);
     }
     setCategoryComboBox();
 
@@ -99,7 +99,7 @@ void MainWindow::displayTransactions()
     MoneyArray assetSum    (end_date_->date(), USD);
     MoneyArray liabilitySum(end_date_->date(), USD);
 
-    for (const Transaction& t : g_book.queryTransactions(QDateTime(start_date_->date(), QTime(00, 00, 00)),
+    for (const Transaction& t : book_->queryTransactions(QDateTime(start_date_->date(), QTime(00, 00, 00)),
                                                          QDateTime(end_date_->date(), QTime(23, 59, 59)),
                                                          static_cast<QLineEdit*>(ui->tableWidget_transactions->cellWidget(1, 1))->text(),
                                                          filter, false, false))
@@ -133,12 +133,10 @@ void MainWindow::displayTransactions()
     ui->tableWidget_transactions->resizeRowsToContents();
 }
 
-void MainWindow::on_tableWidget_transactions_cellDoubleClicked(int row, int column)
-{
-    if (row > 1)
-    {
-        Transaction t = g_book.getTransaction(QDateTime::fromString(ui->tableWidget_transactions->item(row, 0)->text(), DATE_TIME_FORMAT));
-        AddTransaction *addT = new AddTransaction(this);
+void MainWindow::on_tableWidget_transactions_cellDoubleClicked(int row, int column) {
+    if (row > 1) {
+        Transaction t = book_->getTransaction(QDateTime::fromString(ui->tableWidget_transactions->item(row, 0)->text(), DATE_TIME_FORMAT));
+        AddTransaction *addT = new AddTransaction(book_, this);
         addT->setAttribute(Qt::WA_DeleteOnClose);
         addT->setTransaction(t);
         connect(addT, &AddTransaction::insertTransactionFinished, this, &MainWindow::displayTransactions);
@@ -152,7 +150,7 @@ void MainWindow::setCategoryComboBox()
         QComboBox *cateComboBox = static_cast<QComboBox *>(ui->tableWidget_transactions->cellWidget(0, col));
         cateComboBox->clear();
         cateComboBox->addItem("");
-        cateComboBox->addItems(g_book.getCategories(kTableIndex.value(col)));
+        cateComboBox->addItems(book_->getCategories(kTableIndex.value(col)));
     }
 }
 
@@ -170,16 +168,15 @@ void MainWindow::on_pushButton_MergeTransaction_clicked()
     warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     warningMsgBox.setDefaultButton(QMessageBox::Cancel);
     switch (warningMsgBox.exec()) {
-    case QMessageBox::Ok:
-    {
-        Transaction t;
-        for (const QDateTime &dateTime : transactionInfos.keys()) {
-            t += g_book.getTransaction(dateTime);
-            g_book.removeTransaction(dateTime);
-        }
-        g_book.insertTransaction(t);
-        displayTransactions();
-        break;
+    case QMessageBox::Ok: {
+      Transaction t;
+      for (const QDateTime &dateTime : transactionInfos.keys()) {
+        t += book_->getTransaction(dateTime);
+        book_->removeTransaction(dateTime);
+      }
+      book_->insertTransaction(t);
+      displayTransactions();
+      break;
     }
     case QMessageBox::Cancel:
         return;
@@ -202,7 +199,7 @@ void MainWindow::on_pushButtonDeleteTransactions_clicked()
     switch (warningMsgBox.exec()) {
     case QMessageBox::Ok:
         for (const QDateTime &dateTime : transactionInfos.keys())
-            g_book.removeTransaction(dateTime);
+            book_->removeTransaction(dateTime);
         displayTransactions();
         break;
     case QMessageBox::Cancel:
@@ -227,7 +224,7 @@ QMap<QDateTime, QString> MainWindow::getSelectedTransactionInfos() const
 }
 
 void MainWindow::on_actionAddTransaction_triggered() {
-  AddTransaction* addTransaction = new AddTransaction(this);
+  AddTransaction* addTransaction = new AddTransaction(book_, this);
   addTransaction->setAttribute(Qt::WA_DeleteOnClose);
   connect(addTransaction, &AddTransaction::insertTransactionFinished, this, &MainWindow::displayTransactions);
   addTransaction->show();
@@ -236,7 +233,7 @@ void MainWindow::on_actionAddTransaction_triggered() {
 void MainWindow::accountCategoryChanged(const Account::TableType &tableType, const QString &category) {
   QComboBox* nameComboBox = static_cast<QComboBox*>(ui->tableWidget_transactions->cellWidget(1, kTableIndex.key(tableType)));
   nameComboBox->clear();
-  nameComboBox->addItems(g_book.getAccountNamesByLastUpdate(tableType, category, end_date_->dateTime()));
+  nameComboBox->addItems(book_->getAccountNamesByLastUpdate(tableType, category, end_date_->dateTime()));
 }
 
 void MainWindow::on_actionAccountManager_triggered() {
@@ -250,14 +247,14 @@ void MainWindow::on_actionFinancialStatement_triggered() {
 }
 
 void MainWindow::on_actionInvestmentAnalysis_triggered() {
-  InvestmentAnalysis* investmentAnalysis = new InvestmentAnalysis(this);
+  InvestmentAnalysis* investmentAnalysis = new InvestmentAnalysis(book_, this);
   investmentAnalysis->show();
 }
 
 void MainWindow::on_actionTransactionValidation_triggered() {
   // Display validation message
   QString errorMessage = "";
-  for (const Transaction& t : g_book.queryTransactions(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
+  for (const Transaction& t : book_->queryTransactions(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
                                                        QDateTime(QDate(2200, 1, 1), QTime(0, 0, 0)), "", {}, false)) {
     if (!t.validation().empty()) {
       errorMessage += t.dateTime_.toString("yyyy/MM/dd HH:mm:ss") + ": ";

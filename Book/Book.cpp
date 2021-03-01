@@ -1,67 +1,55 @@
 #include "Book.h"
 
-Book g_book;
+//Book g_book;
 
-Book::Book()
-{
-
-}
-
-Book::~Book()
-{
-    logUsageTime();
-    closeDatabase();
-}
-
-bool Book::openDatabase(const QString& dbPath) {
+Book::Book(const QString& dbPath) {
   QFileInfo fileInfo(dbPath);
   if (fileInfo.exists()) {
-    m_database = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
-    m_database.setDatabaseName(fileInfo.absoluteFilePath());
-    if (!m_database.open()) {
-      qDebug() << Q_FUNC_INFO << "Error: connection with database fail";
-      return false;
+    database_ = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
+    database_.setDatabaseName(fileInfo.absoluteFilePath());
+    if (!database_.open()) {
+      qDebug() << Q_FUNC_INFO << "Error: connection with database fail.";
+      return;
     }
   } else {
-        m_database = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
-        m_database.setDatabaseName(dbPath);
-        Q_INIT_RESOURCE(Book);
-        QFile DDL(":/CreateDatabase.sql");
-        if (m_database.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text))
-        {
-            QString statement;
-            while (!DDL.atEnd())
-            {
-                QString line = DDL.readLine();
-                statement += line;
-                if (statement.contains(';'))
-                {
-                    QSqlQuery query(statement, m_database);
-                    statement.clear();
-                }
-            }
-            DDL.close();
+    database_ = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
+    database_.setDatabaseName(dbPath);
+    Q_INIT_RESOURCE(Book);
+    QFile DDL(":/CreateDatabase.sql");
+    if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
+      QString statement;
+      while (!DDL.atEnd()) {
+        QString line = DDL.readLine();
+        statement += line;
+        if (statement.contains(';')) {
+          QSqlQuery query(statement, database_);
+          statement.clear();
         }
-        else
-        {
-            qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened";
-            return false;
-        }
+      }
+      DDL.close();
+    } else {
+      qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened";
+      return;
+    }
   }
-  QSqlQuery query("PRAGMA case_sensitive_like = false", m_database);
-  m_startTime = QDateTime::currentDateTime();
-  return true;
+  QSqlQuery query("PRAGMA case_sensitive_like = false", database_);
+  start_time_ = QDateTime::currentDateTime();
+}
+
+Book::~Book() {
+  logUsageTime();
+  closeDatabase();
 }
 
 void Book::closeDatabase() {
-  if (m_database.isOpen()) {
-    m_database.close();
+  if (database_.isOpen()) {
+    database_.close();
   }
 }
 
 bool Book::dateTimeExist(const QDateTime &dt) const
 {
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM Transactions WHERE Date = :d");
     query.bindValue(":d", dt.toString(DATE_TIME_FORMAT));
     query.exec();
@@ -72,7 +60,7 @@ Transaction Book::getTransaction(const QDateTime &dt)
 {
     Transaction t;
 
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM Transactions WHERE Date = :d");
     query.bindValue(":d", dt.toString(DATE_TIME_FORMAT));
     query.exec();
@@ -91,7 +79,7 @@ Transaction Book::getTransaction(const QDateTime &dt)
 bool Book::insertTransaction(const Transaction &t) const {
   if (!t.validation().isEmpty()) return false;
 
-  QSqlQuery query(m_database);
+  QSqlQuery query(database_);
   query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
                               "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
   query.bindValue(":dateTime",    t.dateTime_.toString(DATE_TIME_FORMAT));
@@ -125,7 +113,7 @@ QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
     }
   }
 
-  QSqlQuery query(m_database);
+  QSqlQuery query(database_);
   query.prepare("SELECT * FROM Transactions"
                 " WHERE (Date BETWEEN :startDate AND :endDate)"
                 " AND (Description LIKE :description)" +
@@ -163,7 +151,7 @@ QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
 }
 
 QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const {
-  QSqlQuery query(m_database);
+  QSqlQuery query(database_);
   query.prepare("SELECT * FROM Transactions WHERE Date <= :d ORDER BY Date ASC");
   query.bindValue(":d", endDateTime.toString(DATE_TIME_FORMAT));
   if (!query.exec()) {
@@ -206,7 +194,7 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
 }
 
 void Book::removeTransaction(const QDateTime &dateTime) const {
-  QSqlQuery query(m_database);
+  QSqlQuery query(database_);
   query.prepare("DELETE FROM Transactions WHERE Date = :d");
   query.bindValue(":d", dateTime.toString(DATE_TIME_FORMAT));
   if (query.exec()) {
@@ -222,7 +210,7 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
         return false;
     }
 
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM Transactions WHERE [" + account.getTableName() + "] LIKE :exp");
     query.bindValue(":exp", "%[" + account.m_category + "|" + account.m_name + ": %");
     if (!query.exec())
@@ -235,7 +223,7 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
     QString l_newString = query.value(account.getTableName()).toString()
                                .replace("[" + account.m_category + "|" + account.m_name + ": ",
                                         "[" +   newAccount.m_category + "|" +   newAccount.m_name + ": ");
-    QSqlQuery query2(m_database);
+    QSqlQuery query2(database_);
     query2.prepare("UPDATE Transactions SET " + account.getTableName() + " = :new WHERE Date = :d");
     query2.bindValue(":d", query.value("Date").toString());
     query2.bindValue(":new", l_newString);
@@ -273,7 +261,7 @@ Currency_e Book::getCurrencyType(const Account &account) const {
     if (account.m_table == Account::Expense or account.m_table == Account::Revenue or account.m_table == Account::Equity)
         return USD;
 
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT Currency FROM [" + account.getTableName() + "] WHERE Category = :c AND Name = :n");
     query.bindValue(":c", account.m_category);
     query.bindValue(":n", account.m_name);
@@ -289,7 +277,7 @@ Currency_e Book::getCurrencyType(const Account &account) const {
 
 QStringList Book::getCategories(Account::TableType p_tableType) const {
     QStringList l_categories;
-    QSqlQuery l_query(m_database);
+    QSqlQuery l_query(database_);
     l_query.prepare("SELECT DISTINCT Category FROM [" + Account::TableName.value(p_tableType) + "] ORDER BY Category ASC");
     if (!l_query.exec())
         qDebug() << Q_FUNC_INFO << l_query.lastError();
@@ -302,7 +290,7 @@ QStringList Book::getCategories(Account::TableType p_tableType) const {
 
 QStringList Book::getAccountNames(Account::TableType tableType, const QString& category) const {
   QStringList names;
-  QSqlQuery query(m_database);
+  QSqlQuery query(database_);
   query.prepare("SELECT Name FROM [" + Account::TableName.value(tableType) + "] WHERE Category = :c ORDER BY Name ASC");
   query.bindValue(":c", category);
 
@@ -319,7 +307,7 @@ QStringList Book::getAccountNamesByLastUpdate(Account::TableType tableType, cons
     QMultiMap<QDateTime, QString> accountNamesByDate;
     for (const QString &accountName: getAccountNames(tableType, category))
     {
-        QSqlQuery query(m_database);
+        QSqlQuery query(database_);
         query.prepare("SELECT MAX(Date) From Transactions WHERE " + Account::TableName.value(tableType) + " LIKE :account AND Date <= :date");
         query.bindValue(":account", "%[" + category + "|" + accountName + ":%");
         query.bindValue(":date", dateTime.toString(DATE_TIME_FORMAT));
@@ -337,7 +325,7 @@ QStringList Book::getAccountNamesByLastUpdate(Account::TableType tableType, cons
 }
 
 bool Book::insertCategory(const QString &p_tableName, const QString &p_category) const {
-    QSqlQuery l_query(m_database);
+    QSqlQuery l_query(database_);
     l_query.prepare("SELECT * FROM [" + p_tableName + "] WHERE Category = :c");   // Maybe build check category exist into a function?
     l_query.bindValue(":c", p_category);
     if (!l_query.exec())
@@ -364,7 +352,7 @@ bool Book::insertCategory(const QString &p_tableName, const QString &p_category)
 
 bool Book::removeCategory(const QString &tableName, const QString &category) const
 {
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("DELETE FROM [" + tableName + "] WHERE Category = :c AND Name IS NULL");
     query.bindValue(":c", category);
     query.exec();
@@ -378,7 +366,7 @@ bool Book::removeCategory(const QString &tableName, const QString &category) con
 
 bool Book::categoryExist(const QString &tableName, const QString &category) const
 {
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM [" + tableName + "] WHERE Category = :c");
     query.bindValue(":c", category);
     query.exec();
@@ -390,7 +378,7 @@ bool Book::renameCategory(const QString &tableName, const QString &category, con
     if (categoryExist(tableName, newCategory))
         return false;
 
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM Transactions WHERE [" + tableName + "] LIKE :exp");
     query.bindValue(":exp", "%[" + category + "|%");
     if (!query.exec())
@@ -401,7 +389,7 @@ bool Book::renameCategory(const QString &tableName, const QString &category, con
     while (query.next())
     {
         QString newString = query.value(tableName).toString().replace("[" + category + "|", "[" + newCategory + "|");
-        QSqlQuery query2(m_database);
+        QSqlQuery query2(database_);
         query2.prepare("UPDATE Transactions SET " + tableName + " = :new WHERE Date = :d");
         query2.bindValue(":d", query.value("Date").toString());
         query2.bindValue(":new", newString);
@@ -421,7 +409,7 @@ bool Book::renameCategory(const QString &tableName, const QString &category, con
 
 bool Book::insertAccount(const Account &account) const
 {
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM [" + account.getTableName() + "] WHERE Category = :c");  // Maybe build check category exist into a function?
     query.bindValue(":c", account.m_category);
     if (!query.exec())
@@ -449,7 +437,7 @@ bool Book::insertAccount(const Account &account) const
 
 bool Book::removeAccount(const Account &account) const
 {
-    QSqlQuery l_query(m_database);
+    QSqlQuery l_query(database_);
     l_query.prepare("SELECT * FROM Transactions WHERE [" + account.getTableName() + "] LIKE :exp");
     l_query.bindValue(":exp", "%[" + account.m_category + "|" + account.m_name + ":%");
     if (!l_query.exec())
@@ -470,7 +458,7 @@ bool Book::removeAccount(const Account &account) const
 
 bool Book::accountExist(const Account &account) const
 {
-    QSqlQuery query(m_database);
+    QSqlQuery query(database_);
     query.prepare("SELECT * FROM [" + account.getTableName() + "] WHERE Category = :c AND Name = :n");
     query.bindValue(":c", account.m_category);
     query.bindValue(":n", account.m_name);
@@ -485,7 +473,7 @@ bool Book::accountExist(const Account &account) const
 QDateTime Book::getFirstTransactionDateTime() const
 {
     QDateTime dateTime;
-    QSqlQuery query("SELECT MIN(Date) FROM Transactions", m_database);
+    QSqlQuery query("SELECT MIN(Date) FROM Transactions", database_);
     if (query.next()) {
         dateTime = query.value("MIN(Date)").toDateTime();
         if (!dateTime.isValid())
@@ -497,7 +485,7 @@ QDateTime Book::getFirstTransactionDateTime() const
 QDateTime Book::getLastTransactionDateTime() const
 {
     QDateTime dateTime;
-    QSqlQuery query("SELECT MAX(Date) FROM Transactions", m_database);
+    QSqlQuery query("SELECT MAX(Date) FROM Transactions", database_);
     if (query.next()) {
         dateTime = query.value("MAX(Date)").toDateTime();
         if (!dateTime.isValid())
@@ -507,23 +495,23 @@ QDateTime Book::getLastTransactionDateTime() const
 }
 
 void Book::logUsageTime() {
-  QSqlQuery query(m_database);
+  QSqlQuery query(database_);
   query.prepare("SELECT * FROM [Log Time] WHERE Date = :d");
-  query.bindValue(":d", m_startTime.date().toString("yyyy-MM-dd"));
+  query.bindValue(":d", start_time_.date().toString("yyyy-MM-dd"));
   query.exec();
   int64_t seconds = 0;
   if (query.next()) {
     seconds = query.value("Seconds").toInt();
   }
-  seconds += m_startTime.secsTo(QDateTime::currentDateTime());
+  seconds += start_time_.secsTo(QDateTime::currentDateTime());
   query.prepare("INSERT OR REPLACE INTO [Log Time] (Date, Seconds) VALUES (:d, :s)");
-  query.bindValue(":d", m_startTime.date().toString("yyyy-MM-dd"));
+  query.bindValue(":d", start_time_.date().toString("yyyy-MM-dd"));
   query.bindValue(":s", seconds);
   query.exec();
 }
 
 bool Book::logging(const QSqlQuery& query_log) const {
-  QSqlQuery query(m_database);
+  QSqlQuery query(database_);
   query.prepare("INSERT INTO [Log] (Time, Query) VALUES (:t, :q)");
   query.bindValue(":t", QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
   query.bindValue(":q", getLastExecutedQuery(query_log));

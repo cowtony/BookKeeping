@@ -15,10 +15,10 @@ const QString DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm";
 
 class BOOKSHARED_EXPORT Book {
 public:
-  explicit Book();
+  // The constructor will create a instance with opened database.
+  explicit Book(const QString& dbPath);
   ~Book();
 
-  bool openDatabase(const QString& dbPath);
   void closeDatabase();
 
   // Transactions
@@ -54,14 +54,14 @@ public:
   static QString getLastExecutedQuery(const QSqlQuery& query);
 
 private:
-  QSqlDatabase m_database;
+  QSqlDatabase database_;
 
-  QDateTime m_startTime;
+  QDateTime start_time_;
   void logUsageTime();
 
   bool logging(const QSqlQuery& query) const; // Log all the modifier actions
 };
 
-BOOKSHARED_EXPORT extern Book g_book;
+//BOOKSHARED_EXPORT extern Book g_book;
 
 #endif // BOOK_H
