@@ -15,7 +15,7 @@ class AddTransaction : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit AddTransaction(std::shared_ptr<Book> book, QWidget *parent);
+  explicit AddTransaction(Book& book, QWidget *parent);
   ~AddTransaction();
 
   void initialization();
@@ -39,7 +39,7 @@ signals:
 
 private:
   Ui::AddTransaction *ui;
-  std::shared_ptr<Book> book_;
+  Book& book_;
 
   QMap<Account::TableType, QTableWidget*> tableMap;
 

@@ -13,7 +13,7 @@ class FinancialStatement : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit FinancialStatement(std::shared_ptr<Book> book, QWidget *parent = nullptr);
+  explicit FinancialStatement(Book& book, QWidget *parent = nullptr);
   ~FinancialStatement();
 
 public slots:
@@ -34,7 +34,7 @@ private slots:
 
 private:
   Ui::FinancialStatement *ui;
-  std::shared_ptr<Book> book_;
+  Book& book_;
 
   void setMoney(QTreeWidgetItem* item, int column, const Money& money);
   void setFont(int column, QTreeWidgetItem* item, int depth = -1);

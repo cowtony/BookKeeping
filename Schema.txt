@@ -1,0 +1,12 @@
+Fact Table: Transaction
+  PK: Date
+  Column: Description
+  Column: Asset (repeated)
+  Column: Revenue (repeated)
+  Column: Liability (repeated)
+  Column: Receivable (repeated)
+
+Dimension table: Asset
+  PK: ID
+  Column: Type
+  Column: Name

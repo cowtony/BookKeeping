@@ -7,22 +7,22 @@ const QMap<Account::TableType, QString> Account::TableName =
      {Expense, "Expense"},
      {Equity, "Equity"}};
 
-Account::Account(TableType table, const QString& category, const QString& name) : m_table(table), m_category(category), m_name(name) {}
+Account::Account(TableType table, const QString& category, const QString& name) : table_(table), category_(category), name_(name) {}
 
-Account::Account(const QString& tableName, const QString& category, const QString& name) : m_category(category), m_name(name) {
+Account::Account(const QString& tableName, const QString& category, const QString& name) : category_(category), name_(name) {
   if (TableName.values().contains(tableName)) {
-    m_table = TableName.key(tableName);
+    table_ = TableName.key(tableName);
   } else {
     qDebug() << Q_FUNC_INFO << "table name doesn't exist!" << tableName;
   }
 }
 
 QString Account::getTableName() const {
-  return TableName.value(m_table);
+  return TableName.value(table_);
 }
 
 QString Account::getFinancialStatementName() const {
-  switch (m_table) {
+  switch (table_) {
     case Revenue:
     case Expense:
       return "Income Statement";
@@ -35,13 +35,13 @@ QString Account::getFinancialStatementName() const {
 }
 
 bool Account::operator <(const Account &p_account) const {
-  if (m_table == p_account.m_category) {
-    return m_category + m_name < p_account.m_category + p_account.m_name;
+  if (table_ == p_account.category_) {
+    return category_ + name_ < p_account.category_ + p_account.name_;
   } else {
-    return m_table < p_account.m_category;
+    return table_ < p_account.category_;
   }
 }
 
 bool Account::operator ==(const Account &account) const {
-  return account.m_table == m_table and account.m_category == m_category and account.m_name == m_name;
+  return account.table_ == table_ and account.category_ == category_ and account.name_ == name_;
 }

@@ -41,7 +41,7 @@ private:
   AccountManager     *account_manager_;
   FinancialStatement *financial_statement_;
 
-  std::shared_ptr<Book> book_;
+  Book book_;
   QDateEdit* start_date_;
   QDateEdit* end_date_;
 

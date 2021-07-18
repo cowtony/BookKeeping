@@ -1,12 +1,12 @@
 #include "InvestmentAnalysis.h"
 #include "ui_InvestmentAnalysis.h"
 
-InvestmentAnalysis::InvestmentAnalysis(std::shared_ptr<Book> book, QWidget *parent)
+InvestmentAnalysis::InvestmentAnalysis(Book& book, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::InvestmentAnalysis), book_(book) {
   ui->setupUi(this);
 
   // Scan, analysis and save all investment product:
-  QStringList investments = book_->getAccountNames(Account::Revenue, "Investment");
+  QStringList investments = book_.getAccountNames(Account::Revenue, "Investment");
   QApplication::setOverrideCursor(Qt::WaitCursor);
   for (const QString& investmentName : investments) {
     analysisInvestment(investmentName);
@@ -60,9 +60,9 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   // 1. Setup two related account from Asset & Revenue.
   Account asset(Account::Asset, "", investmentName);
   Account revenue(Account::Revenue, "Investment", investmentName);
-  for (const QString& categoryName : book_->getCategories(Account::Asset)) {
-    if (book_->accountExist(Account(Account::Asset, categoryName, investmentName))) {
-      if (!asset.m_category.isEmpty()) {
+  for (const QString& categoryName : book_.getCategories(Account::Asset)) {
+    if (book_.accountExist(Account(Account::Asset, categoryName, investmentName))) {
+      if (!asset.category_.isEmpty()) {
         // TODO: make this an error message.
         qDebug() << "Error! More than one account in asset has the investment name.";
         return;
@@ -77,11 +77,11 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   QList<Money> alltime_transfer_history;
   Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), balanceChange(QDate(), USD, 0.00);
   const QDateTime start = QDateTime(QDate(1990, 05, 25), QTime());
-  QList<Transaction> transactions = book_->queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
+  QList<Transaction> transactions = book_.queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
   for (int i = 0; i < transactions.size(); i++) {
     // Init the day before first transaction date and set log(ROI) to 0.
     if (returnHistory.empty()) {
-      returnHistory.insert(transactions.at(i).dateTime_.date().addDays(-1), 0.00);
+      returnHistory.insert(transactions.at(i).date_time_.date().addDays(-1), 0.00);
     }
 
     gainOrLoss += transactions.at(i).getMoneyArray(revenue).sum();
@@ -89,7 +89,7 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
 
     // Skip calculation if next transaction is in the same day.
     if (i + 1 < transactions.size()) {
-      if (transactions.at(i + 1).dateTime_.date() == transactions.at(i).dateTime_.date()) {
+      if (transactions.at(i + 1).date_time_.date() == transactions.at(i).date_time_.date()) {
         continue;
       }
     }
@@ -100,12 +100,12 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
     // If has activity in revenue
     if (gainOrLoss.amount_ != 0.0) {
       double log2_ROI = backCalculateNPV(local_transfer_history, runningBalance); // Get the log2 return so that we can use + instead of * later.
-      if (!returnHistory.contains(transactions.at(i).dateTime_.date())) {
-        returnHistory.insert(transactions.at(i).dateTime_.date(), log2_ROI);
+      if (!returnHistory.contains(transactions.at(i).date_time_.date())) {
+        returnHistory.insert(transactions.at(i).date_time_.date(), log2_ROI);
       } else {
         // We should never have duplicated date since it's merged in the begining.
         qDebug() << "Duplicate date found!";
-        qDebug() << investmentName << transactions.at(i).dateTime_ << transactions.at(i).description_;
+        qDebug() << investmentName << transactions.at(i).date_time_ << transactions.at(i).description_;
         system("pause");
       }
       local_transfer_history.clear();
@@ -272,5 +272,5 @@ void InvestmentAnalysis::plotInvestments() {
 }
 
 void InvestmentAnalysis::on_resetButton_clicked() {
-  ui->startDateEdit->setDateTime(book_->getFirstTransactionDateTime());
+  ui->startDateEdit->setDateTime(book_.getFirstTransactionDateTime());
 }

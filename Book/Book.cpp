@@ -66,7 +66,7 @@ Transaction Book::getTransaction(const QDateTime &dt)
     query.exec();
     if (query.next())
     {
-        t.dateTime_ = dt;
+        t.date_time_ = dt;
         t.description_ = query.value("Description").toString();
         t.stringToData(Account::Expense,   query.value("Expense").toString());
         t.stringToData(Account::Revenue,   query.value("Revenue").toString());
@@ -82,7 +82,7 @@ bool Book::insertTransaction(const Transaction &t) const {
   QSqlQuery query(database_);
   query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
                               "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
-  query.bindValue(":dateTime",    t.dateTime_.toString(DATE_TIME_FORMAT));
+  query.bindValue(":dateTime",    t.date_time_.toString(DATE_TIME_FORMAT));
   query.bindValue(":description", t.description_);
   query.bindValue(":expense",     t.dataToString(Account::Expense));
   query.bindValue(":revenue",     t.dataToString(Account::Revenue));
@@ -108,8 +108,8 @@ QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
 
   QStringList statements;
   for (const Account& account : accounts) {
-    if (!account.m_category.isEmpty()) {
-      statements << "(" + account.getTableName() + " LIKE \"%[" + account.m_category + "|" + account.m_name + ":%\")";
+    if (!account.category_.isEmpty()) {
+      statements << "(" + account.getTableName() + " LIKE \"%[" + account.category_ + "|" + account.name_ + ":%\")";
     }
   }
 
@@ -133,10 +133,10 @@ QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
   while (query.next()) {
     Transaction t;
     t.description_ = query.value("Description").toString();
-    t.dateTime_ = query.value("Date").toDateTime();
+    t.date_time_ = query.value("Date").toDateTime();
     // TODO: somehow several outbounded transaction will also be selected.
     // This hard code is to remove them.
-    if (t.dateTime_ < startTime or t.dateTime_ > endTime) {
+    if (t.date_time_ < startTime or t.date_time_ > endTime) {
       continue;
     }
 
@@ -164,14 +164,14 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
 
   while (query.next()) {
     Transaction transaction;
-    transaction.dateTime_ = query.value("Date").toDateTime();
+    transaction.date_time_ = query.value("Date").toDateTime();
     transaction.stringToData(Account::Expense,   query.value("Expense")  .toString());
     transaction.stringToData(Account::Revenue,   query.value("Revenue")  .toString());
     transaction.stringToData(Account::Asset,     query.value("Asset")    .toString());
     transaction.stringToData(Account::Liability, query.value("Liability").toString());
 
     // Use `while` instead of `if` in case there was no transaction for successive months.
-    while (transaction.dateTime_.date() >= month.addMonths(1)) {
+    while (transaction.date_time_.date() >= month.addMonths(1)) {
       monthlySummary.description_ = month.toString("yyyy-MM");
       retSummarys.push_front(monthlySummary);
 
@@ -181,8 +181,8 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
     }
 
     // TODO: next line increate the time from 5s to 9s.
-    monthlySummary.changeDate(transaction.dateTime_.date());  // Must run this before set m_dateTime.
-    monthlySummary.dateTime_ = transaction.dateTime_;
+    monthlySummary.changeDate(transaction.date_time_.date());  // Must run this before set m_dateTime.
+    monthlySummary.date_time_ = transaction.date_time_;
     monthlySummary += transaction;
     monthlySummary.retainedEarnings += transaction.getRetainedEarnings();
     monthlySummary.transactionError += MoneyArray(transaction.getCheckSum());
@@ -205,14 +205,14 @@ void Book::removeTransaction(const QDateTime &dateTime) const {
 }
 
 bool Book::moveAccount(const Account &account, const Account &newAccount) const {
-    if (account.m_table != newAccount.m_table) {
+    if (account.table_ != newAccount.table_) {
         qDebug() << Q_FUNC_INFO << "Does not support change table yet.";
         return false;
     }
 
     QSqlQuery query(database_);
     query.prepare("SELECT * FROM Transactions WHERE [" + account.getTableName() + "] LIKE :exp");
-    query.bindValue(":exp", "%[" + account.m_category + "|" + account.m_name + ": %");
+    query.bindValue(":exp", "%[" + account.category_ + "|" + account.name_ + ": %");
     if (!query.exec())
     {
         qDebug() << Q_FUNC_INFO << query.lastError();
@@ -221,8 +221,8 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
   // Update transactions
   while (query.next()) {
     QString l_newString = query.value(account.getTableName()).toString()
-                               .replace("[" + account.m_category + "|" + account.m_name + ": ",
-                                        "[" +   newAccount.m_category + "|" +   newAccount.m_name + ": ");
+                               .replace("[" + account.category_ + "|" + account.name_ + ": ",
+                                        "[" +   newAccount.category_ + "|" +   newAccount.name_ + ": ");
     QSqlQuery query2(database_);
     query2.prepare("UPDATE Transactions SET " + account.getTableName() + " = :new WHERE Date = :d");
     query2.bindValue(":d", query.value("Date").toString());
@@ -236,8 +236,8 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
 
     // Update account
     query.prepare("DELETE FROM " + account.getTableName() + " WHERE Category = :c AND Name = :n");
-    query.bindValue(":c", account.m_category);
-    query.bindValue(":n", account.m_name);
+    query.bindValue(":c", account.category_);
+    query.bindValue(":n", account.name_);
     query.exec();
     if (query.exec()) {
       logging(query);
@@ -246,11 +246,11 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
     }
 
     query.prepare("INSERT INTO [" + account.getTableName() + "] (Category, Name) VALUES (:c, :n)");
-    query.bindValue(":c", newAccount.m_category);
-    query.bindValue(":n", newAccount.m_name);
+    query.bindValue(":c", newAccount.category_);
+    query.bindValue(":n", newAccount.name_);
     if (!query.exec()) {
       qDebug() << Q_FUNC_INFO << "Insert new account failed, might be rename the account and merge."
-               << query.lastError() << account.m_category << account.m_name << newAccount.m_category << newAccount.m_name;
+               << query.lastError() << account.category_ << account.name_ << newAccount.category_ << newAccount.name_;
     }
     // The reason not use UPDATE directly is considering the merge case
 
@@ -258,19 +258,19 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
 }
 
 Currency_e Book::getCurrencyType(const Account &account) const {
-    if (account.m_table == Account::Expense or account.m_table == Account::Revenue or account.m_table == Account::Equity)
+    if (account.table_ == Account::Expense or account.table_ == Account::Revenue or account.table_ == Account::Equity)
         return USD;
 
     QSqlQuery query(database_);
     query.prepare("SELECT Currency FROM [" + account.getTableName() + "] WHERE Category = :c AND Name = :n");
-    query.bindValue(":c", account.m_category);
-    query.bindValue(":n", account.m_name);
+    query.bindValue(":c", account.category_);
+    query.bindValue(":n", account.name_);
     if (!query.exec())
         qDebug() << Q_FUNC_INFO << query.lastError();
     if (query.next())
         return Currency::Symbol_3.key(query.value("Currency").toString());
     else {
-        qDebug() << Q_FUNC_INFO << "No account was found" << account.getTableName() << account.m_category << account.m_name;
+        qDebug() << Q_FUNC_INFO << "No account was found" << account.getTableName() << account.category_ << account.name_;
         return USD;
     }
 }
@@ -411,7 +411,7 @@ bool Book::insertAccount(const Account &account) const
 {
     QSqlQuery query(database_);
     query.prepare("SELECT * FROM [" + account.getTableName() + "] WHERE Category = :c");  // Maybe build check category exist into a function?
-    query.bindValue(":c", account.m_category);
+    query.bindValue(":c", account.category_);
     if (!query.exec())
     {
         qDebug() << Q_FUNC_INFO << 1 << query.lastError();
@@ -419,13 +419,13 @@ bool Book::insertAccount(const Account &account) const
     }
     if (!query.next())
     {
-        qDebug() << Q_FUNC_INFO << "Category " << account.m_category << " does not exist";
+        qDebug() << Q_FUNC_INFO << "Category " << account.category_ << " does not exist";
         return false;
     }
 
     query.prepare("INSERT INTO [" + account.getTableName() + "] (Category, Name) VALUES (:c, :n)");
-    query.bindValue(":c", account.m_category);
-    query.bindValue(":n", account.m_name);
+    query.bindValue(":c", account.category_);
+    query.bindValue(":n", account.name_);
     if (!query.exec())
     {
         qDebug() << Q_FUNC_INFO << 2 << query.lastError();
@@ -439,7 +439,7 @@ bool Book::removeAccount(const Account &account) const
 {
     QSqlQuery l_query(database_);
     l_query.prepare("SELECT * FROM Transactions WHERE [" + account.getTableName() + "] LIKE :exp");
-    l_query.bindValue(":exp", "%[" + account.m_category + "|" + account.m_name + ":%");
+    l_query.bindValue(":exp", "%[" + account.category_ + "|" + account.name_ + ":%");
     if (!l_query.exec())
     {
         qDebug() << Q_FUNC_INFO << l_query.lastError();
@@ -450,8 +450,8 @@ bool Book::removeAccount(const Account &account) const
     else
     {
         l_query.prepare("DELETE FROM [" + account.getTableName() + "] WHERE Category = :c AND Name = :n");
-        l_query.bindValue(":c", account.m_category);
-        l_query.bindValue(":n", account.m_name);
+        l_query.bindValue(":c", account.category_);
+        l_query.bindValue(":n", account.name_);
         return l_query.exec();
     }
 }
@@ -460,8 +460,8 @@ bool Book::accountExist(const Account &account) const
 {
     QSqlQuery query(database_);
     query.prepare("SELECT * FROM [" + account.getTableName() + "] WHERE Category = :c AND Name = :n");
-    query.bindValue(":c", account.m_category);
-    query.bindValue(":n", account.m_name);
+    query.bindValue(":c", account.category_);
+    query.bindValue(":n", account.name_);
     if (!query.exec())
     {
         qDebug() << Q_FUNC_INFO << query.lastError();

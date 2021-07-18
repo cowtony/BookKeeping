@@ -10,7 +10,7 @@ QFont FinancialStatement::m_financialStatementFont = QFont("Times New Roman", 14
 QFont FinancialStatement::m_tableSumFont = QFont("Times New Roman", 12, 1, false);
 QFont FinancialStatement::m_categorySumFont;
 
-FinancialStatement::FinancialStatement(std::shared_ptr<Book> book, QWidget *parent)
+FinancialStatement::FinancialStatement(Book& book, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::FinancialStatement), book_(book) {
   ui->setupUi(this);
 
@@ -32,7 +32,7 @@ FinancialStatement::~FinancialStatement() {
 
 void FinancialStatement::on_pushButton_Query_clicked() {
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  m_records = book_->getSummaryByMonth(ui->dateTimeEdit->dateTime());
+  m_records = book_.getSummaryByMonth(ui->dateTimeEdit->dateTime());
   QApplication::restoreOverrideCursor();
 
   display();
@@ -142,14 +142,14 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool
   // Find or create same category:
   QTreeWidgetItem *categoryItem = nullptr;
   for (int i = 0; i < tableItem->childCount(); i++) {
-    if (tableItem->child(i)->text(0) == account.m_category) {
+    if (tableItem->child(i)->text(0) == account.category_) {
       categoryItem = tableItem->child(i);
       break;
     }
   }
   if (categoryItem == nullptr) {
     if (create) {
-      categoryItem = new QTreeWidgetItem(tableItem, {account.m_category});
+      categoryItem = new QTreeWidgetItem(tableItem, {account.category_});
       categoryItem->setFont(0, m_categorySumFont);
     } else {
       return nullptr;
@@ -159,14 +159,14 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool
   // Find or create same account:
   QTreeWidgetItem *accountItem = nullptr;
   for (int i = 0; i < categoryItem->childCount(); i++) {
-    if (categoryItem->child(i)->text(0) == account.m_name) {
+    if (categoryItem->child(i)->text(0) == account.name_) {
       accountItem = categoryItem->child(i);
       break;
     }
   }
   if (accountItem == nullptr) {
     if (create) {
-      accountItem = new QTreeWidgetItem(categoryItem, {account.m_name});
+      accountItem = new QTreeWidgetItem(categoryItem, {account.name_});
     } else {
       return nullptr;
     }

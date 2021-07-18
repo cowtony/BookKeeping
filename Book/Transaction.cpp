@@ -1,62 +1,59 @@
 #include "Transaction.h"
 
 Transaction::Transaction() {
-  // Add four main table.
-  (*this)[Account::Expense];
-  (*this)[Account::Asset];
-  (*this)[Account::Revenue];
-  (*this)[Account::Liability];
+  data_[Account::Expense];
+  data_[Account::Revenue];
+  data_[Account::Asset];
+  data_[Account::Liability];
 }
 
-Transaction Transaction::operator +(Transaction transaction) const
-{
-    // dateTime is the maximum dateTime
-    transaction.dateTime_ = transaction.dateTime_ > dateTime_? transaction.dateTime_ : dateTime_;
+Transaction Transaction::operator +(Transaction transaction) const {
+  // dateTime is the maximum dateTime
+  transaction.date_time_ = transaction.date_time_ > date_time_? transaction.date_time_ : date_time_;
 
-    // merge description
-    if (description_.contains(transaction.description_))
-        transaction.description_ = description_;
-    else if (!transaction.description_.contains(description_))
-        transaction.description_ = description_ + "; " + transaction.description_;
+  // merge description
+  if (description_.contains(transaction.description_)) {
+    transaction.description_ = description_;
+  } else if (!transaction.description_.contains(description_)) {
+    transaction.description_ = description_ + "; " + transaction.description_;
+  }
 
-    // Add up account
-    for (const Account &account : getAccounts())
-    {
-        transaction.addMoneyArray(account, this->getMoneyArray(account));
+  // Add up account
+  for (const Account &account : getAccounts()) {
+    transaction.addMoneyArray(account, this->getMoneyArray(account));
 
-        if (transaction.getMoneyArray(account).isZero())
-        {
-            transaction[account.m_table][account.m_category].remove(account.m_name);
-            if (transaction[account.m_table][account.m_category].isEmpty())
-                transaction[account.m_table].remove(account.m_category);
-        }
+    if (transaction.getMoneyArray(account).isZero()) {
+      transaction.data_[account.table_][account.category_].remove(account.name_);
+      if (transaction.data_[account.table_][account.category_].isEmpty()) {
+        transaction.data_[account.table_].remove(account.category_);
+      }
     }
+  }
 
-    return transaction;
+  return transaction;
 }
 
-void Transaction::operator +=(const Transaction &t)
-{
-    *this = *this + t;
+void Transaction::operator +=(const Transaction &t) {
+  *this = *this + t;
 }
 
 void Transaction::clear() {
-    dateTime_ = QDateTime();
+    date_time_ = QDateTime();
     description_.clear();
-    for (const Account::TableType &tableType : keys()) {
+    for (const Account::TableType &tableType : data_.keys()) {
         clear(tableType);
     }
 }
 
 void Transaction::clear(Account::TableType tableType)
 {
-    (*this)[tableType].clear();
+    data_[tableType].clear();
 }
 
 bool Transaction::accountExist(const Account &account) const {
-  if (contains(account.m_table)) {
-    if (value(account.m_table).contains(account.m_category)) {
-      if (value(account.m_table).value(account.m_category).contains(account.m_name)) {
+  if (data_.contains(account.table_)) {
+    if (data_.value(account.table_).contains(account.category_)) {
+      if (data_.value(account.table_).value(account.category_).contains(account.name_)) {
         return true;
       }
     }
@@ -65,9 +62,9 @@ bool Transaction::accountExist(const Account &account) const {
 }
 
 Money Transaction::getCheckSum() const {
-  Money sum(dateTime_.date());
+  Money sum(date_time_.date());
   for (const Account &account : getAccounts()) {
-    if (account.m_table == Account::Expense or account.m_table == Account::Asset)
+    if (account.table_ == Account::Expense or account.table_ == Account::Asset)
       sum += getMoneyArray(account).sum();
     else
       sum -= getMoneyArray(account).sum();
@@ -80,10 +77,10 @@ QStringList Transaction::validation() const {
     QStringList errorMessage;
     if (description_.isEmpty())
         errorMessage << "Description is empty.";
-    if (value(Account::Asset).isEmpty() and
-        value(Account::Expense).isEmpty() and
-        value(Account::Revenue).isEmpty() and
-        value(Account::Liability).isEmpty())
+    if (data_.value(Account::Asset).isEmpty() and
+        data_.value(Account::Expense).isEmpty() and
+        data_.value(Account::Revenue).isEmpty() and
+        data_.value(Account::Liability).isEmpty())
         errorMessage << "No account entries.";
     if (qFabs(getCheckSum().amount_) > 0.005)
         errorMessage << "The sum of the transaction is not zero: " + QString::number(getCheckSum().amount_);
@@ -97,7 +94,7 @@ QString Transaction::dataToString(Account::TableType tableType) const {
     {
         MoneyArray moneyArray = getMoneyArray(account);    
         if (!moneyArray.isZero())
-            retString << "[" + account.m_category + "|" + account.m_name + ": " + moneyArray.toString() + "]";
+            retString << "[" + account.category_ + "|" + account.name_ + ": " + moneyArray.toString() + "]";
     }
 
     return retString.join("; ");
@@ -119,17 +116,17 @@ void Transaction::stringToData(Account::TableType tableType, const QString& data
 
     Account account(tableType, category, name);
     if (accountExist(account)) {
-      qDebug() << Q_FUNC_INFO << "Transaction has duplicated account" << dateTime_;
+      qDebug() << Q_FUNC_INFO << "Transaction has duplicated account" << date_time_;
     }
-    addMoneyArray(account, MoneyArray(dateTime_.date(), amounts));
+    addMoneyArray(account, MoneyArray(date_time_.date(), amounts));
   }
 }
 
 QList<Account> Transaction::getAccounts() const {
     QList<Account> retAccounts;
-    for (const Account::TableType &tableType : keys()) {
-        for (const QString &category : value(tableType).keys()) {
-            for (const QString &name : value(tableType).value(category).keys()) {
+    for (const Account::TableType &tableType : {Account::Asset, Account::Expense, Account::Revenue, Account::Liability}) {
+        for (const QString &category : data_.value(tableType).keys()) {
+            for (const QString &name : data_.value(tableType).value(category).keys()) {
                 retAccounts.push_back(Account(tableType, category, name));
             }
         }
@@ -140,8 +137,8 @@ QList<Account> Transaction::getAccounts() const {
 QList<Account> Transaction::getAccounts(Account::TableType tableType) const
 {
     QList<Account> retAccounts;
-    for (const QString &category : value(tableType).keys()) {
-        for (const QString &name : value(tableType).value(category).keys()) {
+    for (const QString &category : data_.value(tableType).keys()) {
+        for (const QString &name : data_.value(tableType).value(category).keys()) {
             retAccounts.push_back(Account(tableType, category, name));
         }
     }
@@ -149,42 +146,41 @@ QList<Account> Transaction::getAccounts(Account::TableType tableType) const
 }
 
 MoneyArray Transaction::getMoneyArray(const Account &account) const {
-    if (account.m_table == Account::Equity)
+    if (account.table_ == Account::Equity)
         qDebug() << Q_FUNC_INFO << "Equity should be here.";
 
     if (accountExist(account))
-        return value(account.m_table).value(account.m_category).value(account.m_name);
+        return data_.value(account.table_).value(account.category_).value(account.name_);
     else
-        return MoneyArray(dateTime_.date(), USD);
+        return MoneyArray(date_time_.date(), USD);
 }
 
 void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyArray) {
-  if (account.m_table == Account::Equity) {
+  if (account.table_ == Account::Equity) {
     qDebug() << Q_FUNC_INFO << "Transaction don't store equity, it's calculated by others.";
     return;
   }
 
   if (!accountExist(account)) {
-    (*this)[account.m_table][account.m_category][account.m_name] = MoneyArray(moneyArray.date_, moneyArray.currency());
+    data_[account.table_][account.category_][account.name_] = MoneyArray(moneyArray.date_, moneyArray.currency());
   }
-  (*this)[account.m_table][account.m_category][account.m_name] += moneyArray;
+  data_[account.table_][account.category_][account.name_] += moneyArray;
 }
 
-MoneyArray Transaction::getRetainedEarnings() const
-{
-    MoneyArray ret(dateTime_.date(), USD);
-    for (const Account &account : getAccounts(Account::Revenue))
-        ret += getMoneyArray(account);
-
-    for (const Account &account : getAccounts(Account::Expense))
-        ret -= getMoneyArray(account);
-
-    return ret;
+MoneyArray Transaction::getRetainedEarnings() const {
+  MoneyArray ret(date_time_.date(), USD);
+  for (const Account &account : getAccounts(Account::Revenue)) {
+    ret += getMoneyArray(account);
+  }
+  for (const Account &account : getAccounts(Account::Expense)) {
+    ret -= getMoneyArray(account);
+  }
+  return ret;
 }
 
 MoneyArray Transaction::getXXXContributedCapital() const
 {
-    return MoneyArray(dateTime_.date(), USD);
+    return MoneyArray(date_time_.date(), USD);
 }
 
 //////////////////// Financial Summary /////////////////////////////
@@ -198,7 +194,7 @@ MoneyArray FinancialStat::getMoneyArray(const Account &account) const {
   } else if (account == Account(Account::Equity, "Retained Earnings", "Transaction Error")) {
     return transactionError;
   } else if (account == Account(Account::Equity, "Contributed Capitals", "Contributed Capital")) {
-    return MoneyArray(dateTime_.date(), USD); // Empty money array.
+    return MoneyArray(date_time_.date(), USD); // Empty money array.
   }
   return Transaction::getMoneyArray(account);
 }
@@ -214,10 +210,10 @@ QList<Account> FinancialStat::getAccounts() const {
 
 void FinancialStat::changeDate(const QDate& nextDate) {
   // Skip when next transaction is the same day of current transaction.
-  if (dateTime_.date() == nextDate) {
+  if (date_time_.date() == nextDate) {
     return;
   }
-  MoneyArray before(dateTime_.date(), currencyError.currency());
+  MoneyArray before(date_time_.date(), currencyError.currency());
   MoneyArray after(nextDate, currencyError.currency());
   for (const Account& account : Transaction::getAccounts(Account::Asset)) {
     before += getMoneyArray(account);

@@ -14,7 +14,7 @@ class AccountManager;
 class TreeWidget : public QTreeWidget {
   Q_OBJECT
 public:
-  explicit TreeWidget(std::shared_ptr<Book> book, QWidget *parent = nullptr);
+  explicit TreeWidget(Book& book, QWidget *parent = nullptr);
 
 protected:
   virtual void dragEnterEvent(QDragEnterEvent *event) override;
@@ -22,13 +22,13 @@ protected:
 
 private:
   QStringList drag_from_;
-  std::shared_ptr<Book> book_;
+  Book& book_;
 };
 
 class AccountManager : public QMainWindow {
   Q_OBJECT
 public:
-  explicit AccountManager(std::shared_ptr<Book> book, QWidget *parent = nullptr);
+  explicit AccountManager(Book& book, QWidget *parent = nullptr);
   ~AccountManager();
 
 private slots:
@@ -45,7 +45,7 @@ signals:
 private:
   Ui::AccountManager* ui_;
   TreeWidget* tree_widget_;
-  std::shared_ptr<Book> book_;
+  Book& book_;
 
   QStringList names_;
 

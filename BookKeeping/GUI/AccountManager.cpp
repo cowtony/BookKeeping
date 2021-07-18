@@ -7,7 +7,7 @@
 
 #include "Book.h"
 
-TreeWidget::TreeWidget(std::shared_ptr<Book> book, QWidget *parent)
+TreeWidget::TreeWidget(Book& book, QWidget *parent)
     : QTreeWidget(parent), book_(book) {
   setSelectionMode(QAbstractItemView::SingleSelection);
   setDragDropMode(QAbstractItemView::InternalMove);
@@ -45,7 +45,7 @@ void TreeWidget::dropEvent(QDropEvent *event) {
   } else if (drag_from_.at(0) != dragTo.at(0)) {
     return;
   } else if (drag_from_.at(1) != dragTo.at(1)) {
-    if (book_->accountExist(Account(dragTo.at(0), dragTo.at(1), drag_from_.at(2)))) {
+    if (book_.accountExist(Account(dragTo.at(0), dragTo.at(1), drag_from_.at(2)))) {
       QMessageBox messageBox;
       messageBox.setText("Do you want to merge with existing account?");
       messageBox.setInformativeText("Old Category: " + drag_from_.at(1) + ", New Category: " + dragTo.at(1));
@@ -54,7 +54,7 @@ void TreeWidget::dropEvent(QDropEvent *event) {
       switch (messageBox.exec()) {
       case QMessageBox::Ok:
         QApplication::setOverrideCursor(Qt::WaitCursor);
-        if (book_->moveAccount(Account(drag_from_.at(0), drag_from_.at(1), drag_from_.at(2)),
+        if (book_.moveAccount(Account(drag_from_.at(0), drag_from_.at(1), drag_from_.at(2)),
                                Account(dragTo.at(0),   dragTo.at(1), drag_from_.at(2)))) {
           delete currentItem();
         }
@@ -74,7 +74,7 @@ void TreeWidget::dropEvent(QDropEvent *event) {
       switch (messageBox.exec()) {
       case QMessageBox::Ok:
         QApplication::setOverrideCursor(Qt::WaitCursor);
-        book_->moveAccount(Account(drag_from_.at(0), drag_from_.at(1), drag_from_.at(2)),
+        book_.moveAccount(Account(drag_from_.at(0), drag_from_.at(1), drag_from_.at(2)),
                            Account(dragTo.at(0),   dragTo.at(1), drag_from_.at(2)));
         QApplication::restoreOverrideCursor();
         break;
@@ -88,7 +88,7 @@ void TreeWidget::dropEvent(QDropEvent *event) {
   QTreeWidget::dropEvent(event);
 }
 
-AccountManager::AccountManager(std::shared_ptr<Book> book, QWidget *parent)
+AccountManager::AccountManager(Book& book, QWidget *parent)
     : QMainWindow(parent), ui_(new Ui::AccountManager), book_(book) {
   qDebug() << "-1";
   ui_->setupUi(this);
@@ -105,13 +105,13 @@ AccountManager::AccountManager(std::shared_ptr<Book> book, QWidget *parent)
     accountTypeItem->setText(0, Account::TableName.value(tableType));
     accountTypeItem->setFont(0, kTableFont);
 
-    for (const QString &category : book_->getCategories(tableType)) {
+    for (const QString &category : book_.getCategories(tableType)) {
       QTreeWidgetItem* accountCategoryItem = new QTreeWidgetItem(accountTypeItem);
       accountCategoryItem->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled);
       accountCategoryItem->setText(0, category);
       accountCategoryItem->setFont(0, kCategoryFont);
 
-      for (const QString &name : book_->getAccountNames(tableType, category)) {
+      for (const QString &name : book_.getAccountNames(tableType, category)) {
         QTreeWidgetItem* accountItem = new QTreeWidgetItem(accountCategoryItem);
         accountItem->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled);
         accountItem->setText(0, name);
@@ -159,12 +159,12 @@ void AccountManager::on_pushButton_Add_clicked() {
       QString category = QInputDialog::getText(this, "Add category into table " + names_.at(0), "Category:", QLineEdit::Normal, "", &ok);
       if (ok)
       {
-          if (book_->insertCategory(names_.at(0), category))
+          if (book_.insertCategory(names_.at(0), category))
           {
               QTreeWidgetItem* categoryItem = new QTreeWidgetItem(tree_widget_->currentItem());
               categoryItem->setText(0, category);
               categoryItem->setFont(0, kCategoryFont);
-              for (const QString &accountName : book_->getAccountNames(Account::TableName.key(names_.at(0)), category))
+              for (const QString &accountName : book_.getAccountNames(Account::TableName.key(names_.at(0)), category))
               {
                   QTreeWidgetItem* accountItem = new QTreeWidgetItem(categoryItem);
                   accountItem->setText(0, accountName);
@@ -179,7 +179,7 @@ void AccountManager::on_pushButton_Add_clicked() {
       QString accountName = QInputDialog::getText(this, "Add Account into category " + names_[1], "Name:", QLineEdit::Normal, "", &ok);
       if (ok && !accountName.isEmpty())
       {
-          if (book_->insertAccount(Account(names_.at(0), names_.at(1), accountName)))
+          if (book_.insertAccount(Account(names_.at(0), names_.at(1), accountName)))
           {
               QTreeWidgetItem* l_item = new QTreeWidgetItem;
               tree_widget_->currentItem()->addChild(l_item);
@@ -201,105 +201,85 @@ void AccountManager::on_pushButton_Add_clicked() {
 }
 
 void AccountManager::on_pushButton_Rename_clicked() {
-    switch (names_.size())
-    {
+  switch (names_.size()) {
     case 1:  // Table Level
-        break;
-    case 2:  // Category Level
-    {
-        bool ok;
-        QString newName = QInputDialog::getText(this, "Rename Category", "Name:", QLineEdit::Normal, names_.at(1), &ok);
-        if (ok && !newName.isEmpty())
-        {
-            if (book_->categoryExist(names_.at(0), newName))
-            {
-                QMessageBox messageBox;
-                messageBox.setText("Error: The category already exist.");
-                messageBox.exec();
-            }
-            else
-            {
+      break;
+    case 2: { // Category Level
+      bool ok;
+      QString newName = QInputDialog::getText(this, "Rename Category", "Name:", QLineEdit::Normal, names_.at(1), &ok);
+      if (ok && !newName.isEmpty()) {
+        if (book_.categoryExist(names_.at(0), newName)) {
+          QMessageBox messageBox;
+          messageBox.setText("Error: The category already exist.");
+          messageBox.exec();
+        } else {
+          QApplication::setOverrideCursor(Qt::WaitCursor);
+          if (book_.renameCategory(names_.at(0), names_.at(1), newName)) {
+            tree_widget_->currentItem()->setText(0, newName);
+            names_[1] = newName;
+            emit categoryChanged();
+          }
+          QApplication::restoreOverrideCursor();
+        }
+      }
+      break;
+    }
+    case 3: { // Account Level
+      bool ok;
+      QString newName = QInputDialog::getText(this, "Rename Account", "Name:", QLineEdit::Normal, names_.at(2), &ok);
+      if (ok && !newName.isEmpty()) {
+        if (book_.accountExist(Account(names_.at(0), names_.at(1), newName))) {
+            QMessageBox messageBox;
+            messageBox.setText("Do you want to merge with existing account?");
+            messageBox.setInformativeText("OldName: " + names_[2] + ", NewName: " + newName);
+            messageBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Discard);
+            messageBox.setDefaultButton(QMessageBox::Ok);
+            switch (messageBox.exec()) {
+              case QMessageBox::Ok:
                 QApplication::setOverrideCursor(Qt::WaitCursor);
-                if (book_->renameCategory(names_.at(0), names_.at(1), newName))
-                {
-                    tree_widget_->currentItem()->setText(0, newName);
-                    names_[1] = newName;
-                    emit categoryChanged();
+                if (book_.moveAccount(Account(names_.at(0), names_.at(1), names_.at(2)),
+                                      Account(names_.at(0), names_.at(1), newName))) {
+                  delete tree_widget_->currentItem();
+                  onTreeWidgetItemChanged(tree_widget_->currentItem());
+                  emit accountNameChanged();
                 }
                 QApplication::restoreOverrideCursor();
+                return;
+              case QMessageBox::Discard:
+                return;
             }
+        } else if (book_.moveAccount(Account(names_.at(0), names_.at(1), names_.at(2)),
+                                     Account(names_.at(0), names_.at(1), newName))) {
+          tree_widget_->currentItem()->setText(0, newName);
+          names_[2] = newName;
+          emit accountNameChanged();
         }
-        break;
+      }
+      break;
     }
-    case 3:  // Account Level
-    {
-        bool ok;
-        QString newName = QInputDialog::getText(this, "Rename Account", "Name:", QLineEdit::Normal, names_.at(2), &ok);
-        if (ok && !newName.isEmpty())
-        {
-            if (book_->accountExist(Account(names_.at(0), names_.at(1), newName)))
-            {
-                QMessageBox messageBox;
-                messageBox.setText("Do you want to merge with existing account?");
-                messageBox.setInformativeText("OldName: " + names_[2] + ", NewName: " + newName);
-                messageBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Discard);
-                messageBox.setDefaultButton(QMessageBox::Ok);
-                switch (messageBox.exec()) {
-                case QMessageBox::Ok:
-                    QApplication::setOverrideCursor(Qt::WaitCursor);
-                    if (book_->moveAccount(Account(names_.at(0), names_.at(1), names_.at(2)),
-                                           Account(names_.at(0), names_.at(1), newName)))
-                    {
-                        delete tree_widget_->currentItem();
-                        onTreeWidgetItemChanged(tree_widget_->currentItem());
-                        emit accountNameChanged();
-                    }
-                    QApplication::restoreOverrideCursor();
-                    return;
-                case QMessageBox::Discard:
-                    return;
-                }
-            }
-            else if (book_->moveAccount(Account(names_.at(0), names_.at(1), names_.at(2)),
-                                        Account(names_.at(0), names_.at(1), newName)))
-            {
-                tree_widget_->currentItem()->setText(0, newName);
-                names_[2] = newName;
-                emit accountNameChanged();
-            }
-        }
-        break;
-    }
-    }
+  }
 }
 
-void AccountManager::on_pushButton_Delete_clicked()
-{
-    switch (names_.size())
-    {
-    case 1:  // Table Level
+void AccountManager::on_pushButton_Delete_clicked() {
+    switch (names_.size()) {
+      case 1:  // Table Level
         break;
-    case 2:  // Category Level
-        if (book_->removeCategory(names_.at(0), names_.at(1)))
-        {
-            delete tree_widget_->currentItem();
-        }
-        else
-        {
-            QMessageBox messageBox;
-            messageBox.setText("Cannot delete!\nThe category still have account in it!");
-            messageBox.exec();
+      case 2:  // Category Level
+        if (book_.removeCategory(names_.at(0), names_.at(1))) {
+          delete tree_widget_->currentItem();
+        } else {
+          QMessageBox messageBox;
+          messageBox.setText("Cannot delete!\nThe category still have account in it!");
+          messageBox.exec();
         }
         break;
-    case 3:  // Account Level
-        if (book_->removeAccount(Account(names_.at(0), names_.at(1), names_.at(2))))
-        {
-            delete tree_widget_->currentItem();
-        }
-        else {
-            QMessageBox messageBox;
-            messageBox.setText("Cannot delete!\nThe account still have transactions link to it!");
-            messageBox.exec();
+      case 3:  // Account Level
+        if (book_.removeAccount(Account(names_.at(0), names_.at(1), names_.at(2)))) {
+          delete tree_widget_->currentItem();
+        } else {
+          QMessageBox messageBox;
+          messageBox.setText("Cannot delete!\nThe account still have transactions link to it!");
+          messageBox.exec();
         }
         break;
     }

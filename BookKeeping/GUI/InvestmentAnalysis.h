@@ -16,7 +16,7 @@ class InvestmentAnalysis : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit InvestmentAnalysis(std::shared_ptr<Book> book, QWidget *parent = nullptr);
+  explicit InvestmentAnalysis(Book& book, QWidget *parent = nullptr);
   ~InvestmentAnalysis();
 
 private slots:
@@ -29,7 +29,7 @@ private slots:
 
 private:
   Ui::InvestmentAnalysis *ui;
-  std::shared_ptr<Book> book_;
+  Book& book_;
 
   QMap<QString, double> discount_rates_;  // Value: annual discount rate
   QMap<QString, QMap<QDate, double>> return_histories_;  // Key1: investment name, Value: (Key2: date, Value: log2(ROI) until date)
