@@ -531,6 +531,8 @@ bool Book::logging(const QSqlQuery& query_log) const {
 QString Book::getLastExecutedQuery(const QSqlQuery& query) {
   QString str = query.lastQuery();
 
+  QVariantList bound_values(query.boundValues());
+  qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << bound_values.back().toString();
   // TODO: Fix the following section.
   /*
   QMapIterator<QString, QVariant> it(query.boundValues());

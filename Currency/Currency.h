@@ -11,6 +11,8 @@
 #include <QObject>
 #include <QNetworkReply>
 
+// TODO: Software will corrupt if Currency.db does not exist.
+
 enum Currency_e {EUR, USD, CNY, GBP};
 
 class CURRENCYSHARED_EXPORT Currency : public QObject {

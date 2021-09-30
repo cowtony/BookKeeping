@@ -34,4 +34,5 @@ unix {
     INSTALLS += target
 }
 
-RESOURCES +=
+RESOURCES += \
+  Currency.qrc

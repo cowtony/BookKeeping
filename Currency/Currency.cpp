@@ -14,18 +14,41 @@ Currency::Currency(QObject *parent) : QObject(parent)
     connect(&webCtrl_, &QNetworkAccessManager::finished, this, &Currency::onNetworkReply);
 }
 
-Currency::~Currency()
-{
-    closeDatabase();
+Currency::~Currency() {
+  closeDatabase();
 }
 
 void Currency::openDatabase(const QString &dbPath) {
-  database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
-  database_.setDatabaseName(dbPath);
-  // TODO: If the database not exist, create a new one with correct schema. Reference Book.db
-  if (!database_.open()) {
-    qDebug() << Q_FUNC_INFO << database_.lastError();
+  QFileInfo fileInfo(dbPath);
+  if (fileInfo.exists()) {
+    database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
+    database_.setDatabaseName(fileInfo.absoluteFilePath());
+    if (!database_.open()) {
+      qDebug() << Q_FUNC_INFO << database_.lastError();
+      return;
+    }
+  } else {
+    database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
+    database_.setDatabaseName(dbPath);
+    Q_INIT_RESOURCE(Currency);
+    QFile DDL(":/CreateDatabase.sql");
+    if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
+      QString statement;
+      while (!DDL.atEnd()) {
+        QString line = DDL.readLine();
+        statement += line;
+        if (statement.contains(';')) {
+          QSqlQuery query(statement, database_);
+          statement.clear();
+        }
+      }
+      DDL.close();
+    } else {
+      qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened.";
+      return;
+    }
   }
+
   removeInvalidCurrency();
 }
 
