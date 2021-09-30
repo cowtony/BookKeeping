@@ -40,7 +40,7 @@
       </column>
       <column>
        <property name="text">
-        <string>DR</string>
+        <string>Discount Rate</string>
        </property>
        <property name="font">
         <font>

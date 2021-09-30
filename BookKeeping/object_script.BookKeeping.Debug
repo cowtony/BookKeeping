@@ -1,0 +1,14 @@
+debug/BarChart.o
+debug/FinancialStatement.o
+debug/InvestmentAnalysis.o
+debug/main.o
+debug/AddTransaction.o
+debug/MainWindow.o
+debug/AccountManager.o
+debug/qrc_resources.o
+debug/moc_AddTransaction.o
+debug/moc_BarChart.o
+debug/moc_FinancialStatement.o
+debug/moc_InvestmentAnalysis.o
+debug/moc_MainWindow.o
+debug/moc_AccountManager.o

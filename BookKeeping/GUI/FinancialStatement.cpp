@@ -50,9 +50,9 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money
 
   item->setText(column, money.toString());
   if (money.amount_ < 0) {
-    item->setTextColor(column, Qt::red);
+    item->setForeground(column, Qt::red);
   } else {
-    item->setTextColor(column, QColor(Qt::black));
+    item->setForeground(column, QColor(Qt::black));
   }
 
   // Recursivly update parent sum:

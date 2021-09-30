@@ -31,7 +31,7 @@ public:
                                        const QList<Account>& accounts,
                                        bool ascending = true,
                                        bool accountUnion = false) const;
-  QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31))) const;
+  QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
   void removeTransaction(const QDateTime& p_dateTime) const;
 
   // Account

@@ -25,7 +25,7 @@ InvestmentAnalysis::InvestmentAnalysis(Book& book, QWidget *parent)
     double discount_rate = (discount_rates_.value(investments.at(row)) - 1.0) * 100;
     QTableWidgetItem* discount_rate_item = new QTableWidgetItem(QString::number(discount_rate, 'f', 2) + "%");
     if (discount_rate < 0) {
-      discount_rate_item->setTextColor(Qt::red);
+      discount_rate_item->setForeground(Qt::red);
     }
     discount_rate_item->setTextAlignment(Qt::AlignRight);
     ui->investmentTableWidget->setItem(row, 1, discount_rate_item);
@@ -37,7 +37,7 @@ InvestmentAnalysis::InvestmentAnalysis(Book& book, QWidget *parent)
     }
     QTableWidgetItem* apr_item = new QTableWidgetItem(QString::number(APR, 'f', 2) + "%");
     if (APR < 0) {
-      apr_item->setTextColor(Qt::red);
+      apr_item->setForeground(Qt::red);
     }
     apr_item->setTextAlignment(Qt::AlignRight);
     ui->investmentTableWidget->setItem(row, 2, apr_item);
@@ -141,7 +141,7 @@ double InvestmentAnalysis::backCalculateNPV(const QList<Money>& history, const M
       return log2_dailyROI;
     }
 
-    if (temp_npv < npv xor monotonic_increase) {
+    if ((temp_npv < npv) xor monotonic_increase) {
       max = log2_dailyROI;
     } else {
       min = log2_dailyROI;
@@ -242,7 +242,7 @@ void InvestmentAnalysis::plotInvestments() {
           continue;
         }
         value += previousDate.daysTo(date) * return_histories_.value(investmentName).value(date);
-        lineSeries->append(QDateTime(date).toMSecsSinceEpoch(), value);
+        lineSeries->append(QDateTime(date, QTime(0, 0, 0)).toMSecsSinceEpoch(), value);
 
         minY = value < minY ? value : minY;
         maxY = value > maxY ? value : maxY;

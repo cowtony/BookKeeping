@@ -90,15 +90,11 @@ void TreeWidget::dropEvent(QDropEvent *event) {
 
 AccountManager::AccountManager(Book& book, QWidget *parent)
     : QMainWindow(parent), ui_(new Ui::AccountManager), book_(book) {
-  qDebug() << "-1";
   ui_->setupUi(this);
-  qDebug() << "0";
   tree_widget_ = new TreeWidget(book_);
   tree_widget_->headerItem()->setText(0, QApplication::translate("AccountManager", "Account Name", nullptr));
   ui_->gridLayout->addWidget(tree_widget_, 0, 0, 1, 3);
-  qDebug() << "1";
   connect(tree_widget_, &QTreeWidget::currentItemChanged, this, &AccountManager::onTreeWidgetItemChanged);
-  qDebug() << "2";
   for (const Account::TableType &tableType : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
     QTreeWidgetItem* accountTypeItem = new QTreeWidgetItem(tree_widget_);
     accountTypeItem->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled);

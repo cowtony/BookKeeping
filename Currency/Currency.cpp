@@ -19,15 +19,14 @@ Currency::~Currency()
     closeDatabase();
 }
 
-void Currency::openDatabase(const QString &dbPath)
-{
-    database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
-    database_.setDatabaseName(dbPath);
-    if (!database_.open())
-    {
-        qDebug() << Q_FUNC_INFO << database_.lastError();
-    }
-    removeInvalidCurrency();
+void Currency::openDatabase(const QString &dbPath) {
+  database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
+  database_.setDatabaseName(dbPath);
+  // TODO: If the database not exist, create a new one with correct schema. Reference Book.db
+  if (!database_.open()) {
+    qDebug() << Q_FUNC_INFO << database_.lastError();
+  }
+  removeInvalidCurrency();
 }
 
 void Currency::closeDatabase()
@@ -36,42 +35,41 @@ void Currency::closeDatabase()
         database_.close();
 }
 
-double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Currency_e toSymbol)
-{
-    if (fromSymbol == toSymbol)
-        return 1.0;
+double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Currency_e toSymbol) {
+  if (fromSymbol == toSymbol) {
+    return 1.0;
+  }
 
-    double result = 0.0 / 0.0;
+  double result = 0.0 / 0.0;
 
-    QSqlQuery query(database_);
-    query.prepare("SELECT * FROM Currency WHERE Date <= :d ORDER BY Date DESC");
-    query.bindValue(":d", date.toString("yyyy-MM-dd"));
-    if (!query.exec())
-        qDebug() << Q_FUNC_INFO << query.lastError();
-    if (query.next())
-    {
-        result = query.value(Symbol_3.value(toSymbol)).toDouble() / query.value(Symbol_3.value(fromSymbol)).toDouble();
-        if (query.value("Date").toDate() == date)
-            return result;
+  QSqlQuery query(database_);
+  query.prepare("SELECT * FROM Currency WHERE Date <= :d ORDER BY Date DESC");
+  query.bindValue(":d", date.toString("yyyy-MM-dd"));
+  if (!query.exec()) {
+    qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+  }
+  if (query.next()) {
+    result = query.value(Symbol_3.value(toSymbol)).toDouble() / query.value(Symbol_3.value(fromSymbol)).toDouble();
+    if (query.value("Date").toDate() == date) {
+      return result;
     }
-    else
-        qDebug() << Q_FUNC_INFO << "Currency not found in date" << date;
+  } else {
+    qDebug() << Q_FUNC_INFO << "Currency not found in date" << date;
+  }
 
-    if (!requestedDate_.contains(date) and date < QDate::currentDate())
-    {
-        requestedDate_.insert(date);
-        QUrl url("http://data.fixer.io/api/"
-                 + date.toString("yyyy-MM-dd") + "?"
-//                 "access_key=077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
-                 "access_key=b6ec9d9dd5efa56c094fc370fd68fbc8"    // cowtony@163.com        19900525
-//                 "access_key=af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
-        //       "&base=EUR"    // This is for paid user only
-                 "&symbols=" + Symbol_3.values().join(','));
-        qDebug() << Q_FUNC_INFO << "Requesting:" << url;
-        webCtrl_.get(QNetworkRequest(url));
-    }
-
-    return result;
+  if (!requestedDate_.contains(date) and date < QDate::currentDate()) {
+    requestedDate_.insert(date);
+    QUrl url("http://data.fixer.io/api/"
+             + date.toString("yyyy-MM-dd") + "?"
+//             "access_key=077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
+             "access_key=b6ec9d9dd5efa56c094fc370fd68fbc8"    // cowtony@163.com        19900525
+//             "access_key=af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
+//             "&base=EUR"    // This is for paid user only.
+             "&symbols=" + Symbol_3.values().join(','));
+    qDebug() << Q_FUNC_INFO << "Requesting:" << url;
+    webCtrl_.get(QNetworkRequest(url));
+  }
+  return result;
 }
 
 void Currency::removeInvalidCurrency() {
@@ -89,7 +87,7 @@ void Currency::onNetworkReply(QNetworkReply* reply)
         QJsonDocument jsonResponse = QJsonDocument::fromJson(jsonString.toUtf8());
         QJsonObject jsonObject = jsonResponse.object();
         QDateTime dateTime;
-        dateTime.setTime_t(jsonObject.value("timestamp").toInt());
+        dateTime.setSecsSinceEpoch(jsonObject.value("timestamp").toInt());
         QJsonValue rates = jsonObject.value("rates");
         QJsonObject jsonRates = rates.toObject();
 

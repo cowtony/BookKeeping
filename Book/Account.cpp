@@ -35,10 +35,10 @@ QString Account::getFinancialStatementName() const {
 }
 
 bool Account::operator <(const Account &p_account) const {
-  if (table_ == p_account.category_) {
+  if (category_ == p_account.category_) {
     return category_ + name_ < p_account.category_ + p_account.name_;
   } else {
-    return table_ < p_account.category_;
+    return category_ < p_account.category_;
   }
 }
 

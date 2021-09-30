@@ -1,0 +1,14 @@
+release/BarChart.o
+release/FinancialStatement.o
+release/InvestmentAnalysis.o
+release/main.o
+release/AddTransaction.o
+release/MainWindow.o
+release/AccountManager.o
+release/qrc_resources.o
+release/moc_AddTransaction.o
+release/moc_BarChart.o
+release/moc_FinancialStatement.o
+release/moc_InvestmentAnalysis.o
+release/moc_MainWindow.o
+release/moc_AccountManager.o

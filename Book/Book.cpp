@@ -313,9 +313,9 @@ QStringList Book::getAccountNamesByLastUpdate(Account::TableType tableType, cons
         query.bindValue(":date", dateTime.toString(DATE_TIME_FORMAT));
         query.exec();
         if (query.next())
-            accountNamesByDate.insertMulti(query.value("MAX(Date)").toDateTime(), accountName);
+            accountNamesByDate.insert(query.value("MAX(Date)").toDateTime(), accountName);
         else
-            accountNamesByDate.insertMulti(QDateTime(QDate(1990, 05, 25)), accountName);
+            accountNamesByDate.insert(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), accountName);
     }
 
     QStringList accountNames;
@@ -530,6 +530,9 @@ bool Book::logging(const QSqlQuery& query_log) const {
 
 QString Book::getLastExecutedQuery(const QSqlQuery& query) {
   QString str = query.lastQuery();
+
+  // TODO: Fix the following section.
+  /*
   QMapIterator<QString, QVariant> it(query.boundValues());
 
   it.toBack();
@@ -538,5 +541,6 @@ QString Book::getLastExecutedQuery(const QSqlQuery& query) {
     it.previous();
     str.replace(it.key(), it.value().toString());
   }
+  */
   return str;
 }
