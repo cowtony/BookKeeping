@@ -76,8 +76,10 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   QList<Money> local_transfer_history; // Store all the transfer activities since last summary.
   QList<Money> alltime_transfer_history;
   Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), balanceChange(QDate(), USD, 0.00);
-  const QDateTime start = QDateTime(QDate(1990, 05, 25), QTime());
-  QList<Transaction> transactions = book_.queryTransactions(start, QDateTime::currentDateTime(), "", {asset, revenue}, true, true);
+  QList<Transaction> transactions =
+      book_.queryTransactions(TransactionFilter(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
+                                                QDateTime::currentDateTime(),
+                                                "", {asset, revenue}, true, true));
   for (int i = 0; i < transactions.size(); i++) {
     // Init the day before first transaction date and set log(ROI) to 0.
     if (returnHistory.empty()) {

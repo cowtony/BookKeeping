@@ -3,7 +3,9 @@
 
 #include <QMainWindow>
 #include <QDateEdit>
+
 #include "AccountManager.h"
+#include "book_model.h"
 #include "FinancialStatement.h"
 
 namespace Ui {
@@ -47,13 +49,12 @@ private:
 
   Book book_;
 
-  const QVector<Account::TableType> kTableList = {Account::Expense, Account::Revenue, Account::Asset, Account::Liability};
-
   // Filter components:
   QDateEdit* start_date_;
   QDateEdit* end_date_;
   QVector<QComboBox*> category_combo_boxes_;
   QVector<QComboBox*> name_combo_boxes_;
+  BookModel book_model_;
 };
 
 #endif // MAINWINDOW_H

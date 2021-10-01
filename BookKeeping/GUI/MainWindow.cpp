@@ -61,6 +61,10 @@ MainWindow::MainWindow(QWidget *parent)
   connect(account_manager_, &AccountManager::categoryChanged, this, &MainWindow::setCategoryComboBox);
   connect(account_manager_, &AccountManager::categoryChanged, this, &MainWindow::displayTransactions);
   displayTransactions();
+
+  // WIP: QTableView
+  ui->tableView->setModel(&book_model_);
+  ui->tableView->show();
 }
 
 MainWindow::~MainWindow() {
@@ -71,26 +75,26 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::displayTransactions() {
-  const int kMaximumRows = 200;
   while (ui->tableWidget_transactions->rowCount() > 2)
       ui->tableWidget_transactions->removeRow(2);
 
-  // Collecxt filters.
-  QList<Account> filter;
+  // Build query filter.
+  TransactionFilter filter(QDateTime(start_date_->date(), QTime(00, 00, 00)),
+                           QDateTime(end_date_->date(), QTime(23, 59, 59)),
+                           static_cast<QLineEdit*>(ui->tableWidget_transactions->cellWidget(1, 1))->text(),
+                           {}, false, false);
   for (int i = 0; i < kTableList.size(); i++) {
     if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
-      filter << Account(kTableList.at(i), category_combo_boxes_.at(i)->currentText(), name_combo_boxes_.at(i)->currentText());
+      filter.addAccount(Account(kTableList.at(i), category_combo_boxes_.at(i)->currentText(), name_combo_boxes_.at(i)->currentText()));
     }
   }
 
   // Calculate sum and display to window.
   QVector<MoneyArray> sums(kTableList.size(), MoneyArray{end_date_->date(), USD});
-  for (const Transaction& t : book_.queryTransactions(QDateTime(start_date_->date(), QTime(00, 00, 00)),
-                                                      QDateTime(end_date_->date(), QTime(23, 59, 59)),
-                                                      static_cast<QLineEdit*>(ui->tableWidget_transactions->cellWidget(1, 1))->text(),
-                                                      filter, false, false)) {
+  book_model_.SetTransactions(book_.queryTransactions(filter));
+  for (const Transaction& t : book_model_.transactions()) {
     int row = ui->tableWidget_transactions->rowCount();
-    if (row > kMaximumRows) {
+    if (row > kMaximumTransactions) {
       break;
     }
 
@@ -119,6 +123,8 @@ void MainWindow::displayTransactions() {
   // Adjust column width & row height.
   ui->tableWidget_transactions->resizeColumnsToContents();
   ui->tableWidget_transactions->resizeRowsToContents();
+  ui->tableView->resizeColumnsToContents();
+  ui->tableView->resizeRowsToContents();
 }
 
 void MainWindow::on_tableWidget_transactions_cellDoubleClicked(int row, int column) {
@@ -240,12 +246,12 @@ void MainWindow::on_actionInvestmentAnalysis_triggered() {
 void MainWindow::on_actionTransactionValidation_triggered() {
   // Display validation message
   QString errorMessage = "";
-  for (const Transaction& t : book_.queryTransactions(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
-                                                       QDateTime(QDate(2200, 1, 1), QTime(0, 0, 0)), "", {}, false)) {
-    if (!t.validation().empty()) {
-      errorMessage += t.date_time_.toString("yyyy/MM/dd HH:mm:ss") + ": ";
-      errorMessage += t.description_ + '\n';
-      errorMessage += "\t" + t.validation().join("; ") + "\n\n";
+  // Query ALL transactions.
+  for (const Transaction& transaction : book_.queryTransactions(TransactionFilter())) {
+    if (!transaction.validation().empty()) {
+      errorMessage += transaction.date_time_.toString("yyyy/MM/dd HH:mm:ss") + ": ";
+      errorMessage += transaction.description_ + '\n';
+      errorMessage += "\t" + transaction.validation().join("; ") + "\n\n";
     }
   }
 

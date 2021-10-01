@@ -11,8 +11,6 @@
 #include "Transaction.h"
 #include "Account.h"
 
-const QString DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm";
-
 class BOOKSHARED_EXPORT Book {
 public:
   // The constructor will create a instance with opened database.
@@ -25,12 +23,7 @@ public:
   bool dateTimeExist(const QDateTime& dt) const;
   Transaction getTransaction(const QDateTime& dt);
   bool insertTransaction(const Transaction& t) const;
-  QList<Transaction> queryTransactions(const QDateTime& startTime,
-                                       const QDateTime& endTime,
-                                       const QString& description,
-                                       const QList<Account>& accounts,
-                                       bool ascending = true,
-                                       bool accountUnion = false) const;
+  QList<Transaction> queryTransactions(const TransactionFilter& filter) const;
   QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
   void removeTransaction(const QDateTime& p_dateTime) const;
 

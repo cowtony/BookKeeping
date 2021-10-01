@@ -239,8 +239,7 @@ void FinancialStatement::on_pushButtonExport_clicked()
     QApplication::clipboard()->setText(rows.join('\n'));
 }
 
-void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem *item, int column)
-{
+void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem *item, int column) {
     QStringList pathway;
     QTreeWidgetItem *tempItem = item;
     while (tempItem != nullptr)

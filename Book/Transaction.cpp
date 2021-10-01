@@ -1,6 +1,7 @@
 #include "Transaction.h"
 
-Transaction::Transaction() {
+Transaction::Transaction(const QDateTime& date_time, const QString& description)
+  : date_time_(date_time), description_(description) {
   data_[Account::Expense];
   data_[Account::Revenue];
   data_[Account::Asset];
@@ -123,15 +124,15 @@ void Transaction::stringToData(Account::TableType tableType, const QString& data
 }
 
 QList<Account> Transaction::getAccounts() const {
-    QList<Account> retAccounts;
-    for (const Account::TableType &tableType : {Account::Asset, Account::Expense, Account::Revenue, Account::Liability}) {
-        for (const QString &category : data_.value(tableType).keys()) {
-            for (const QString &name : data_.value(tableType).value(category).keys()) {
-                retAccounts.push_back(Account(tableType, category, name));
-            }
-        }
+  QList<Account> all_ccounts;
+  for (const Account::TableType& tableType : {Account::Asset, Account::Expense, Account::Revenue, Account::Liability}) {
+    for (const QString& category : data_.value(tableType).keys()) {
+      for (const QString& name : data_.value(tableType).value(category).keys()) {
+        all_ccounts.push_back(Account(tableType, category, name));
+      }
     }
-    return retAccounts;
+  }
+  return all_ccounts;
 }
 
 QList<Account> Transaction::getAccounts(Account::TableType tableType) const
@@ -181,6 +182,23 @@ MoneyArray Transaction::getRetainedEarnings() const {
 MoneyArray Transaction::getXXXContributedCapital() const
 {
     return MoneyArray(date_time_.date(), USD);
+}
+
+//////////////////// Transaction Filter ////////////////////////////
+TransactionFilter::TransactionFilter(const QDateTime& start_time,
+                                     const QDateTime& end_time,
+                                     const QString& description,
+                                     const QList<Account>& accounts,
+                                     bool use_union,
+                                     bool ascending_order)
+  : Transaction(start_time, description), end_date_time_(end_time), use_union_(use_union), ascending_order_(ascending_order) {
+  for (const Account& account : accounts) {
+    addAccount(account);
+  }
+}
+
+void TransactionFilter::addAccount(const Account& account) {
+  addMoneyArray(account, MoneyArray(QDate(), "$1"));
 }
 
 //////////////////// Financial Summary /////////////////////////////

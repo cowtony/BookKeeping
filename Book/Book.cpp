@@ -98,56 +98,48 @@ bool Book::insertTransaction(const Transaction &t) const {
   }
 }
 
-QList<Transaction> Book::queryTransactions(const QDateTime& startTime,
-                                           const QDateTime& endTime,
-                                           const QString& description,
-                                           const QList<Account>& accounts,
-                                           bool ascending,
-                                           bool accountUnion) const {
-  QList<Transaction> transactionList;
-
+QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) const {
   QStringList statements;
-  for (const Account& account : accounts) {
+  for (const Account& account : filter.getAccounts()) {
     if (!account.category_.isEmpty()) {
       statements << "(" + account.getTableName() + " LIKE \"%[" + account.category_ + "|" + account.name_ + ":%\")";
     }
   }
 
   QSqlQuery query(database_);
-  query.prepare("SELECT * FROM Transactions"
-                " WHERE (Date BETWEEN :startDate AND :endDate)"
-                " AND (Description LIKE :description)" +
-                QString(statements.empty()? "" : " AND ") +
-                statements.join(accountUnion? " OR " : " AND ") +
-                " ORDER BY Date " + (ascending? "ASC" : "DESC"));
+  query.prepare(QString("SELECT * FROM Transactions WHERE (Date BETWEEN :startDate AND :endDate) AND (Description LIKE :description)") +
+                (statements.empty()? "" : " AND ") +
+                statements.join(filter.use_union_? " OR " : " AND ") +
+                " ORDER BY Date " + (filter.ascending_order_? "ASC" : "DESC"));
 
-  query.bindValue(":startDate", startTime.toString(DATE_TIME_FORMAT));
-  query.bindValue(":endDate",     endTime.toString(DATE_TIME_FORMAT));
-  query.bindValue(":description", "%" + description + "%");
+  query.bindValue(":startDate", filter.date_time_.toString(DATE_TIME_FORMAT));
+  query.bindValue(":endDate",   filter.end_date_time_.toString(DATE_TIME_FORMAT));
+  query.bindValue(":description", "%" + filter.description_ + "%");
 
   if (!query.exec()) {
     qDebug() << Q_FUNC_INFO << query.lastError();
     return {};
   }
 
+  QList<Transaction> result;
   while (query.next()) {
-    Transaction t;
-    t.description_ = query.value("Description").toString();
-    t.date_time_ = query.value("Date").toDateTime();
+    Transaction transaction;
+    transaction.description_ = query.value("Description").toString();
+    transaction.date_time_ = query.value("Date").toDateTime();
     // TODO: somehow several outbounded transaction will also be selected.
     // This hard code is to remove them.
-    if (t.date_time_ < startTime or t.date_time_ > endTime) {
+    if (transaction.date_time_ < filter.date_time_ or transaction.date_time_ > filter.end_date_time_) {
       continue;
     }
 
-    t.stringToData(Account::Expense,   query.value(Account::TableName.value(Account::Expense)).toString());
-    t.stringToData(Account::Revenue,   query.value(Account::TableName.value(Account::Revenue)).toString());
-    t.stringToData(Account::Asset,     query.value(Account::TableName.value(Account::Asset)).toString());
-    t.stringToData(Account::Liability, query.value(Account::TableName.value(Account::Liability)).toString());
-    transactionList.push_back(t);
+    transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
+    transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
+    transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
+    transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
+    result.push_back(transaction);
   }
 
-  return transactionList;
+  return result;
 }
 
 QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const {
@@ -278,7 +270,7 @@ Currency_e Book::getCurrencyType(const Account &account) const {
 QStringList Book::getCategories(Account::TableType p_tableType) const {
     QStringList l_categories;
     QSqlQuery l_query(database_);
-    l_query.prepare("SELECT DISTINCT Category FROM [" + Account::TableName.value(p_tableType) + "] ORDER BY Category ASC");
+    l_query.prepare("SELECT DISTINCT Category FROM [" + Account::kTableName.value(p_tableType) + "] ORDER BY Category ASC");
     if (!l_query.exec())
         qDebug() << Q_FUNC_INFO << l_query.lastError();
     while (l_query.next())
@@ -291,7 +283,7 @@ QStringList Book::getCategories(Account::TableType p_tableType) const {
 QStringList Book::getAccountNames(Account::TableType tableType, const QString& category) const {
   QStringList names;
   QSqlQuery query(database_);
-  query.prepare("SELECT Name FROM [" + Account::TableName.value(tableType) + "] WHERE Category = :c ORDER BY Name ASC");
+  query.prepare("SELECT Name FROM [" + Account::kTableName.value(tableType) + "] WHERE Category = :c ORDER BY Name ASC");
   query.bindValue(":c", category);
 
   if (!query.exec()) {
@@ -308,7 +300,7 @@ QStringList Book::getAccountNamesByLastUpdate(Account::TableType tableType, cons
     for (const QString &accountName: getAccountNames(tableType, category))
     {
         QSqlQuery query(database_);
-        query.prepare("SELECT MAX(Date) From Transactions WHERE " + Account::TableName.value(tableType) + " LIKE :account AND Date <= :date");
+        query.prepare("SELECT MAX(Date) From Transactions WHERE " + Account::kTableName.value(tableType) + " LIKE :account AND Date <= :date");
         query.bindValue(":account", "%[" + category + "|" + accountName + ":%");
         query.bindValue(":date", dateTime.toString(DATE_TIME_FORMAT));
         query.exec();

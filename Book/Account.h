@@ -12,7 +12,7 @@
 
 struct BOOKSHARED_EXPORT Account {
   typedef enum {Asset, Liability, Revenue, Expense, Equity} TableType;
-  static const QMap<TableType, QString> TableName;
+  static const QMap<TableType, QString> kTableName;
 
   explicit Account(TableType table, const QString& category, const QString& name);
   explicit Account(const QString& tableName, const QString& category, const QString& name);

@@ -98,7 +98,7 @@ AccountManager::AccountManager(Book& book, QWidget *parent)
   for (const Account::TableType &tableType : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
     QTreeWidgetItem* accountTypeItem = new QTreeWidgetItem(tree_widget_);
     accountTypeItem->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled);
-    accountTypeItem->setText(0, Account::TableName.value(tableType));
+    accountTypeItem->setText(0, Account::kTableName.value(tableType));
     accountTypeItem->setFont(0, kTableFont);
 
     for (const QString &category : book_.getCategories(tableType)) {
@@ -160,7 +160,7 @@ void AccountManager::on_pushButton_Add_clicked() {
               QTreeWidgetItem* categoryItem = new QTreeWidgetItem(tree_widget_->currentItem());
               categoryItem->setText(0, category);
               categoryItem->setFont(0, kCategoryFont);
-              for (const QString &accountName : book_.getAccountNames(Account::TableName.key(names_.at(0)), category))
+              for (const QString &accountName : book_.getAccountNames(Account::kTableName.key(names_.at(0)), category))
               {
                   QTreeWidgetItem* accountItem = new QTreeWidgetItem(categoryItem);
                   accountItem->setText(0, accountName);

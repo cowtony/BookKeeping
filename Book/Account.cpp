@@ -1,6 +1,6 @@
 #include "Account.h"
 
-const QMap<Account::TableType, QString> Account::TableName =
+const QMap<Account::TableType, QString> Account::kTableName =
     {{Asset, "Asset"},
      {Liability, "Liability"},
      {Revenue, "Revenue"},
@@ -10,15 +10,15 @@ const QMap<Account::TableType, QString> Account::TableName =
 Account::Account(TableType table, const QString& category, const QString& name) : table_(table), category_(category), name_(name) {}
 
 Account::Account(const QString& tableName, const QString& category, const QString& name) : category_(category), name_(name) {
-  if (TableName.values().contains(tableName)) {
-    table_ = TableName.key(tableName);
+  if (kTableName.values().contains(tableName)) {
+    table_ = kTableName.key(tableName);
   } else {
     qDebug() << Q_FUNC_INFO << "table name doesn't exist!" << tableName;
   }
 }
 
 QString Account::getTableName() const {
-  return TableName.value(table_);
+  return kTableName.value(table_);
 }
 
 QString Account::getFinancialStatementName() const {

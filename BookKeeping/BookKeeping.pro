@@ -36,6 +36,7 @@ SOURCES += \
     GUI/BarChart.cpp \
     GUI/FinancialStatement.cpp \
     GUI/InvestmentAnalysis.cpp \
+    book_model.cpp \
     main.cpp \
     GUI/AddTransaction.cpp \
     GUI/MainWindow.cpp \
@@ -54,7 +55,8 @@ HEADERS += \
     GUI/FinancialStatement.h \
     GUI/InvestmentAnalysis.h \
     GUI/MainWindow.h \
-    GUI/AccountManager.h
+    GUI/AccountManager.h \
+    book_model.h
 
 RESOURCES += \
     resources.qrc
