@@ -47,11 +47,17 @@ public:
 //  bool removeColumns(int column, int count, const QModelIndex &parent = QModelIndex()) override;
 
   void SetTransactions(const QList<Transaction>& transactions);
-  const QList<Transaction>& transactions() { return transactions_; }
+  const QList<Transaction>& transactions() const { return transactions_; }
+  QList<Transaction> getTransactions(const QModelIndexList& index_list) const;
+  const Transaction getTransaction(int index) const {
+    Q_ASSERT(index >= 0 and index < transactions_.size());
+    return transactions_.at(index);
+  }
 
 private:
-  const std::vector<QString> kColumnNames = {"DateTime", "Description", "Expense", "Revenue", "Asset", "Liability"};
+  const std::vector<QString> kColumnNames = {"Date", "Description", "Expense", "Revenue", "Asset", "Liability"};
   QList<Transaction> transactions_;
+  Transaction sum_transaction_;
 };
 
 #endif // BOOKMODEL_H

@@ -30,18 +30,16 @@ private slots:
   void on_actionTransactionValidation_triggered();
 
   // Show all filtered transactions.
-  void displayTransactions();
+  void refreshTable();
 
   void on_pushButtonDeleteTransactions_clicked();
   void accountCategoryChanged(const Account::TableType& table_type, const QString& category, QComboBox* name_combo_box);
-  void on_tableWidget_transactions_cellDoubleClicked(int row, int column);
+  void on_tableView_transactions_doubleClicked(const QModelIndex &index);
   void setCategoryComboBox();
 
   void on_pushButton_MergeTransaction_clicked();
 
 private:
-  QMap<QDateTime, QString> getSelectedTransactionInfos() const;
-
   Ui::MainWindow *ui;
 
   AccountManager     *account_manager_;

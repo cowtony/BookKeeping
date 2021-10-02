@@ -279,6 +279,11 @@ void AddTransaction::on_pushButton_Split_clicked() {
     Money split = (remain / (lastNode.m_sign * count));
     split.changeCurrency(book_.getCurrencyType(lastNode));
     lastNode.m_lineEdit->setText(split.toString());
+    if (split.amount_ < 0) {
+      lastNode.m_lineEdit->setStyleSheet("color: red");
+    } else {
+      lastNode.m_lineEdit->setStyleSheet("color: black");
+    }
     on_pushButton_Split_clicked();
   }
 

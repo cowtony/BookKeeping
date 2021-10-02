@@ -90,15 +90,14 @@ QStringList Transaction::validation() const {
 }
 
 QString Transaction::dataToString(Account::TableType tableType) const {
-    QStringList retString;
-    for (const Account &account : getAccounts(tableType))
-    {
-        MoneyArray moneyArray = getMoneyArray(account);    
-        if (!moneyArray.isZero())
-            retString << "[" + account.category_ + "|" + account.name_ + ": " + moneyArray.toString() + "]";
+  QStringList retString;
+  for (const Account& account : getAccounts(tableType)) {
+    MoneyArray moneyArray = getMoneyArray(account);
+    if (!moneyArray.isZero()) {
+      retString << "[" + account.category_ + "|" + account.name_ + ": " + moneyArray.toString() + "]";
     }
-
-    return retString.join("; ");
+  }
+  return retString.join("; ");
 }
 
 void Transaction::stringToData(Account::TableType tableType, const QString& data) {

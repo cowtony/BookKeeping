@@ -100,7 +100,8 @@ void Money::changeCurrency(Currency_e currency_e) {
 }
 
 QString Money::toString() const {
-    return QLocale(QLocale::English).toCurrencyString(getRoundedAmount(), Currency::Symbol_1.value(currency_), 2);
+  // TODO: This returns ($100.00) instead of -$100.00 now.
+  return QLocale(QLocale::English).toCurrencyString(getRoundedAmount(), Currency::Symbol_1.value(currency_), 2);
 }
 
 Money Money::round() const
@@ -169,14 +170,12 @@ void MoneyArray::push_back(Money money) {
   amounts_.push_back(money.amount_);
 }
 
-QString MoneyArray::toString() const
-{
-    QStringList result;
-    for (const double &amount : amounts_)
-    {
-        result << Money(date_, currency_, amount).toString();
-    }
-    return result.join(", ");
+QString MoneyArray::toString() const {
+  QStringList result;
+  for (const double& amount : amounts_) {
+    result << Money(date_, currency_, amount).toString();
+  }
+  return result.join(", ");
 }
 
 void MoneyArray::changeCurrency(Currency_e currency) {

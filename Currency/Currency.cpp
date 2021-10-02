@@ -24,7 +24,7 @@ void Currency::openDatabase(const QString &dbPath) {
     database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
     database_.setDatabaseName(fileInfo.absoluteFilePath());
     if (!database_.open()) {
-      qDebug() << Q_FUNC_INFO << database_.lastError();
+      qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << database_.lastError();
       return;
     }
   } else {
@@ -44,7 +44,7 @@ void Currency::openDatabase(const QString &dbPath) {
       }
       DDL.close();
     } else {
-      qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened.";
+      qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Database not opened or CreateDatabase.txt not opened.";
       return;
     }
   }
@@ -77,7 +77,7 @@ double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Curre
       return result;
     }
   } else {
-    qDebug() << Q_FUNC_INFO << "Currency not found in date" << date;
+    qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date;
   }
 
   if (!requestedDate_.contains(date) and date < QDate::currentDate()) {
@@ -89,7 +89,7 @@ double Currency::getCurrencyRate(const QDate& date, Currency_e fromSymbol, Curre
 //             "access_key=af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
 //             "&base=EUR"    // This is for paid user only.
              "&symbols=" + Symbol_3.values().join(','));
-    qDebug() << Q_FUNC_INFO << "Requesting:" << url;
+    qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
     webCtrl_.get(QNetworkRequest(url));
   }
   return result;
@@ -121,10 +121,10 @@ void Currency::onNetworkReply(QNetworkReply* reply)
         for (QString symbol: Symbol_3.values())
             query.bindValue(":" + symbol.toLower(), jsonRates.value(symbol).toDouble());
         if (!query.exec())
-            qDebug() << Q_FUNC_INFO << query.lastError();
+            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
     }
     else {
-      qDebug() << Q_FUNC_INFO << "ErrorReply";
+      qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "ErrorReply";
     }
     delete reply;
 }

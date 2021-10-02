@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>787</width>
-    <height>709</height>
+    <width>692</width>
+    <height>446</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,133 +16,23 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0" colspan="2">
-     <widget class="QTableView" name="tableView_filter"/>
-    </item>
-    <item row="1" column="0" colspan="2">
-     <widget class="QTableWidget" name="tableWidget_transactions">
-      <row>
-       <property name="text">
-        <string>From:</string>
-       </property>
-      </row>
-      <row>
-       <property name="text">
-        <string>To:</string>
-       </property>
-      </row>
-      <row>
-       <property name="text">
-        <string>1</string>
-       </property>
-      </row>
-      <column>
-       <property name="text">
-        <string>Date</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Description</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Expense</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Revenue</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Asset</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Liability</string>
-       </property>
-      </column>
-      <item row="0" column="0">
-       <property name="text">
-        <string>Start Date</string>
-       </property>
-      </item>
-      <item row="0" column="1">
-       <property name="text">
-        <string>a</string>
-       </property>
-      </item>
-      <item row="0" column="2">
-       <property name="text">
-        <string>ExpenseCategory</string>
-       </property>
-      </item>
-      <item row="0" column="3">
-       <property name="text">
-        <string>RevenueCategory</string>
-       </property>
-      </item>
-      <item row="0" column="4">
-       <property name="text">
-        <string>AccountCategory</string>
-       </property>
-      </item>
-      <item row="0" column="5">
-       <property name="text">
-        <string>LiabilityCategory</string>
-       </property>
-      </item>
-      <item row="1" column="0">
-       <property name="text">
-        <string>End Date</string>
-       </property>
-      </item>
-      <item row="1" column="1">
-       <property name="text">
-        <string>b</string>
-       </property>
-      </item>
-      <item row="1" column="2">
-       <property name="text">
-        <string>ExpenseName</string>
-       </property>
-      </item>
-      <item row="1" column="3">
-       <property name="text">
-        <string>RevenueName</string>
-       </property>
-      </item>
-      <item row="1" column="4">
-       <property name="text">
-        <string>AccountName</string>
-       </property>
-      </item>
-      <item row="1" column="5">
-       <property name="text">
-        <string>LiabilityName</string>
-       </property>
-      </item>
-      <item row="2" column="0">
-       <property name="text">
-        <string/>
-       </property>
-      </item>
+     <widget class="QTableView" name="tableView_transactions">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
      </widget>
     </item>
-    <item row="2" column="0" colspan="2">
-     <widget class="QTableView" name="tableView"/>
-    </item>
-    <item row="3" column="0">
+    <item row="1" column="0">
      <widget class="QPushButton" name="pushButton_MergeTransaction">
       <property name="text">
        <string>Merge Transaction</string>
       </property>
      </widget>
     </item>
-    <item row="3" column="1">
+    <item row="1" column="1">
      <widget class="QPushButton" name="pushButtonDeleteTransactions">
       <property name="text">
        <string>Delete Transactions</string>
@@ -156,7 +46,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>787</width>
+     <width>692</width>
      <height>21</height>
     </rect>
    </property>
