@@ -13,7 +13,7 @@
 #include "Money.h"
 #include "Account.h"
 
-const QString DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm";
+const QString kDateTimeFormat = "yyyy-MM-dd HH:mm";
 
 class BOOKSHARED_EXPORT Transaction {
 public:
@@ -23,19 +23,19 @@ public:
   void        operator +=(const Transaction& p_transaction);
 
   void clear();
-  void clear(Account::TableType tableType);
+  void clear(Account::Type tableType);
 
   MoneyArray getMoneyArray(const Account& account) const;
   void       addMoneyArray(const Account& account, const MoneyArray& moneyArray);
-  void stringToData(Account::TableType tableType, const QString& data);
+  void stringToData(Account::Type tableType, const QString& data);
 
   bool accountExist(const Account& account) const;
   Money getCheckSum() const;
   QStringList validation() const;  // Return error message
-  QString dataToString(Account::TableType p_tableType) const;
+  QString dataToString(Account::Type p_tableType) const;
 
   QList<Account> getAccounts() const;
-  QList<Account> getAccounts(Account::TableType tableType) const;
+  QList<Account> getAccounts(Account::Type tableType) const;
 
   MoneyArray getRetainedEarnings() const;
   MoneyArray getXXXContributedCapital() const;  // not used yet
@@ -47,7 +47,7 @@ protected:
 
 private:
   // Key 0: table type, Key 1: Category, Key 2: Account Name
-  QMap<Account::TableType, QMap<QString, QMap<QString, MoneyArray>>> data_;
+  QMap<Account::Type, QMap<QString, QMap<QString, MoneyArray>>> data_;
 };
 
 struct BOOKSHARED_EXPORT TransactionFilter : public Transaction {

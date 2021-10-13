@@ -3,6 +3,20 @@
 BookModel::BookModel(QObject *parent)
   : QAbstractTableModel(parent) {}
 
+void BookModel::SetTransactions(const QList<Transaction>& transactions) {
+  transactions_ = transactions.mid(0, kMaximumTransactions);
+  sum_transaction_.clear();
+  for (const Transaction& transaction : transactions) {
+    sum_transaction_ += transaction;
+  }
+  sum_transaction_.date_time_ = QDateTime();
+  sum_transaction_.description_ = "SUM:";
+  QModelIndex top_left = createIndex(2, 0);
+  QModelIndex bottom_right = createIndex(kReservedFilterRow + transactions_.size(), columnCount() - 1);
+  emit dataChanged(top_left, bottom_right, {Qt::DisplayRole});
+  emit layoutChanged();  // To update the rows, not exactly sure how this works.
+}
+
 QVariant BookModel::headerData(int section, Qt::Orientation orientation, int role) const {
   if (role == Qt::DisplayRole) {
     switch (orientation) {
@@ -21,16 +35,6 @@ QVariant BookModel::headerData(int section, Qt::Orientation orientation, int rol
   return QVariant();
 }
 
-//bool BookModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role)
-//{
-//  if (value != headerData(section, orientation, role)) {
-//    // FIXME: Implement me!
-//    emit headerDataChanged(orientation, section, section);
-//    return true;
-//  }
-//  return false;
-//}
-
 int BookModel::rowCount(const QModelIndex& /* parent */) const {
   return kReservedFilterRow + transactions_.size() + 1;
 }
@@ -38,22 +42,6 @@ int BookModel::rowCount(const QModelIndex& /* parent */) const {
 int BookModel::columnCount(const QModelIndex& /* parent */) const {
   return kColumnNames.size();
 }
-
-//bool BookModel::hasChildren(const QModelIndex &parent) const
-//{
-//  // FIXME: Implement me!
-//}
-
-//bool BookModel::canFetchMore(const QModelIndex &parent) const
-//{
-//  // FIXME: Implement me!
-//  return false;
-//}
-
-//void BookModel::fetchMore(const QModelIndex &parent)
-//{
-//  // FIXME: Implement me!
-//}
 
 QVariant BookModel::data(const QModelIndex &index, int role) const {
   if (!index.isValid()) {
@@ -75,7 +63,7 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
         : transactions_.at(index.row() - kReservedFilterRow);
     switch (index.column()) {
     case 0:
-      return transaction.date_time_.toString(DATE_TIME_FORMAT);
+      return transaction.date_time_.toString(kDateTimeFormat);
     case 1:
       return transaction.description_;
     case 2:
@@ -88,19 +76,57 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
   return QVariant();
 }
 
-void BookModel::SetTransactions(const QList<Transaction>& transactions) {
-  transactions_ = transactions.mid(0, kMaximumTransactions);
-  sum_transaction_.clear();
-  for (const Transaction& transaction : transactions) {
-    sum_transaction_ += transaction;
+Transaction BookModel::getTransaction(const QModelIndex& model_index) const {
+  int index = model_index.row() - kReservedFilterRow;
+  if (index >= 0 and index < transactions_.size()) {
+    return transactions_.at(index);
+  } else {
+    return Transaction();
   }
-  sum_transaction_.date_time_ = QDateTime();
-  sum_transaction_.description_ = "SUM:";
-  QModelIndex top_left = createIndex(2, 0);
-  QModelIndex bottom_right = createIndex(kReservedFilterRow + transactions_.size(), columnCount() - 1);
-  emit dataChanged(top_left, bottom_right, {Qt::DisplayRole});
-  emit layoutChanged();  // To update the rows, not exactly sure how this works.
 }
+
+QList<Transaction> BookModel::getTransactions(const QModelIndexList& index_list) const {
+  QSet<int> selected_indexes;
+  for (QModelIndex model_index : index_list) {
+    int index = model_index.row() - kReservedFilterRow;
+    if (index < 0 or index >= transactions_.size()) {
+      qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << model_index;
+      continue;
+    }
+    selected_indexes.insert(index);
+  }
+  QList<Transaction> result;
+  for (int index : selected_indexes) {
+    result.append(transactions_.at(index));
+  }
+  return result;
+}
+
+//bool BookModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role)
+//{
+//  if (value != headerData(section, orientation, role)) {
+//    // FIXME: Implement me!
+//    emit headerDataChanged(orientation, section, section);
+//    return true;
+//  }
+//  return false;
+//}
+
+//bool BookModel::hasChildren(const QModelIndex &parent) const
+//{
+//  // FIXME: Implement me!
+//}
+
+//bool BookModel::canFetchMore(const QModelIndex &parent) const
+//{
+//  // FIXME: Implement me!
+//  return false;
+//}
+
+//void BookModel::fetchMore(const QModelIndex &parent)
+//{
+//  // FIXME: Implement me!
+//}
 
 //bool BookModel::setData(const QModelIndex &index, const QVariant &value, int role)
 //{
@@ -145,20 +171,3 @@ void BookModel::SetTransactions(const QList<Transaction>& transactions) {
 //  // FIXME: Implement me!
 //  endRemoveColumns();
 //}
-
-QList<Transaction> BookModel::getTransactions(const QModelIndexList& index_list) const {
-  QSet<int> selected_indexes;
-  for (QModelIndex model_index : index_list) {
-    int index = model_index.row() - kReservedFilterRow;
-    if (index < 0 or index >= transactions_.size()) {
-      qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << model_index;
-      continue;
-    }
-    selected_indexes.insert(index);
-  }
-  QList<Transaction> result;
-  for (int index : selected_indexes) {
-    result.append(transactions_.at(index));
-  }
-  return result;
-}

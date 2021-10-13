@@ -24,39 +24,44 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
-#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 RC_ICONS = Resource/App_Icon.ico
 
-INCLUDEPATH += Account \
-    GUI \
+INCLUDEPATH += GUI \
+    main_window \
+    account_manager \
     Book
 
 SOURCES += \
     GUI/BarChart.cpp \
     GUI/FinancialStatement.cpp \
     GUI/InvestmentAnalysis.cpp \
-    book_model.cpp \
+    account_manager/account_manager.cpp \
+    account_manager/account_tree_node.cpp \
+    account_manager/accounts_model.cpp \
     main.cpp \
     GUI/AddTransaction.cpp \
-    GUI/MainWindow.cpp \
-    GUI/AccountManager.cpp
+    main_window/book_model.cpp \
+    main_window/main_window.cpp
 
 FORMS += \
-    GUI/AccountManager.ui \
     GUI/AddTransaction.ui \
     GUI/FinancialStatement.ui \
     GUI/InvestmentAnalysis.ui \
-    GUI/MainWindow.ui
+    account_manager/account_manager.ui \
+    main_window/main_window.ui
 
 HEADERS += \
     GUI/AddTransaction.h \
     GUI/BarChart.h \
     GUI/FinancialStatement.h \
     GUI/InvestmentAnalysis.h \
-    GUI/MainWindow.h \
-    GUI/AccountManager.h \
-    book_model.h
+    account_manager/account_manager.h \
+    account_manager/account_tree_node.h \
+    account_manager/accounts_model.h \
+    main_window/book_model.h \
+    main_window/main_window.h
 
 RESOURCES += \
     resources.qrc

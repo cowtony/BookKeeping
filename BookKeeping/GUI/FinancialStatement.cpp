@@ -125,14 +125,14 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool
   // Find or create same table:
   QTreeWidgetItem *tableItem = nullptr;
   for (int i = 0; i < statementItem->childCount(); i++) {
-    if (statementItem->child(i)->text(0) == account.getTableName()) {
+    if (statementItem->child(i)->text(0) == account.typeName()) {
       tableItem = statementItem->child(i);
       break;
     }
   }
   if (tableItem == nullptr) {
     if (create) {
-      tableItem = new QTreeWidgetItem(statementItem, {account.getTableName()});
+      tableItem = new QTreeWidgetItem(statementItem, {account.typeName()});
       tableItem->setFont(0, m_tableSumFont);
     } else {
       return nullptr;
@@ -142,14 +142,14 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool
   // Find or create same category:
   QTreeWidgetItem *categoryItem = nullptr;
   for (int i = 0; i < tableItem->childCount(); i++) {
-    if (tableItem->child(i)->text(0) == account.category_) {
+    if (tableItem->child(i)->text(0) == account.category) {
       categoryItem = tableItem->child(i);
       break;
     }
   }
   if (categoryItem == nullptr) {
     if (create) {
-      categoryItem = new QTreeWidgetItem(tableItem, {account.category_});
+      categoryItem = new QTreeWidgetItem(tableItem, {account.category});
       categoryItem->setFont(0, m_categorySumFont);
     } else {
       return nullptr;
@@ -159,14 +159,14 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool
   // Find or create same account:
   QTreeWidgetItem *accountItem = nullptr;
   for (int i = 0; i < categoryItem->childCount(); i++) {
-    if (categoryItem->child(i)->text(0) == account.name_) {
+    if (categoryItem->child(i)->text(0) == account.name) {
       accountItem = categoryItem->child(i);
       break;
     }
   }
   if (accountItem == nullptr) {
     if (create) {
-      accountItem = new QTreeWidgetItem(categoryItem, {account.name_});
+      accountItem = new QTreeWidgetItem(categoryItem, {account.name});
     } else {
       return nullptr;
     }

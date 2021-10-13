@@ -5,9 +5,7 @@
 
 #include "Transaction.h"
 
-const int kMaximumTransactions = 200;
-const int kReservedFilterRow = 2;
-const QVector<Account::TableType> kTableList = {Account::Expense, Account::Revenue, Account::Asset, Account::Liability};
+const QVector<Account::Type> kTableList = {Account::Expense, Account::Revenue, Account::Asset, Account::Liability};
 
 class BookModel : public QAbstractTableModel {
   Q_OBJECT
@@ -49,13 +47,13 @@ public:
   void SetTransactions(const QList<Transaction>& transactions);
   const QList<Transaction>& transactions() const { return transactions_; }
   QList<Transaction> getTransactions(const QModelIndexList& index_list) const;
-  const Transaction getTransaction(int index) const {
-    Q_ASSERT(index >= 0 and index < transactions_.size());
-    return transactions_.at(index);
-  }
+  Transaction getTransaction(const QModelIndex& model_index) const;
 
 private:
+  const int kReservedFilterRow = 2;
+  const int kMaximumTransactions = 200;
   const std::vector<QString> kColumnNames = {"Date", "Description", "Expense", "Revenue", "Asset", "Liability"};
+
   QList<Transaction> transactions_;
   Transaction sum_transaction_;
 };

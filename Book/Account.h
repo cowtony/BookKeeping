@@ -11,22 +11,24 @@
 #include "Currency.h"
 
 struct BOOKSHARED_EXPORT Account {
-  typedef enum {Asset, Liability, Revenue, Expense, Equity} TableType;
-  static const QMap<TableType, QString> kTableName;
+  typedef enum {Asset, Liability, Revenue, Expense, Equity} Type;
+  static const QMap<Type, QString> kTableName;
 
-  explicit Account(TableType table, const QString& category, const QString& name);
+  explicit Account(Type table, const QString& category, const QString& name);
   explicit Account(const QString& tableName, const QString& category, const QString& name);
 
-  TableType table_;
-  QString   category_;
-  QString   name_;
-  int id_;  // Primary key in database.
+  Type    type;
+  QString category;
+  QString name;
 
-  QString getTableName() const;
+  QString typeName() const;
   QString getFinancialStatementName() const; // Income Statement, Balance Sheet, Cash Flow
 
   bool operator  <(const Account& account) const;
   bool operator ==(const Account& account) const;
+
+private:
+  int id_;  // Primary key in database, not used.
 };
 
 #endif // ACCOUNT_H

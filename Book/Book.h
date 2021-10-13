@@ -21,17 +21,19 @@ public:
 
   // Transactions
   bool dateTimeExist(const QDateTime& dt) const;
-  Transaction getTransaction(const QDateTime& dt);
-  bool insertTransaction(const Transaction& t) const;
-  QList<Transaction> queryTransactions(const TransactionFilter& filter) const;
+  bool insertTransaction(const Transaction& transaction) const;
+  Transaction queryTransaction(const QDateTime& date_time) const;  // Not used.
+  QList<Transaction> queryTransactions(const TransactionFilter& filter = TransactionFilter()) const;
   QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
   void removeTransaction(const QDateTime& p_dateTime) const;
 
   // Account
-  Currency_e  getCurrencyType(const Account& account) const;
-  QStringList getCategories  (Account::TableType p_tableType) const;
-  QStringList getAccountNames(Account::TableType p_tableType, const QString& p_category) const;
-  QStringList getAccountNamesByLastUpdate(Account::TableType p_tableType, const QString& p_category, const QDateTime& p_dateTime) const;
+  QList<Account> queryAllAccountsFrom(QList<Account::Type> account_types = {}) const;
+  Currency_e  queryCurrencyType(const Account& account) const;
+  QStringList queryCategories  (Account::Type table_type) const;
+  QStringList queryAccountNames(Account::Type table_type, const QString& category) const;
+  QStringList queryAccountNamesByLastUpdate(Account::Type table_type, const QString& category, const QDateTime& date_time) const;
+
   bool insertCategory(const QString& tableName, const QString& category) const;
   bool removeCategory(const QString& tableName, const QString& category) const;
   bool categoryExist (const QString& tableName, const QString& category) const;

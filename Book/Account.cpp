@@ -1,28 +1,28 @@
 #include "Account.h"
 
-const QMap<Account::TableType, QString> Account::kTableName =
+const QMap<Account::Type, QString> Account::kTableName =
     {{Asset, "Asset"},
      {Liability, "Liability"},
      {Revenue, "Revenue"},
      {Expense, "Expense"},
      {Equity, "Equity"}};
 
-Account::Account(TableType table, const QString& category, const QString& name) : table_(table), category_(category), name_(name) {}
+Account::Account(Type table, const QString& category, const QString& name) : type(table), category(category), name(name) {}
 
-Account::Account(const QString& tableName, const QString& category, const QString& name) : category_(category), name_(name) {
+Account::Account(const QString& tableName, const QString& category, const QString& name) : category(category), name(name) {
   if (kTableName.values().contains(tableName)) {
-    table_ = kTableName.key(tableName);
+    type = kTableName.key(tableName);
   } else {
     qDebug() << Q_FUNC_INFO << "table name doesn't exist!" << tableName;
   }
 }
 
-QString Account::getTableName() const {
-  return kTableName.value(table_);
+QString Account::typeName() const {
+  return kTableName.value(type);
 }
 
 QString Account::getFinancialStatementName() const {
-  switch (table_) {
+  switch (type) {
     case Revenue:
     case Expense:
       return "Income Statement";
@@ -35,13 +35,13 @@ QString Account::getFinancialStatementName() const {
 }
 
 bool Account::operator <(const Account &p_account) const {
-  if (category_ == p_account.category_) {
-    return category_ + name_ < p_account.category_ + p_account.name_;
+  if (category == p_account.category) {
+    return category + name < p_account.category + p_account.name;
   } else {
-    return category_ < p_account.category_;
+    return category < p_account.category;
   }
 }
 
 bool Account::operator ==(const Account &account) const {
-  return account.table_ == table_ and account.category_ == category_ and account.name_ == name_;
+  return account.type == type and account.category == category and account.name == name;
 }

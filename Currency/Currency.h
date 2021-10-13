@@ -12,6 +12,7 @@
 #include <QNetworkReply>
 
 // TODO: Software will corrupt if Currency.db does not exist.
+// TODO: Software will crush on new date without rate into.
 
 enum Currency_e {EUR, USD, CNY, GBP};
 

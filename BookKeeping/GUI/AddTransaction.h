@@ -25,10 +25,7 @@ private slots:
   void on_calendarWidget_selectionChanged();
   void on_dateTimeEdit_dateTimeChanged(const QDateTime &dateTime_);
   void on_lineEdit_Description_editingFinished();
-
-  void onAccountNameChanged(QTableWidget* tableWidget, int row);
   void onAccountCateChanged(QTableWidget* tableWidget, int row);
-
   void on_pushButton_Split_clicked();
   void on_pushButton_Insert_clicked();
 
@@ -41,7 +38,7 @@ private:
   Ui::AddTransaction *ui;
   Book& book_;
 
-  QMap<Account::TableType, QTableWidget*> tableMap;
+  QMap<Account::Type, QTableWidget*> tableMap;
 
   QDateTime replacedDateTime;
 

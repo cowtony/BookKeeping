@@ -6,7 +6,7 @@ InvestmentAnalysis::InvestmentAnalysis(Book& book, QWidget *parent)
   ui->setupUi(this);
 
   // Scan, analysis and save all investment product:
-  QStringList investments = book_.getAccountNames(Account::Revenue, "Investment");
+  QStringList investments = book_.queryAccountNames(Account::Revenue, "Investment");
   QApplication::setOverrideCursor(Qt::WaitCursor);
   for (const QString& investmentName : investments) {
     analysisInvestment(investmentName);
@@ -60,9 +60,9 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   // 1. Setup two related account from Asset & Revenue.
   Account asset(Account::Asset, "", investmentName);
   Account revenue(Account::Revenue, "Investment", investmentName);
-  for (const QString& categoryName : book_.getCategories(Account::Asset)) {
+  for (const QString& categoryName : book_.queryCategories(Account::Asset)) {
     if (book_.accountExist(Account(Account::Asset, categoryName, investmentName))) {
-      if (!asset.category_.isEmpty()) {
+      if (!asset.category.isEmpty()) {
         // TODO: make this an error message.
         qDebug() << "Error! More than one account in asset has the investment name.";
         return;

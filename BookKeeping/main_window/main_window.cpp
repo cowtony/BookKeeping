@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+#include "main_window.h"
 #include "ui_MainWindow.h"
 
 #include <QMessageBox>
@@ -52,10 +52,10 @@ MainWindow::MainWindow(QWidget *parent)
   setCategoryComboBox();
   // Put this to the last of init because this will triger on_tableView_transactions_cellChanged().
   // QLineEdit: Description Filter.
-  QLineEdit *description_filter = new QLineEdit;
-  description_filter->setPlaceholderText("Description Filter");
-  ui->tableView_transactions->setIndexWidget(book_model_.index(1, 1), description_filter);
-  connect(description_filter, &QLineEdit::textEdited, this, &MainWindow::refreshTable);
+  description_ = new QLineEdit;
+  description_->setPlaceholderText("Description Filter");
+  ui->tableView_transactions->setIndexWidget(book_model_.index(1, 1), description_);
+  connect(description_, &QLineEdit::textEdited, this, &MainWindow::refreshTable);
 
   connect(account_manager_, &AccountManager::accountNameChanged, this, &MainWindow::refreshTable);
   connect(account_manager_, &AccountManager::categoryChanged, this, &MainWindow::setCategoryComboBox);
@@ -75,8 +75,7 @@ void MainWindow::refreshTable() {
   // Build transaction filter.
   TransactionFilter filter(QDateTime(start_date_->date(), QTime(00, 00, 00)),
                            QDateTime(end_date_->date(), QTime(23, 59, 59)),
-                           static_cast<QLineEdit*>(ui->tableView_transactions->indexWidget(book_model_.index(1, 1)))->text(),
-                           {}, false, false);
+                           description_->text(), {}, false, false);
   for (int i = 0; i < kTableList.size(); i++) {
     if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
       filter.addAccount(Account(kTableList.at(i), category_combo_boxes_.at(i)->currentText(), name_combo_boxes_.at(i)->currentText()));
@@ -91,13 +90,15 @@ void MainWindow::refreshTable() {
 }
 
 void MainWindow::on_tableView_transactions_doubleClicked(const QModelIndex &index) {
-  if (index.row() >= kReservedFilterRow) {
-    Transaction transaction = book_model_.getTransaction(index.row() - kReservedFilterRow);
-    AddTransaction *add_transaction = new AddTransaction(book_, this);
-    add_transaction->setAttribute(Qt::WA_DeleteOnClose);
-    add_transaction->setTransaction(transaction);
-    connect(add_transaction, &AddTransaction::insertTransactionFinished, this, &MainWindow::refreshTable);
+  Transaction transaction = book_model_.getTransaction(index);
+  if (transaction.description_ == "") {
+    QMessageBox::warning(this, "Warning", "Please do not double click on non-transaction rows.", QMessageBox::Ok);
+    return;
   }
+  AddTransaction *add_transaction = new AddTransaction(book_, this);
+  add_transaction->setAttribute(Qt::WA_DeleteOnClose);
+  add_transaction->setTransaction(transaction);
+  connect(add_transaction, &AddTransaction::insertTransactionFinished, this, &MainWindow::refreshTable);
 }
 
 void MainWindow::setCategoryComboBox() {
@@ -105,7 +106,7 @@ void MainWindow::setCategoryComboBox() {
     QComboBox *cateComboBox = category_combo_boxes_.at(i);
     cateComboBox->clear();
     cateComboBox->addItem("");
-    cateComboBox->addItems(book_.getCategories(kTableList.at(i)));
+    cateComboBox->addItems(book_.queryCategories(kTableList.at(i)));
   }
 }
 
@@ -119,7 +120,7 @@ void MainWindow::on_pushButton_MergeTransaction_clicked() {
   warningMsgBox.setText("Are you sure you want to merge the following transactions?");
   for (const Transaction& transaction : selected_transactions) {
     warningMsgBox.setInformativeText(warningMsgBox.informativeText()
-                                     + '\n' + transaction.date_time_.toString(DATE_TIME_FORMAT)
+                                     + '\n' + transaction.date_time_.toString(kDateTimeFormat)
                                      + ": " + transaction.description_);
   }
   warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
@@ -150,7 +151,7 @@ void MainWindow::on_pushButtonDeleteTransactions_clicked() {
   warningMsgBox.setText("Are you sure you want to delete the following transactions?");
   for (const Transaction& transaction : selected_transactions)
       warningMsgBox.setInformativeText(warningMsgBox.informativeText()
-                                       + '\n' + transaction.date_time_.toString(DATE_TIME_FORMAT)
+                                       + '\n' + transaction.date_time_.toString(kDateTimeFormat)
                                        + ": " + transaction.description_);
   warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
   warningMsgBox.setDefaultButton(QMessageBox::Cancel);
@@ -173,11 +174,11 @@ void MainWindow::on_actionAddTransaction_triggered() {
   addTransaction->show();
 }
 
-void MainWindow::accountCategoryChanged(const Account::TableType& table_type,
+void MainWindow::accountCategoryChanged(const Account::Type& table_type,
                                         const QString& category,
                                         QComboBox* name_combo_box) {
   name_combo_box->clear();
-  name_combo_box->addItems(book_.getAccountNamesByLastUpdate(table_type, category, end_date_->dateTime()));
+  name_combo_box->addItems(book_.queryAccountNamesByLastUpdate(table_type, category, end_date_->dateTime()));
 }
 
 void MainWindow::on_actionAccountManager_triggered() {
@@ -199,7 +200,7 @@ void MainWindow::on_actionTransactionValidation_triggered() {
   // Display validation message
   QString errorMessage = "";
   // Query ALL transactions.
-  for (const Transaction& transaction : book_.queryTransactions(TransactionFilter())) {
+  for (const Transaction& transaction : book_.queryTransactions()) {
     if (!transaction.validation().empty()) {
       errorMessage += transaction.date_time_.toString("yyyy/MM/dd HH:mm:ss") + ": ";
       errorMessage += transaction.description_ + '\n';

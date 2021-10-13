@@ -24,16 +24,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    Account.cpp \
-    Transaction.cpp \
-    Book.cpp \
-    Money.cpp
+    account.cpp \
+    transaction.cpp \
+    book.cpp \
+    money.cpp
 
 HEADERS += \
-    Account.h \
-    Transaction.h \
-    Book.h \
-    Money.h
+    account.h \
+    transaction.h \
+    book.h \
+    money.h
 
 unix {
     target.path = /usr/lib

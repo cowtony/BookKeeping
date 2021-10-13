@@ -90,7 +90,7 @@ void AddTransaction::setTransaction(const Transaction &transaction) {
   ui->lineEdit_Description->setText(QString(transaction.description_).remove("[R]"));
 
   for (const Account &account : transaction.getAccounts()) {
-    setTableRow(tableMap.value(account.table_), account, transaction.getMoneyArray(account));
+    setTableRow(tableMap.value(account.type), account, transaction.getMoneyArray(account));
   }
 
   show();
@@ -105,7 +105,7 @@ Transaction AddTransaction::getTransaction() {
                                     ui->tableWidget_Expenses,
                                     ui->tableWidget_Revenues,
                                     ui->tableWidget_Liabilities}) {
-    const Account::TableType tableType = tableMap.key(tableWidget);
+    const Account::Type tableType = tableMap.key(tableWidget);
 
     for (int row = 0; row < tableWidget->rowCount() - 1; row++) {
       QComboBox *cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
@@ -117,12 +117,17 @@ Transaction AddTransaction::getTransaction() {
 
       Account account(tableType, cateComboBox->currentText(), nameComboBox->currentText());
 
-      MoneyArray moneyArray(ui->dateTimeEdit->date(), book_.getCurrencyType(account));
+      MoneyArray moneyArray(ui->dateTimeEdit->date(), book_.queryCurrencyType(account));
       for (int col = 2; col < tableWidget->columnCount(); col++) {
         QLineEdit *lineEdit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
-        Money money(ui->dateTimeEdit->date(), lineEdit->text(), book_.getCurrencyType(account));
+        Money money(ui->dateTimeEdit->date(), lineEdit->text(), book_.queryCurrencyType(account));
         if (!lineEdit->text().isEmpty()) {
           lineEdit->setText(money.toString());
+          if (money.amount_ < 0) {
+            lineEdit->setStyleSheet("color: red");
+          } else {
+            lineEdit->setStyleSheet("color: black");
+          }
         }
         moneyArray.push_back(money);
       }
@@ -145,9 +150,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
   }
 
   if (!errorMsg.empty()) {
-    QMessageBox errorMsgBox;
-    errorMsgBox.setText(errorMsg.join('\n'));
-    errorMsgBox.exec();
+    QMessageBox::warning(this, "Warning!", errorMsg.join('\n'), QMessageBox::Ok);
     return;
   }
 
@@ -198,61 +201,49 @@ void AddTransaction::on_lineEdit_Description_editingFinished() {
 }
 
 void AddTransaction::onAccountCateChanged(QTableWidget* tableWidget, int row) {
-    QComboBox* cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
-    QComboBox* nameComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1));
+  QComboBox* cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
+  QComboBox* nameComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1));
 
-    nameComboBox->clear();
-    QStringList l_accountNamesByDate = book_.getAccountNamesByLastUpdate(tableMap.key(tableWidget), cateComboBox->currentText(), ui->dateTimeEdit->dateTime());
-    nameComboBox->addItems(l_accountNamesByDate);
-    nameComboBox->setDisabled(cateComboBox->currentIndex() == 0);
+  nameComboBox->clear();
+  QStringList l_accountNamesByDate = book_.queryAccountNamesByLastUpdate(tableMap.key(tableWidget), cateComboBox->currentText(), ui->dateTimeEdit->dateTime());
+  nameComboBox->addItems(l_accountNamesByDate);
+  nameComboBox->setDisabled(cateComboBox->currentIndex() == 0);
 
-    for (int col = 2; col < tableWidget->columnCount(); col++)
-    {
-        QLineEdit *lineEdit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
-        if (cateComboBox->currentIndex() == 0)
-        {
-            lineEdit->setText("0.00");
-            lineEdit->setEnabled(false);
-        }
-        else
-        {
-            lineEdit->setEnabled(true);
-        }
+  for (int col = 2; col < tableWidget->columnCount(); col++) {
+    QLineEdit *lineEdit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
+    if (cateComboBox->currentIndex() == 0) {
+      lineEdit->setText("0.00");
+      lineEdit->setEnabled(false);
+    } else {
+      lineEdit->setEnabled(true);
     }
+  }
 
-    if (cateComboBox->currentIndex() != 0) // Set Disable
-    {
-        gotoStart:
-        for (int r = 0; r < tableWidget->rowCount() - 1; r++)
-        {
-            if (row == r) continue;
-            QComboBox* nameCB = static_cast<QComboBox*>(tableWidget->cellWidget(r, 1));
-            if (nameComboBox->currentText() == nameCB->currentText())
-            {
-                if (nameComboBox->currentIndex() < nameComboBox->count() - 1)
-                {
-                    nameComboBox->setCurrentIndex(nameComboBox->currentIndex() + 1);
-                    goto gotoStart;
-                }
-                else
-                {
-                    return;
-                }
-            }
+  if (cateComboBox->currentIndex() != 0) { // Set Disable
+    gotoStart:
+    for (int r = 0; r < tableWidget->rowCount() - 1; r++) {
+      if (row == r) continue;
+      QComboBox* nameCB = static_cast<QComboBox*>(tableWidget->cellWidget(r, 1));
+      if (nameComboBox->currentText() == nameCB->currentText()) {
+        if (nameComboBox->currentIndex() < nameComboBox->count() - 1) {
+          nameComboBox->setCurrentIndex(nameComboBox->currentIndex() + 1);
+          goto gotoStart;
+        } else {
+          return;
         }
+      }
     }
+  }
 
-    getTransaction();
+  getTransaction();
 }
-
-void AddTransaction::onAccountNameChanged(QTableWidget* tableWidget, int row) {}
 
 // Recursivly fill the blank spots.
 void AddTransaction::on_pushButton_Split_clicked() {
   struct Node : public Account {
-    Node(QLineEdit* p_lineEdit = nullptr, TableType p_tableType = Asset)
+    Node(QLineEdit* p_lineEdit = nullptr, Type p_tableType = Asset)
     : Account(p_tableType, "", ""), m_lineEdit(p_lineEdit) {
-      m_sign = table_ == Asset || table_ == Expense? 1 : -1;
+      m_sign = type == Asset || type == Expense? 1 : -1;
     }
     int m_sign;
     QLineEdit* m_lineEdit;
@@ -265,8 +256,8 @@ void AddTransaction::on_pushButton_Split_clicked() {
         QLineEdit *lineEdit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
         if (lineEdit->text().isEmpty()) {
           lastNode = Node(lineEdit, tableMap.key(tableWidget));
-          lastNode.category_    = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0))->currentText();
-          lastNode.name_        = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1))->currentText();
+          lastNode.category    = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0))->currentText();
+          lastNode.name        = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1))->currentText();
           count++;
         }
       }
@@ -277,7 +268,7 @@ void AddTransaction::on_pushButton_Split_clicked() {
     Transaction t = getTransaction();
     Money remain = - t.getCheckSum();
     Money split = (remain / (lastNode.m_sign * count));
-    split.changeCurrency(book_.getCurrencyType(lastNode));
+    split.changeCurrency(book_.queryCurrencyType(lastNode));
     lastNode.m_lineEdit->setText(split.toString());
     if (split.amount_ < 0) {
       lastNode.m_lineEdit->setStyleSheet("color: red");
@@ -290,47 +281,46 @@ void AddTransaction::on_pushButton_Split_clicked() {
   return;
 }
 
-int AddTransaction::insertTableRow(QTableWidget *tableWidget)
-{
-    int row = tableWidget->rowCount() - 1;
-    tableWidget->insertRow(row);
-    tableWidget->setRowHeight(row, 20);
+int AddTransaction::insertTableRow(QTableWidget* tableWidget) {
+  int row = tableWidget->rowCount() - 1;
+  tableWidget->insertRow(row);
+  tableWidget->setRowHeight(row, 20);
 
-    QComboBox* cateComboBox = new QComboBox;
-    tableWidget->setCellWidget(row, 0, cateComboBox);
-    QComboBox* nameComboBox = new QComboBox;
-    tableWidget->setCellWidget(row, 1, nameComboBox);
-    for (int col = 2; col < tableWidget->columnCount(); col++)
-    {
-        QLineEdit *lineEdit = new QLineEdit;
-        tableWidget->setCellWidget(row, col, lineEdit);
-        lineEdit->setAlignment(Qt::AlignRight);
-        lineEdit->setDisabled(true);
-    }
-    connect(cateComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, tableWidget, row](){ this->onAccountCateChanged(tableWidget, row); });
-    connect(nameComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, tableWidget, row](){ this->onAccountNameChanged(tableWidget, row); });
-    cateComboBox->addItem("");
-    cateComboBox->addItems(book_.getCategories(tableMap.key(tableWidget)));
-    return row;
+  QComboBox* cateComboBox = new QComboBox;
+  tableWidget->setCellWidget(row, 0, cateComboBox);
+  QComboBox* nameComboBox = new QComboBox;
+  tableWidget->setCellWidget(row, 1, nameComboBox);
+  for (int col = 2; col < tableWidget->columnCount(); col++) {
+    QLineEdit* lineEdit = new QLineEdit;
+    tableWidget->setCellWidget(row, col, lineEdit);
+    lineEdit->setAlignment(Qt::AlignRight);
+    lineEdit->setDisabled(true);
+  }
+  connect(cateComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this, tableWidget, row](){ this->onAccountCateChanged(tableWidget, row); });
+  cateComboBox->addItem("");
+  cateComboBox->addItems(book_.queryCategories(tableMap.key(tableWidget)));
+  return row;
 }
 
-void AddTransaction::setTableRow(QTableWidget *tableWidget, Account p_account, const MoneyArray &p_moneyArray)
-{
-    int row = insertTableRow(tableWidget);
+void AddTransaction::setTableRow(QTableWidget *table_widget, Account account, const MoneyArray &money_array) {
+  int row = insertTableRow(table_widget);
 
-    QComboBox *cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
-    cateComboBox->setCurrentText(p_account.category_);
-    QComboBox *nameComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1));
-    nameComboBox->setCurrentText(p_account.name_);
+  QComboBox *cateComboBox = static_cast<QComboBox*>(table_widget->cellWidget(row, 0));
+  cateComboBox->setCurrentText(account.category);
+  QComboBox *nameComboBox = static_cast<QComboBox*>(table_widget->cellWidget(row, 1));
+  nameComboBox->setCurrentText(account.name);
 
-    for (int col = 2; col < tableWidget->columnCount(); col++)
-    {
-        QLineEdit *lineEdit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
-        lineEdit->setText(p_moneyArray.getMoney(col - 2).toString());
-    }
+  for (int col = 2; col < table_widget->columnCount(); col++) {
+      QLineEdit *lineEdit = static_cast<QLineEdit*>(table_widget->cellWidget(row, col));
+      lineEdit->setText(money_array.getMoney(col - 2).toString());
+      if (money_array.getMoney(col - 2).amount_ < 0) {
+        lineEdit->setStyleSheet("color: red");
+      } else {
+        lineEdit->setStyleSheet("color: black");
+      }
+  }
 }
 
-void AddTransaction::on_checkBox_RecursiveTransaction_stateChanged(int arg1)
-{
-    ui->dateEdit_nextTransaction->setEnabled(arg1 > 0);
+void AddTransaction::on_checkBox_RecursiveTransaction_stateChanged(int arg1) {
+  ui->dateEdit_nextTransaction->setEnabled(arg1 > 0);
 }
