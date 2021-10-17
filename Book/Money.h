@@ -7,14 +7,14 @@
 #  define BOOKSHARED_EXPORT __declspec(dllimport)
 #endif
 
-#include "Currency.h"
+#include "currency.h"
 
 const int PERSON_COUNT = 2;
 
 class BOOKSHARED_EXPORT Money {
 public:
-  explicit Money(const QDate& date, Currency_e currency = USD, double amount = 0.00);
-  explicit Money(const QDate& date, QString money_str, Currency_e currency = USD);  // Valid Input: 123.5 -123.5 (123.5) USD123.50 $123.50 -USD123.50 -$123.50 ($123.50)
+  explicit Money(const QDate& date, Currency::Type currency = Currency::USD, double amount = 0.00);
+  explicit Money(const QDate& date, QString money_str, Currency::Type currency = Currency::USD);  // Valid Input: 123.5 -123.5 (123.5) USD123.50 $123.50 -USD123.50 -$123.50 ($123.50)
 
   QDate  date_;
   double amount_;
@@ -31,11 +31,11 @@ public:
   QString toString() const;
   Money round() const;
 
-  Currency_e currency() const;
-  void changeCurrency(Currency_e currency_e);
+  Currency::Type currency() const;
+  void changeCurrency(Currency::Type currency_e);
 
 protected:
-  Currency_e currency_; // Making this private because change this value will cause m_amounts change as well.
+  Currency::Type currency_; // Making this private because change this value will cause m_amounts change as well.
 
 private:
   double getRoundedAmount() const;
@@ -44,7 +44,7 @@ private:
 // TODO: make this inherited from Money
 class BOOKSHARED_EXPORT MoneyArray : public Money {
 public:
-  explicit MoneyArray(const QDate& date = QDate(1990, 05, 25), Currency_e currency = USD);
+  explicit MoneyArray(const QDate& date = QDate(1990, 05, 25), Currency::Type currency = Currency::USD);
   explicit MoneyArray(const QDate& date, const QString& p_money_s);
   explicit MoneyArray(const Money& money);
 
@@ -56,7 +56,7 @@ public:
   void push_back(Money money);
   QString toString() const;
 
-  void changeCurrency(Currency_e currency_e);
+  void changeCurrency(Currency::Type currency_e);
 
   MoneyArray operator -() const;
   MoneyArray operator  +(const MoneyArray& moneyArray) const;

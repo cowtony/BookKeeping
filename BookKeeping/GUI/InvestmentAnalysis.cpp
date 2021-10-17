@@ -75,7 +75,7 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
   QMap<QDate, double> returnHistory; // Key: date, Value: log2(daily return) until date.
   QList<Money> local_transfer_history; // Store all the transfer activities since last summary.
   QList<Money> alltime_transfer_history;
-  Money runningBalance(QDate(), USD, 0.00), gainOrLoss(QDate(), USD, 0.00), balanceChange(QDate(), USD, 0.00);
+  Money runningBalance(QDate(), Currency::USD, 0.00), gainOrLoss(QDate(), Currency::USD, 0.00), balanceChange(QDate(), Currency::USD, 0.00);
   QList<Transaction> transactions =
       book_.queryTransactions(TransactionFilter(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
                                                 QDateTime::currentDateTime(),
@@ -114,8 +114,8 @@ void InvestmentAnalysis::analysisInvestment(const QString& investmentName) {
       local_transfer_history << runningBalance;
     }
 
-    gainOrLoss = Money(QDate(), USD, 0.00);
-    balanceChange = Money(QDate(), USD, 0.00);
+    gainOrLoss = Money(QDate(), Currency::USD, 0.00);
+    balanceChange = Money(QDate(), Currency::USD, 0.00);
   }
 
   return_histories_.insert(investmentName, returnHistory);
@@ -161,7 +161,7 @@ double InvestmentAnalysis::backCalculateNPV(const QList<Money>& history, const M
 // The NPV may monotonic increase or DECREASE with ROI.
 // This is depends on how history is ordered and negative values inside.
 Money InvestmentAnalysis::calculateNPV(const QList<Money>& history, double log2_dailyROI, const QDate& present) {
-  Money ret(QDate(), USD, 0.00);
+  Money ret(QDate(), Currency::USD, 0.00);
   for (Money money : history) {
     ret += money * (qPow(2.0, log2_dailyROI * money.date_.daysTo(present)));
   }
@@ -179,7 +179,7 @@ double InvestmentAnalysis::calculateAPR(const QMap<QDate, double>& returnHistory
   return qPow(2.0, log2_AROI);
 }
 
-void InvestmentAnalysis::on_investmentTableWidget_cellClicked(int row, int column) {
+void InvestmentAnalysis::on_investmentTableWidget_cellClicked(int row, int /* column */) {
   QTableWidgetItem* item = ui->investmentTableWidget->item(row, 0);
   if (item->checkState() == Qt::Unchecked) {
     item->setCheckState(Qt::Checked);
@@ -192,11 +192,11 @@ void InvestmentAnalysis::on_investmentTableWidget_cellClicked(int row, int colum
   plotInvestments();
 }
 
-void InvestmentAnalysis::on_startDateEdit_dateChanged(const QDate &date) {
+void InvestmentAnalysis::on_startDateEdit_dateChanged(const QDate& /* date */) {
   plotInvestments();
 }
 
-void InvestmentAnalysis::on_axisX_rangeChanged(const QDateTime& start, const QDateTime& end) {
+void InvestmentAnalysis::on_axisX_rangeChanged(const QDateTime& start, const QDateTime& /* end */) {
   ui->startDateEdit->setDate(start.date());
   plotInvestments();
 }

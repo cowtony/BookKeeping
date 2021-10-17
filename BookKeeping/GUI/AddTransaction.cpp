@@ -20,7 +20,7 @@ AddTransaction::AddTransaction(Book& book, QWidget *parent)
   ui->tableWidget_Revenues->setPalette(palette);
   ui->tableWidget_Liabilities->setPalette(palette);
 
-  ui->comboBox_Currency->addItems(Currency::Symbol_3.values());
+  ui->comboBox_Currency->addItems(Currency::kCurrencyToCode.values());
 
   initialization();
 }
@@ -141,7 +141,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
   QStringList errorMsg;
 
   Transaction t = getTransaction();
-  errorMsg << t.validation();
+  errorMsg << t.validate();
 
   if (book_.dateTimeExist(ui->dateTimeEdit->dateTime())) {
     if (ui->pushButton_Insert->text() != "Replace" or ui->dateTimeEdit->dateTime() != replacedDateTime) {
@@ -189,7 +189,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
 void AddTransaction::on_calendarWidget_selectionChanged() {
   ui->dateTimeEdit->setDate(ui->calendarWidget->selectedDate());
   ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));
-  ui->label_Currency->setText("Currency: " + QString::number(g_currency.getCurrencyRate(ui->dateTimeEdit->date(), USD, CNY)));
+  ui->label_Currency->setText("Currency: " + QString::number(g_currency.getCurrencyRate(ui->dateTimeEdit->date(), Currency::USD, Currency::CNY)));
 }
 
 void AddTransaction::on_dateTimeEdit_dateTimeChanged(const QDateTime &dateTime_) {  // This may not necessary

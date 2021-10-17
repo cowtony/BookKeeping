@@ -201,10 +201,10 @@ void MainWindow::on_actionTransactionValidation_triggered() {
   QString errorMessage = "";
   // Query ALL transactions.
   for (const Transaction& transaction : book_.queryTransactions()) {
-    if (!transaction.validation().empty()) {
+    if (!transaction.validate().empty()) {
       errorMessage += transaction.date_time_.toString("yyyy/MM/dd HH:mm:ss") + ": ";
       errorMessage += transaction.description_ + '\n';
-      errorMessage += "\t" + transaction.validation().join("; ") + "\n\n";
+      errorMessage += "\t" + transaction.validate().join("; ") + "\n\n";
     }
   }
 

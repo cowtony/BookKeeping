@@ -74,7 +74,7 @@ Money Transaction::getCheckSum() const {
   return sum;
 }
 
-QStringList Transaction::validation() const {
+QStringList Transaction::validate() const {
     QStringList errorMessage;
     if (description_.isEmpty())
         errorMessage << "Description is empty.";
@@ -152,7 +152,7 @@ MoneyArray Transaction::getMoneyArray(const Account &account) const {
     if (accountExist(account))
         return data_.value(account.type).value(account.category).value(account.name);
     else
-        return MoneyArray(date_time_.date(), USD);
+        return MoneyArray(date_time_.date(), Currency::USD);
 }
 
 void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyArray) {
@@ -168,7 +168,7 @@ void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyA
 }
 
 MoneyArray Transaction::getRetainedEarnings() const {
-  MoneyArray ret(date_time_.date(), USD);
+  MoneyArray ret(date_time_.date(), Currency::USD);
   for (const Account &account : getAccounts(Account::Revenue)) {
     ret += getMoneyArray(account);
   }
@@ -180,7 +180,7 @@ MoneyArray Transaction::getRetainedEarnings() const {
 
 MoneyArray Transaction::getXXXContributedCapital() const
 {
-    return MoneyArray(date_time_.date(), USD);
+    return MoneyArray(date_time_.date(), Currency::USD);
 }
 
 //////////////////// Transaction Filter ////////////////////////////
@@ -211,7 +211,7 @@ MoneyArray FinancialStat::getMoneyArray(const Account &account) const {
   } else if (account == Account(Account::Equity, "Retained Earnings", "Transaction Error")) {
     return transactionError;
   } else if (account == Account(Account::Equity, "Contributed Capitals", "Contributed Capital")) {
-    return MoneyArray(date_time_.date(), USD); // Empty money array.
+    return MoneyArray(date_time_.date(), Currency::USD); // Empty money array.
   }
   return Transaction::getMoneyArray(account);
 }

@@ -31,7 +31,7 @@ public:
 
   bool accountExist(const Account& account) const;
   Money getCheckSum() const;
-  QStringList validation() const;  // Return error message
+  QStringList validate() const;  // Return error message
   QString dataToString(Account::Type p_tableType) const;
 
   QList<Account> getAccounts() const;

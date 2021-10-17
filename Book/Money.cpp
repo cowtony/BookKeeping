@@ -1,14 +1,14 @@
-#include "Money.h"
+#include "money.h"
 #include <QtMath>
 #include <QLocale>
-#include "Currency.h"
+#include "currency.h"
 
 /****************** Money ****************************/
-Money::Money(const QDate& date, Currency_e currency, double amount)
+Money::Money(const QDate& date, Currency::Type currency, double amount)
   : date_(date), amount_(amount), currency_(currency) {
 }
 
-Money::Money(const QDate& date, QString money_str, Currency_e currency)
+Money::Money(const QDate& date, QString money_str, Currency::Type currency)
   : date_(date), amount_(0.00), currency_(currency) {
   if (money_str.isEmpty()) {
     return;
@@ -22,11 +22,11 @@ Money::Money(const QDate& date, QString money_str, Currency_e currency)
     money_str.remove(0, 1);
   }
 
-  if (Currency::Symbol_1.values().contains(money_str.left(1))) {
-    currency_ = Currency::Symbol_1.key(money_str.left(1));
+  if (Currency::kCurrencyToSymbol.values().contains(money_str.left(1))) {
+    currency_ = Currency::kCurrencyToSymbol.key(money_str.left(1));
     money_str.remove(0, 1);
-  } else if (Currency::Symbol_3.values().contains(money_str.left(3))) {
-    currency_ = Currency::Symbol_3.key(money_str.left(3));
+  } else if (Currency::kCurrencyToCode.values().contains(money_str.left(3))) {
+    currency_ = Currency::kCurrencyToCode.key(money_str.left(3));
     money_str.remove(0, 3);
   }
 
@@ -38,7 +38,7 @@ Money::Money(const QDate& date, QString money_str, Currency_e currency)
   }
 }
 
-Currency_e Money::currency() const {
+Currency::Type Money::currency() const {
   return currency_;
 }
 
@@ -58,12 +58,11 @@ Money Money::operator /(int val) const
     return Money(date_, currency_, amount_ / val);
 }
 
-Money Money::operator +(Money money) const
-{
-    money.date_ = date_ > money.date_? date_ : money.date_;
-    money.changeCurrency(currency_);
-    money.amount_ = amount_ + money.amount_;
-    return money;
+Money Money::operator +(Money money) const {
+  money.date_ = date_ > money.date_? date_ : money.date_;
+  money.changeCurrency(currency_);
+  money.amount_ += amount_;
+  return money;
 }
 
 Money Money::operator -(Money money) const {
@@ -94,14 +93,14 @@ void Money::operator -=(const Money &money)
     *this = *this - money;
 }
 
-void Money::changeCurrency(Currency_e currency_e) {
+void Money::changeCurrency(Currency::Type currency_e) {
   amount_  *= g_currency.getCurrencyRate(date_, currency_, currency_e);
   currency_ = currency_e;
 }
 
 QString Money::toString() const {
   // TODO: This returns ($100.00) instead of -$100.00 now.
-  return QLocale(QLocale::English).toCurrencyString(getRoundedAmount(), Currency::Symbol_1.value(currency_), 2);
+  return QLocale(QLocale::English).toCurrencyString(getRoundedAmount(), Currency::kCurrencyToSymbol.value(currency_), 2);
 }
 
 Money Money::round() const
@@ -112,13 +111,13 @@ Money Money::round() const
 }
 
 /*************** Money Array ********************/
-MoneyArray::MoneyArray(const QDate& date, Currency_e currency)
+MoneyArray::MoneyArray(const QDate& date, Currency::Type currency)
   : Money(date, currency, 0.00) {
   amounts_.clear();
 }
 
 MoneyArray::MoneyArray(const QDate& date, const QString& money_str)
-  : Money(date, USD, 0.00) {
+  : Money(date, Currency::USD, 0.00) {
   for (const QString &moneyString : money_str.split(", ")) {
     Money money(date_, moneyString);
     changeCurrency(money.currency());
@@ -178,7 +177,7 @@ QString MoneyArray::toString() const {
   return result.join(", ");
 }
 
-void MoneyArray::changeCurrency(Currency_e currency) {
+void MoneyArray::changeCurrency(Currency::Type currency) {
   double currencyRate = g_currency.getCurrencyRate(date_, currency_, currency);
   currency_ = currency;
   for (double& amount : amounts_) {

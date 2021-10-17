@@ -8,8 +8,8 @@
 #endif
 
 #include <QtSql>
-#include "Transaction.h"
-#include "Account.h"
+#include "transaction.h"
+#include "account.h"
 
 class BOOKSHARED_EXPORT Book {
 public:
@@ -29,7 +29,7 @@ public:
 
   // Account
   QList<Account> queryAllAccountsFrom(QList<Account::Type> account_types = {}) const;
-  Currency_e  queryCurrencyType(const Account& account) const;
+  Currency::Type queryCurrencyType(const Account& account) const;
   QStringList queryCategories  (Account::Type table_type) const;
   QStringList queryAccountNames(Account::Type table_type, const QString& category) const;
   QStringList queryAccountNamesByLastUpdate(Account::Type table_type, const QString& category, const QDateTime& date_time) const;

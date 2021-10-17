@@ -22,7 +22,7 @@ Book::Book(const QString& dbPath) {
         QString line = DDL.readLine();
         statement += line;
         if (statement.contains(';')) {
-          QSqlQuery query(statement, database_);
+          QSqlQuery(statement, database_);
           statement.clear();
         }
       }
@@ -32,7 +32,7 @@ Book::Book(const QString& dbPath) {
       return;
     }
   }
-  QSqlQuery query("PRAGMA case_sensitive_like = false", database_);
+  QSqlQuery("PRAGMA case_sensitive_like = false", database_);
   start_time_ = QDateTime::currentDateTime();
 }
 
@@ -57,7 +57,7 @@ bool Book::dateTimeExist(const QDateTime &dt) const
 }
 
 bool Book::insertTransaction(const Transaction &transaction) const {
-  if (!transaction.validation().isEmpty()) {
+  if (!transaction.validate().isEmpty()) {
     return false;
   }
 
@@ -249,9 +249,9 @@ bool Book::moveAccount(const Account &account, const Account &newAccount) const 
     return true;
 }
 
-Currency_e Book::queryCurrencyType(const Account &account) const {
+Currency::Type Book::queryCurrencyType(const Account &account) const {
     if (account.type == Account::Expense or account.type == Account::Revenue or account.type == Account::Equity)
-        return USD;
+        return Currency::USD;
 
     QSqlQuery query(database_);
     query.prepare("SELECT Currency FROM [" + account.typeName() + "] WHERE Category = :c AND Name = :n");
@@ -260,10 +260,10 @@ Currency_e Book::queryCurrencyType(const Account &account) const {
     if (!query.exec())
         qDebug() << Q_FUNC_INFO << query.lastError();
     if (query.next())
-        return Currency::Symbol_3.key(query.value("Currency").toString());
+        return Currency::kCurrencyToCode.key(query.value("Currency").toString());
     else {
         qDebug() << Q_FUNC_INFO << "No account was found" << account.typeName() << account.category << account.name;
-        return USD;
+        return Currency::USD;
     }
 }
 
