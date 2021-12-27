@@ -189,7 +189,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
 void AddTransaction::on_calendarWidget_selectionChanged() {
   ui->dateTimeEdit->setDate(ui->calendarWidget->selectedDate());
   ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));
-  ui->label_Currency->setText("Currency: " + QString::number(g_currency.getCurrencyRate(ui->dateTimeEdit->date(), Currency::USD, Currency::CNY)));
+  ui->label_Currency->setText("Currency: " + QString::number(g_currency.getExchangeRate(ui->dateTimeEdit->date(), Currency::USD, Currency::CNY)));
 }
 
 void AddTransaction::on_dateTimeEdit_dateTimeChanged(const QDateTime &dateTime_) {  // This may not necessary

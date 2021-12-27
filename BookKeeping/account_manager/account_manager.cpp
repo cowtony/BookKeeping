@@ -93,7 +93,7 @@ AccountManager::AccountManager(Book& book, QWidget *parent)
   ui_->setupUi(this);
   tree_widget_ = new TreeWidget(book_);
   tree_widget_->headerItem()->setText(0, QApplication::translate("AccountManager", "Account Name", nullptr));
-  ui_->gridLayout->addWidget(tree_widget_, 0, 0, 1, 2);
+  ui_->gridLayout->addWidget(tree_widget_, 0, 0, 1, 3);
   connect(tree_widget_, &QTreeWidget::currentItemChanged, this, &AccountManager::onTreeWidgetItemChanged);
   for (const Account::Type &tableType : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
     QTreeWidgetItem* accountTypeItem = new QTreeWidgetItem(tree_widget_);

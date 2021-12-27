@@ -94,7 +94,7 @@ void Money::operator -=(const Money &money)
 }
 
 void Money::changeCurrency(Currency::Type currency_e) {
-  amount_  *= g_currency.getCurrencyRate(date_, currency_, currency_e);
+  amount_  *= g_currency.getExchangeRate(date_, currency_, currency_e);
   currency_ = currency_e;
 }
 
@@ -178,7 +178,7 @@ QString MoneyArray::toString() const {
 }
 
 void MoneyArray::changeCurrency(Currency::Type currency) {
-  double currencyRate = g_currency.getCurrencyRate(date_, currency_, currency);
+  double currencyRate = g_currency.getExchangeRate(date_, currency_, currency);
   currency_ = currency;
   for (double& amount : amounts_) {
     amount *= currencyRate;

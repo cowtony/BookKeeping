@@ -32,6 +32,7 @@ QString Account::getFinancialStatementName() const {
       return "Balance Sheet";
     // TODO: Add case for return "Cash Flow";
   }
+  return QString();
 }
 
 bool Account::operator <(const Account &p_account) const {

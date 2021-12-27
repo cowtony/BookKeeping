@@ -3,7 +3,7 @@
 
 #include <QAbstractTableModel>
 
-#include "Transaction.h"
+#include "transaction.h"
 
 const QVector<Account::Type> kTableList = {Account::Expense, Account::Revenue, Account::Asset, Account::Liability};
 
@@ -49,9 +49,10 @@ public:
   QList<Transaction> getTransactions(const QModelIndexList& index_list) const;
   Transaction getTransaction(const QModelIndex& model_index) const;
 
+  static const int kMaximumTransactions = 200;
+
 private:
   const int kReservedFilterRow = 2;
-  const int kMaximumTransactions = 200;
   const std::vector<QString> kColumnNames = {"Date", "Description", "Expense", "Revenue", "Asset", "Liability"};
 
   QList<Transaction> transactions_;

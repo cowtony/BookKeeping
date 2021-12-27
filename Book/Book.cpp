@@ -110,11 +110,13 @@ QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) cons
   query.prepare(QString("SELECT * FROM Transactions WHERE (Date BETWEEN :startDate AND :endDate) AND (Description LIKE :description)") +
                 (statements.empty()? "" : " AND ") +
                 statements.join(filter.use_union_? " OR " : " AND ") +
-                " ORDER BY Date " + (filter.ascending_order_? "ASC" : "DESC"));
+                " ORDER BY Date " + (filter.ascending_order_? "ASC" : "DESC") +
+                " LIMIT :limit");
 
   query.bindValue(":startDate", filter.date_time_.toString(kDateTimeFormat));
   query.bindValue(":endDate",   filter.end_date_time_.toString(kDateTimeFormat));
   query.bindValue(":description", "%" + filter.description_ + "%");
+  query.bindValue(":limit", filter.limit_);
 
   if (!query.exec()) {
     qDebug() << Q_FUNC_INFO << query.lastError();

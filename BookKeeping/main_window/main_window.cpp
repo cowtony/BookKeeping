@@ -4,9 +4,9 @@
 #include <QMessageBox>
 #include <QLineEdit>
 
-#include "Transaction.h"
+#include "transaction.h"
 #include "AddTransaction.h"
-#include "Currency.h"
+#include "currency.h"
 #include "InvestmentAnalysis.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -73,9 +73,13 @@ MainWindow::~MainWindow() {
 
 void MainWindow::refreshTable() {
   // Build transaction filter.
-  TransactionFilter filter(QDateTime(start_date_->date(), QTime(00, 00, 00)),
-                           QDateTime(end_date_->date(), QTime(23, 59, 59)),
-                           description_->text(), {}, false, false);
+  TransactionFilter filter = TransactionFilter()
+                             .fromTime(QDateTime(start_date_->date(), QTime(00, 00, 00)))
+                             .toTime(QDateTime(end_date_->date(), QTime(23, 59, 59)))
+                             .setDescription(description_->text())
+                             .useOr()
+                             .orderByDescending()
+                             .setLimit(BookModel::kMaximumTransactions);
   for (int i = 0; i < kTableList.size(); i++) {
     if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
       filter.addAccount(Account(kTableList.at(i), category_combo_boxes_.at(i)->currentText(), name_combo_boxes_.at(i)->currentText()));

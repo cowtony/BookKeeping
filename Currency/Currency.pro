@@ -35,4 +35,4 @@ unix {
 }
 
 RESOURCES += \
-  currency.qrc
+  Currency.qrc

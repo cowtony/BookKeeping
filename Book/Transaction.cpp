@@ -1,4 +1,4 @@
-#include "Transaction.h"
+#include "transaction.h"
 
 Transaction::Transaction(const QDateTime& date_time, const QString& description)
   : date_time_(date_time), description_(description) {
@@ -184,20 +184,56 @@ MoneyArray Transaction::getXXXContributedCapital() const
 }
 
 //////////////////// Transaction Filter ////////////////////////////
-TransactionFilter::TransactionFilter(const QDateTime& start_time,
-                                     const QDateTime& end_time,
-                                     const QString& description,
-                                     const QList<Account>& accounts,
-                                     bool use_union,
-                                     bool ascending_order)
-  : Transaction(start_time, description), end_date_time_(end_time), use_union_(use_union), ascending_order_(ascending_order) {
+TransactionFilter::TransactionFilter(const QList<Account>& accounts)
+  : Transaction(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), "") {
   for (const Account& account : accounts) {
     addAccount(account);
   }
 }
 
-void TransactionFilter::addAccount(const Account& account) {
+TransactionFilter& TransactionFilter::addAccount(const Account& account) {
   addMoneyArray(account, MoneyArray(QDate(), "$1"));
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::fromTime(const QDateTime& start_time) {
+  date_time_ = start_time;
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::toTime(const QDateTime& end_time) {
+  end_date_time_ = end_time;
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::setDescription(const QString& description) {
+  description_ = description;
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::useAnd() {
+  use_union_ = true;
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::useOr() {
+  use_union_ = false;
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::orderByAscending() {
+  ascending_order_ = true;
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::orderByDescending() {
+  ascending_order_ = false;
+  return *this;
+}
+
+TransactionFilter& TransactionFilter::setLimit(int limit) {
+  limit_ = limit;
+  return *this;
 }
 
 //////////////////// Financial Summary /////////////////////////////

@@ -82,7 +82,7 @@ int AccountsModel::rowCount(const QModelIndex& parent) const {
   return parent_node->childCount();
 }
 
-int AccountsModel::columnCount(const QModelIndex &parent) const {
+int AccountsModel::columnCount(const QModelIndex& /* parent */) const {
   return 1;
 }
 

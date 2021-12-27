@@ -25,7 +25,7 @@ public:
 
   void openDatabase(const QString& p_dbPath = "Currency.db");
   void closeDatabase();
-  double getCurrencyRate(const QDate& date, Type fromSymbol, Type toSymbol);
+  double getExchangeRate(const QDate& date, Type fromSymbol, Type toSymbol);
 
 private slots:
   void onNetworkReply(QNetworkReply*);

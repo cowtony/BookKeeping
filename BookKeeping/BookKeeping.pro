@@ -31,6 +31,7 @@ RC_ICONS = Resource/App_Icon.ico
 INCLUDEPATH += GUI \
     main_window \
     account_manager \
+    financial_statement \
     Book
 
 SOURCES += \

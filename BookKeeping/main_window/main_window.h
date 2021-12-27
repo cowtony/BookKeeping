@@ -6,7 +6,7 @@
 
 #include "account_manager.h"
 #include "book_model.h"
-#include "FinancialStatement.h"
+#include "financial_statement.h"
 
 namespace Ui {
 class MainWindow;

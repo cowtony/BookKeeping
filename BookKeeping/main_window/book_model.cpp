@@ -20,16 +20,17 @@ void BookModel::SetTransactions(const QList<Transaction>& transactions) {
 QVariant BookModel::headerData(int section, Qt::Orientation orientation, int role) const {
   if (role == Qt::DisplayRole) {
     switch (orientation) {
-    case Qt::Horizontal:
-      if (section < static_cast<int>(kColumnNames.size())) {
-        return kColumnNames.at(section);
-      }
-    case Qt::Vertical:
-      switch (section) {
-        case 0:  return "From:";
-        case 1:  return "To:";
-        default: return section - kReservedFilterRow + 1;
-      }
+      case Qt::Horizontal:
+        if (section < static_cast<int>(kColumnNames.size())) {
+          return kColumnNames.at(section);
+        }
+        break;
+      case Qt::Vertical:
+        switch (section) {
+          case 0:  return "From:";
+          case 1:  return "To:";
+          default: return section - kReservedFilterRow + 1;
+        }
     }
   }
   return QVariant();

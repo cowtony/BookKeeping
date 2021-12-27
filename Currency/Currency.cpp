@@ -58,7 +58,7 @@ void Currency::closeDatabase() {
   }
 }
 
-double Currency::getCurrencyRate(const QDate& date, Type from_symbol, Type to_symbol) {
+double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_symbol) {
   if (from_symbol == to_symbol) {
     return 1.0;
   }
@@ -69,9 +69,12 @@ double Currency::getCurrencyRate(const QDate& date, Type from_symbol, Type to_sy
   if (!query.exec()) {
     qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
   }
+  double result = 0.0 / 0.0;  // NaN.
   if (query.next()) {
+    // Get the most recent exchange rate.
+    result = query.value(kCurrencyToCode.value(to_symbol)).toDouble() / query.value(kCurrencyToCode.value(from_symbol)).toDouble();
     if (query.value("Date").toDate() == date) {
-      return query.value(kCurrencyToCode.value(to_symbol)).toDouble() / query.value(kCurrencyToCode.value(from_symbol)).toDouble();
+      return result;
     }
   }
   qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date;
@@ -87,7 +90,7 @@ double Currency::getCurrencyRate(const QDate& date, Type from_symbol, Type to_sy
     qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
     web_ctrl_.get(QNetworkRequest(url));
   }
-  return 0.0 / 0.0;
+  return result;
 }
 
 void Currency::removeInvalidCurrency() {

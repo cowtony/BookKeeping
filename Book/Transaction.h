@@ -9,9 +9,9 @@
 
 #include <QDateTime>
 #include <QMap>
-#include "Currency.h"
+#include "currency.h"
 #include "Money.h"
-#include "Account.h"
+#include "account.h"
 
 const QString kDateTimeFormat = "yyyy-MM-dd HH:mm";
 
@@ -51,18 +51,22 @@ private:
 };
 
 struct BOOKSHARED_EXPORT TransactionFilter : public Transaction {
-  TransactionFilter(const QDateTime& start_time = QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)),
-                    const QDateTime& end_time = QDateTime(QDate(2200, 01, 01), QTime(23, 59, 59)),
-                    const QString& description = "",
-                    const QList<Account>& accounts = {},
-                    bool use_union = false,
-                    bool ascending_order = true);
+  TransactionFilter(const QList<Account>& accounts = {});
 
-  void addAccount(const Account& account);
+  TransactionFilter& addAccount(const Account& account);
+  TransactionFilter& fromTime(const QDateTime& start_time);
+  TransactionFilter& toTime(const QDateTime& start_time);
+  TransactionFilter& setDescription(const QString& description);
+  TransactionFilter& useAnd();
+  TransactionFilter& useOr();
+  TransactionFilter& orderByAscending();
+  TransactionFilter& orderByDescending();
+  TransactionFilter& setLimit(int limit);
 
-  QDateTime end_date_time_;
+  QDateTime end_date_time_ = QDateTime(QDate(2200, 01, 01), QTime(23, 59, 59));
   bool use_union_ = false;
   bool ascending_order_ = true;
+  int limit_ = INT_MAX;
 };
 
 // TODO: merge this into Transaction
