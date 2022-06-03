@@ -7,13 +7,15 @@ const QMap<Account::Type, QString> Account::kTableName =
      {Expense, "Expense"},
      {Equity, "Equity"}};
 
-Account::Account(Type table, const QString& category, const QString& name) : type(table), category(category), name(name) {}
+Account::Account(Type account_type, const QString& category, const QString& name, const QString& comment)
+  : type(account_type), category(category), name(name), comment(comment) {}
 
-Account::Account(const QString& tableName, const QString& category, const QString& name) : category(category), name(name) {
-  if (kTableName.values().contains(tableName)) {
-    type = kTableName.key(tableName);
+Account::Account(const QString& account_type, const QString& category, const QString& name, const QString& comment)
+  : category(category), name(name), comment(comment) {
+  if (kTableName.values().contains(account_type)) {
+    type = kTableName.key(account_type);
   } else {
-    qDebug() << Q_FUNC_INFO << "table name doesn't exist!" << tableName;
+    qDebug() << Q_FUNC_INFO << "table name doesn't exist!" << account_type;
   }
 }
 

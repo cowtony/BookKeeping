@@ -19,35 +19,56 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="2">
-     <widget class="QPushButton" name="pushButton_Delete">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="text">
-       <string>Delete</string>
-      </property>
-     </widget>
+    <item row="1" column="2">
+     <layout class="QGridLayout" name="gridLayout_7">
+      <item row="0" column="0">
+       <widget class="QPushButton" name="pushButton_Delete">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Delete</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
-    <item row="0" column="1">
-     <widget class="QPushButton" name="pushButton_Rename">
-      <property name="text">
-       <string>Rename</string>
-      </property>
-     </widget>
+    <item row="0" column="2">
+     <layout class="QGridLayout" name="gridLayout_4"/>
+    </item>
+    <item row="1" column="0">
+     <layout class="QGridLayout" name="gridLayout_5">
+      <item row="0" column="0">
+       <widget class="QPushButton" name="pushButton_Add">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Add</string>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="1">
+     <layout class="QGridLayout" name="gridLayout_6">
+      <item row="0" column="0">
+       <widget class="QPushButton" name="pushButton_Rename">
+        <property name="text">
+         <string>Rename</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item row="0" column="0">
-     <widget class="QPushButton" name="pushButton_Add">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="text">
-       <string>Add</string>
-      </property>
-      <property name="checkable">
-       <bool>false</bool>
-      </property>
-     </widget>
+     <layout class="QGridLayout" name="gridLayout_2"/>
+    </item>
+    <item row="0" column="1">
+     <layout class="QGridLayout" name="gridLayout_3"/>
     </item>
    </layout>
   </widget>

@@ -1,5 +1,5 @@
 #include "account_manager.h"
-#include "ui_AccountManager.h"
+#include "ui_account_manager.h"
 
 #include <QInputDialog>
 #include <QMessageBox>
@@ -10,9 +10,18 @@
 TreeWidget::TreeWidget(Book& book, QWidget *parent)
     : QTreeWidget(parent), book_(book) {
   setSelectionMode(QAbstractItemView::SingleSelection);
-  setDragDropMode(QAbstractItemView::InternalMove);
-  setDropIndicatorShown(true);
+  setDragEnabled(true);
   setAcceptDrops(true);
+  setDropIndicatorShown(true);
+  setDragDropMode(QAbstractItemView::InternalMove);
+
+  headerItem()->setText(0, "Account Name");
+  headerItem()->setText(1, "Comment");
+  setColumnWidth(0, 150);
+}
+
+void TreeWidget::startDrag(Qt::DropActions actions) {
+  QTreeWidget::startDrag(actions);  // TODO: This will cause "program has unexpectedly finished", didn't found out why.
 }
 
 void TreeWidget::dragEnterEvent(QDragEnterEvent *event) {
@@ -20,6 +29,7 @@ void TreeWidget::dragEnterEvent(QDragEnterEvent *event) {
   QTreeWidgetItem *item = currentItem();
   while (item != nullptr) {
     drag_from_.push_front(item->text(0));
+    qDebug() << item->text(0);
     item = item->parent();
   }
   QTreeWidget::dragEnterEvent(event);
@@ -88,47 +98,48 @@ void TreeWidget::dropEvent(QDropEvent *event) {
   QTreeWidget::dropEvent(event);
 }
 
+void TreeWidget::onItemChanged(QTreeWidgetItem* item, int column) {
+  // TODO: implement this function.
+  qDebug() << item->text(column);
+
+}
+
 AccountManager::AccountManager(Book& book, QWidget *parent)
-    : QMainWindow(parent), ui_(new Ui::AccountManager), book_(book) {
+    : QMainWindow(parent), ui_(new Ui::AccountManager), book_(book), account_model_(book) {
   ui_->setupUi(this);
   tree_widget_ = new TreeWidget(book_);
-  tree_widget_->headerItem()->setText(0, QApplication::translate("AccountManager", "Account Name", nullptr));
-  ui_->gridLayout->addWidget(tree_widget_, 0, 0, 1, 3);
-  connect(tree_widget_, &QTreeWidget::currentItemChanged, this, &AccountManager::onTreeWidgetItemChanged);
-  for (const Account::Type &tableType : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
-    QTreeWidgetItem* accountTypeItem = new QTreeWidgetItem(tree_widget_);
-    accountTypeItem->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled);
-    accountTypeItem->setText(0, Account::kTableName.value(tableType));
-    accountTypeItem->setFont(0, kTypeFont);
+  tree_view_ = new QTreeView;
+  tree_view_->setModel(&account_model_);
 
-    for (const QString &category : book_.queryCategories(tableType)) {
-      QTreeWidgetItem* accountCategoryItem = new QTreeWidgetItem(accountTypeItem);
-      accountCategoryItem->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled);
-      accountCategoryItem->setText(0, category);
-      accountCategoryItem->setFont(0, kCategoryFont);
+  ui_->gridLayout->addWidget(tree_widget_, 0, 0, 1, 2);
+  ui_->gridLayout->addWidget(tree_view_, 0, 2, 1, 1);
+  connect(tree_widget_, &QTreeWidget::currentItemChanged, this, &AccountManager::onCurrentItemChanged);
 
-      for (const QString &name : book_.queryAccountNames(tableType, category)) {
-        QTreeWidgetItem* accountItem = new QTreeWidgetItem(accountCategoryItem);
-        accountItem->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled);
-        accountItem->setText(0, name);
-        accountItem->setFont(0, kAccountFont);
+  for (const Account::Type& account_type : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
+    QTreeWidgetItem* account_type_item = AddAccountType(account_type);
+    for (const QString& category : book_.queryCategories(account_type)) {
+      QTreeWidgetItem* account_category_item = AddAccountGroup(account_type_item, category);
+      for (const Account& account : book_.queryAccounts(account_type, category)) {
+        AddAccount(account_category_item, account.name, account.comment);
       }
     }
   }
+  // Connect after accounts are populated, since adding new child also deemed as itemChange.
+  connect(tree_widget_, &QTreeWidget::itemChanged, tree_widget_, &TreeWidget::onItemChanged);
 
   // WIP: TreeView
-//  account_model_.setupAccounts(book_.queryAllAccountsFrom({Account::Asset, Account::Liability, Account::Revenue, Account::Expense}));
-//  ui_->treeView_accounts->setModel(&account_model_);
-//  ui_->treeView_accounts->setDragDropMode(QAbstractItemView::InternalMove);
-//  ui_->treeView_accounts->setSelectionMode(QAbstractItemView::SingleSelection);
-//  ui_->treeView_accounts->setDropIndicatorShown(true);
+  account_model_.setupAccounts(book_.queryAllAccountsFrom({Account::Asset, Account::Liability, Account::Revenue, Account::Expense}));
+  tree_view_->setDragDropMode(QAbstractItemView::InternalMove);
+  tree_view_->setSelectionMode(QAbstractItemView::SingleSelection);
+  tree_view_->setDropIndicatorShown(true);
+  tree_view_->setColumnWidth(0, 300);
 }
 
 AccountManager::~AccountManager() {
 //  delete ui;
 }
 
-void AccountManager::onTreeWidgetItemChanged(QTreeWidgetItem *current) {
+void AccountManager::onCurrentItemChanged(QTreeWidgetItem *current) {
   QTreeWidgetItem* node = current;
   names_.clear();
   while (node != nullptr) {
@@ -147,12 +158,8 @@ void AccountManager::on_pushButton_Add_clicked() {
       QString category_name = QInputDialog::getText(this, "Add category into table: " + names_.back(), "Category:", QLineEdit::Normal, "", &ok);
       if (ok) {
         if (book_.insertCategory(names_.at(0), category_name)) {
-          QTreeWidgetItem* category_item = new QTreeWidgetItem(tree_widget_->currentItem());
-          category_item->setText(0, category_name);
-          category_item->setFont(0, kCategoryFont);
-          QTreeWidgetItem* account_item = new QTreeWidgetItem(category_item);  // Insert the dummy account name item with the same name.
-          account_item->setText(0, category_name);
-          account_item->setFont(0, kAccountFont);
+          QTreeWidgetItem* account_category_item = AddAccountGroup(tree_widget_->currentItem(), category_name);
+          AddAccount(account_category_item, category_name); // Insert the dummy account name item with the same name.
         } else {
           QMessageBox::warning(this, "Insert Failed", names_.back() + ": " + category_name, QMessageBox::Ok);
         }
@@ -164,9 +171,7 @@ void AccountManager::on_pushButton_Add_clicked() {
       QString account_name = QInputDialog::getText(this, "Add account into category: " + names_.back(), "Name:", QLineEdit::Normal, "", &ok);
       if (ok && !account_name.isEmpty()) {
         if (book_.insertAccount(Account(names_.at(0), names_.at(1), account_name))) {
-          QTreeWidgetItem* account_item = new QTreeWidgetItem(tree_widget_->currentItem());
-          account_item->setText(0, account_name);
-          account_item->setFont(0, kAccountFont);
+          AddAccount(tree_widget_->currentItem(), account_name);
         } else {
           QMessageBox::warning(this, "Insert Failed", names_.back() + ": " + account_name, QMessageBox::Ok);
         }
@@ -222,7 +227,7 @@ void AccountManager::on_pushButton_Rename_clicked() {
           QApplication::setOverrideCursor(Qt::WaitCursor);
           if (book_.moveAccount(old_account, new_account)) {
             delete tree_widget_->currentItem();
-            onTreeWidgetItemChanged(tree_widget_->currentItem());
+            onCurrentItemChanged(tree_widget_->currentItem());
             emit accountNameChanged();
           }
           QApplication::restoreOverrideCursor();
@@ -255,4 +260,30 @@ void AccountManager::on_pushButton_Delete_clicked() {
   if (parent->childCount() == 0) {
     delete parent;
   }
+}
+
+QTreeWidgetItem* AccountManager::AddAccountType(Account::Type account_type) {
+  QTreeWidgetItem* account_type_item = new QTreeWidgetItem(tree_widget_);
+  account_type_item->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled);
+  account_type_item->setText(0, Account::kTableName.value(account_type));
+  account_type_item->setFont(0, kTypeFont);
+  return account_type_item;
+}
+
+QTreeWidgetItem* AccountManager::AddAccountGroup(QTreeWidgetItem* category, const QString& group_name) {
+  QTreeWidgetItem* account_category_item = new QTreeWidgetItem(category);
+  account_category_item->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled);
+  account_category_item->setText(0, group_name);
+  account_category_item->setFont(0, kCategoryFont);
+  return account_category_item;
+}
+
+QTreeWidgetItem* AccountManager::AddAccount(QTreeWidgetItem* category, const QString& account_name, const QString& comment) {
+  QTreeWidgetItem* account_item = new QTreeWidgetItem(category);
+  // TODO: enable after fix the drag drop issue.
+  account_item->setFlags((Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable /*| Qt::ItemIsDragEnabled*/) & ~Qt::ItemIsDropEnabled);
+  account_item->setText(0, account_name);
+  account_item->setText(1, comment);
+  account_item->setFont(0, kAccountFont);
+  return account_item;
 }

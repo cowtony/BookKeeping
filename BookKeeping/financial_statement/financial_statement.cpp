@@ -1,5 +1,5 @@
 #include "financial_statement.h"
-#include "ui_FinancialStatement.h"
+#include "ui_financial_statement.h"
 
 #include <QtMath>
 #include <QClipboard>

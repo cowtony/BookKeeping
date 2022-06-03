@@ -1,22 +1,29 @@
 #include "accounts_model.h"
 
-AccountsModel::AccountsModel(QObject *parent)
-  : QAbstractItemModel(parent) {
-  root_node_ = new AccountTreeNode();
+#include <QApplication>
+#include <QMessageBox>
+
+AccountsModel::AccountsModel(Book& book, QObject *parent)
+  : QAbstractItemModel(parent), book_(book) {
+  root_ = new AccountTreeNode();
 }
 
 AccountsModel::~AccountsModel() {
-  delete root_node_;
+  delete root_;
 }
 
 void AccountsModel::setupAccounts(const QList<Account>& accounts) {
+  root_->clear();
   for (const Account& account : accounts) {
-    AccountTreeNode* current_node = root_node_;
+    AccountTreeNode* current_node = root_;
     for (const QString& name : {account.typeName(), account.category, account.name}) {
       if (current_node->childAt(name) == nullptr) {
         current_node->insertChild(new AccountTreeNode(name));
       }
       current_node = current_node->childAt(name);
+      if (current_node->depth() == 3) {
+        current_node->setComment(account.comment);
+      }
     }
   }
   emit dataChanged(QModelIndex(), QModelIndex());
@@ -26,7 +33,8 @@ QVariant AccountsModel::headerData(int section, Qt::Orientation orientation, int
   if (role == Qt::DisplayRole) {
     if (orientation == Qt::Horizontal) {
       switch (section) {
-        case 0:  return "Account Name";
+        case 0: return "Account Name";
+        case 1: return "Comment";
         default: return QVariant();
       }
     }
@@ -50,7 +58,7 @@ QModelIndex AccountsModel::index(int row, int column, const QModelIndex& parent)
   }
   AccountTreeNode* parent_node;
   if (!parent.isValid()) {
-    parent_node = root_node_;
+    parent_node = root_;
   } else {
     parent_node = static_cast<AccountTreeNode*>(parent.internalPointer());
   }
@@ -68,7 +76,7 @@ QModelIndex AccountsModel::parent(const QModelIndex &index) const {
 
   AccountTreeNode* node = static_cast<AccountTreeNode*>(index.internalPointer());
   AccountTreeNode* parent_node = node->parent();
-  if (parent_node == root_node_) {
+  if (parent_node == root_) {
     return QModelIndex();  // Root won't have ModelIndex.
   }
   return createIndex(parent_node->index(), 0, parent_node);
@@ -76,14 +84,14 @@ QModelIndex AccountsModel::parent(const QModelIndex &index) const {
 
 int AccountsModel::rowCount(const QModelIndex& parent) const {
   if (!parent.isValid()) {
-    return root_node_->childCount();
+    return root_->childCount();
   }
   AccountTreeNode* parent_node = static_cast<AccountTreeNode*>(parent.internalPointer());
   return parent_node->childCount();
 }
 
 int AccountsModel::columnCount(const QModelIndex& /* parent */) const {
-  return 1;
+  return 2;
 }
 
 //bool AccountModel::hasChildren(const QModelIndex &parent) const
@@ -106,18 +114,24 @@ QVariant AccountsModel::data(const QModelIndex& index, int role) const {
   if (!index.isValid()) {
     return QVariant();
   }
-  AccountTreeNode* node = static_cast<AccountTreeNode*>(index.internalPointer());
+  AccountTreeNode* node = getItem(index);
   switch (role) {
-  case Qt::DisplayRole:
-    return node->name();
-  case Qt::FontRole:
-    switch (node->depth()) {
-    case 1: return kTypeFont;
-    case 2: return kCategoryFont;
-    case 3: return kAccountFont;
+    case Qt::DisplayRole:
+    case Qt::EditRole:
+      switch (index.column()) {
+        case 0: return node->name();
+        case 1: return node->comment();
+        default: break;
+      }
+      break;
+    case Qt::FontRole:
+      switch (node->depth()) {
+        case 1: return kTypeFont;
+        case 2: return kCategoryFont;
+        case 3: return kAccountFont;
+        default: break;
+      }
     default: break;
-    }
-  default: break;
   }
   return QVariant();
 }
@@ -126,12 +140,94 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
   if (data(index, role) == value) {
     return false;
   }
-  if (role == Qt::DisplayRole) {
-    AccountTreeNode* node = getItem(index);
-    if (!node->setName(value.toString())) {
+  AccountTreeNode* node = getItem(index);
+  switch (role) {
+    case Qt::EditRole:
+      switch (node->depth()) {
+        case 1:  // Account Type
+          return false;
+        case 2: { // Account Group
+          if (value.toString().isEmpty()) {
+            return false;
+          }
+          if (book_.categoryExist(node->accountType(), value.toString())) {
+            QMessageBox message_box;
+            message_box.setText("Group name " + value.toString() + " already exist.");
+            message_box.exec();
+            return false;
+          }
+          QApplication::setOverrideCursor(Qt::WaitCursor);
+          bool success = book_.renameCategory(node->accountType(), node->accountGroup(), value.toString());
+          QApplication::restoreOverrideCursor();
+          if (success) {
+            node->setName(value.toString());
+          } else {
+            return false;
+          }
+          break;
+        }
+        case 3:  // Account
+          switch (index.column()) {
+            case 0: {  // Account Name
+              if (value.toString().isEmpty()) {
+                return false;
+              }
+              Account old_account = node->account();
+              Account new_account = old_account;
+              new_account.name = value.toString();
+              bool account_exist = book_.accountExist(new_account);
+
+              if (account_exist) {  // new_account_name exist, perform merge.
+                if (!node->comment().isEmpty()) {
+                  QMessageBox message_box;
+                  message_box.setText("The account to be merged still have unempty comment.");
+                  message_box.exec();
+                  return false;
+                }
+                QMessageBox message_box;
+                message_box.setText("Do you want to merge with existing account?");
+                message_box.setInformativeText("OldName: " + old_account.name + ", NewName: " + value.toString());
+                message_box.setStandardButtons(QMessageBox::Ok | QMessageBox::Discard);
+                message_box.setDefaultButton(QMessageBox::Ok);
+                switch (message_box.exec()) {
+                  case QMessageBox::Discard:
+                    return false;
+                }
+              }
+
+              QApplication::setOverrideCursor(Qt::WaitCursor);
+              bool success = book_.moveAccount(old_account, new_account);
+              QApplication::restoreOverrideCursor();
+              if (!success) {
+                return false;
+              }
+              if (account_exist) {
+                removeItem(index);
+              } else { // Simply rename.
+                if (!node->setName(value.toString())) {
+                  return false;
+                }
+              }
+
+              break;
+            }
+            case 1: { // Comment
+              if(!book_.updateAccountComment(node->account(), value.toString())) {
+                return false;
+              }
+              node->setComment(value.toString());
+              break;
+            }
+            default: return false;
+          }
+        default:
+          return false;
+      }
+      break;
+    default:
       return false;
-    }
   }
+
   emit dataChanged(index, index, {role});
   return true;
 }
@@ -142,12 +238,12 @@ Qt::ItemFlags AccountsModel::flags(const QModelIndex& index) const {
     return QAbstractItemModel::flags(index);
   }
   switch (node->depth()) {
-    case 1:
+    case 1:  // Account type
       return (Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled;
-    case 2:
-      return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled;
-    case 3:
-      return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled;
+    case 2:  // Account group
+      return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled;
+    case 3:  // Account name
+      return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled;
   }
   return Qt::NoItemFlags;
 }
@@ -175,11 +271,7 @@ QMimeData* AccountsModel::mimeData(const QModelIndexList& indexes) const {
   return mimeData;
 }
 
-bool AccountsModel::canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const {
-  Q_UNUSED(action);
-  Q_UNUSED(row);
-  Q_UNUSED(parent);
-
+bool AccountsModel::canDropMimeData(const QMimeData* data, Qt::DropAction /* action */, int /* row */, int column, const QModelIndex& /* parent */) const {
   if (!data->hasFormat("application/vnd.text.list")) {
     return false;
   }

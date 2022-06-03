@@ -18,8 +18,12 @@ public:
   explicit TreeWidget(Book& book, QWidget *parent = nullptr);
 
 protected:
+  virtual void startDrag(Qt::DropActions actions) override;
   virtual void dragEnterEvent(QDragEnterEvent *event) override;
   virtual void dropEvent(QDropEvent *event) override;
+
+public slots:
+  void onItemChanged(QTreeWidgetItem *item, int column);
 
 private:
   QStringList drag_from_;
@@ -33,7 +37,7 @@ public:
   ~AccountManager();
 
 private slots:
-  void onTreeWidgetItemChanged(QTreeWidgetItem *current);
+  void onCurrentItemChanged(QTreeWidgetItem *current);
 
   void on_pushButton_Add_clicked();
   void on_pushButton_Rename_clicked();
@@ -44,13 +48,16 @@ signals:
   void categoryChanged();
 
 private:
+  QTreeWidgetItem* AddAccountType(Account::Type account_type);
+  QTreeWidgetItem* AddAccountGroup(QTreeWidgetItem* category, const QString& group_name);
+  QTreeWidgetItem* AddAccount(QTreeWidgetItem* group, const QString& account_name, const QString& comment = "");
+
   Ui::AccountManager* ui_;
   TreeWidget* tree_widget_;
+  QTreeView* tree_view_;
   Book& book_;
 
   QStringList names_;
-
-
 
   AccountsModel account_model_;
 };

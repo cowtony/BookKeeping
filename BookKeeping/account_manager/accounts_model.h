@@ -1,10 +1,11 @@
 #ifndef ACCOUNTS_MODEL_H
 #define ACCOUNTS_MODEL_H
 
-// Note: Used for QTreeView, but decide to use QTreeWidget instead of QTreeView.
+// Note: Used for QTreeView, but decide to use QTreeWidget instead of QTreeView. Because?
 
 #include <QAbstractItemModel>
 #include "account_tree_node.h"
+#include "book.h"
 
 const QFont kTypeFont     = QFont("Georgia",         12, 1, true);
 const QFont kCategoryFont = QFont("Times New Roman", 12, 1, false);
@@ -14,7 +15,7 @@ class AccountsModel : public QAbstractItemModel {
   Q_OBJECT
 
 public:
-  explicit AccountsModel(QObject *parent = nullptr);
+  explicit AccountsModel(Book& book, QObject *parent = nullptr);
   ~AccountsModel();
 
   // Header:
@@ -63,7 +64,8 @@ public:
 private:
   AccountTreeNode* getItem(const QModelIndex& index) const;
 
-  AccountTreeNode* root_node_;
+  AccountTreeNode* root_;
+  Book& book_;
 };
 
 #endif // ACCOUNTS_MODEL_H

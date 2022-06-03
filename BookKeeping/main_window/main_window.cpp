@@ -1,5 +1,5 @@
 #include "main_window.h"
-#include "ui_MainWindow.h"
+#include "ui_main_window.h"
 
 #include <QMessageBox>
 #include <QLineEdit>
@@ -71,6 +71,16 @@ MainWindow::~MainWindow() {
   delete ui;
 }
 
+void MainWindow::resizeEvent(QResizeEvent* event) {
+  resizeColumns();
+  QMainWindow::resizeEvent(event);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+  QMainWindow::closeEvent(event);
+  // Do something on close here
+}
+
 void MainWindow::refreshTable() {
   // Build transaction filter.
   TransactionFilter filter = TransactionFilter()
@@ -87,10 +97,7 @@ void MainWindow::refreshTable() {
   }
 
   book_model_.SetTransactions(book_.queryTransactions(filter));
-
-  // Adjust column width & row height.
-  ui->tableView_transactions->resizeColumnsToContents();
-  ui->tableView_transactions->resizeRowsToContents();
+  resizeColumns();
 }
 
 void MainWindow::on_tableView_transactions_doubleClicked(const QModelIndex &index) {
@@ -143,6 +150,44 @@ void MainWindow::on_pushButton_MergeTransaction_clicked() {
   case QMessageBox::Cancel:
     return;
   }
+}
+
+void MainWindow::resizeColumns() {
+  int width = ui->tableView_transactions->width() - /*Tried it out, otherwise scroll bar still show up*/60;
+  ui->tableView_transactions->resizeColumnsToContents();
+  width -= ui->tableView_transactions->columnWidth(0); // Date & Time
+
+  QSet<int> columns = {1, 2, 3, 4, 5};  // Columns to be adjusted.
+  // Work on column 1.
+  if (!description_->text().isEmpty()) {
+    width -= ui->tableView_transactions->columnWidth(1);
+    columns.remove(1);
+  }
+  // Work on column 2 to 5.
+  for (int i = 0; i < name_combo_boxes_.size(); ++i) {
+    if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
+      width -= ui->tableView_transactions->columnWidth(i + 2);
+      columns.remove(i + 2);
+    }
+  }
+  // Remove columns already narrower than limit.
+  while (true) {
+    int original_size = columns.size();
+    for (int col : columns) {
+      if (ui->tableView_transactions->columnWidth(col) < width / columns.size()) {
+        width -= ui->tableView_transactions->columnWidth(col);
+        columns.remove(col);
+      }
+    }
+    if (original_size == columns.size()) {
+      break;
+    }
+  }
+  // Final adjustment.
+  for (int col : columns) {
+    ui->tableView_transactions->setColumnWidth(col, width / columns.size());
+  }
+  ui->tableView_transactions->resizeRowsToContents();
 }
 
 void MainWindow::on_pushButtonDeleteTransactions_clicked() {
@@ -221,9 +266,4 @@ void MainWindow::on_actionTransactionValidation_triggered() {
   msgBox.setInformativeText(errorMessage);
   msgBox.setStandardButtons(QMessageBox::Ok);
   msgBox.exec();
-}
-
-void MainWindow::closeEvent(QCloseEvent *event) {
-  QMainWindow::closeEvent(event);
-  // Do something on close here
 }

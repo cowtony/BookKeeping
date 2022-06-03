@@ -17,6 +17,9 @@ public:
   explicit Book(const QString& dbPath);
   ~Book();
 
+  Book (const Book&) = delete;            // Book object is not copiable.
+  Book& operator=(const Book&) = delete;  // Book object is not assignable.
+
   void closeDatabase();
 
   // Transactions
@@ -30,9 +33,10 @@ public:
   // Account
   QList<Account> queryAllAccountsFrom(QList<Account::Type> account_types = {}) const;
   Currency::Type queryCurrencyType(const Account& account) const;
-  QStringList queryCategories  (Account::Type table_type) const;
-  QStringList queryAccountNames(Account::Type table_type, const QString& category) const;
-  QStringList queryAccountNamesByLastUpdate(Account::Type table_type, const QString& category, const QDateTime& date_time) const;
+  QStringList    queryCategories  (Account::Type account_type) const;
+  QList<Account> queryAccounts(Account::Type account_type, const QString& category) const;
+  QStringList    queryAccountNamesByLastUpdate(Account::Type account_type, const QString& category, const QDateTime& date_time) const;
+  bool updateAccountComment(const Account& account, const QString& comment) const;
 
   bool insertCategory(const QString& tableName, const QString& category) const;
   bool removeCategory(const QString& tableName, const QString& category) const;

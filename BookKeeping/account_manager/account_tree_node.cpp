@@ -1,9 +1,7 @@
 #include "account_tree_node.h"
 
 AccountTreeNode::~AccountTreeNode() {
-  for (AccountTreeNode* child : children_) {
-    delete child;
-  }
+  clear();
 }
 
 AccountTreeNode* AccountTreeNode::childAt(int index) const {
@@ -38,7 +36,24 @@ Account AccountTreeNode::account() const {
   }
   QString category = parent_->name_;
   QString type = parent_->parent_->name_;
-  return Account(type, category, name_);
+  return Account(type, category, name_, comment_);
+}
+
+QString AccountTreeNode::accountType() const {
+  switch (depth_) {
+    case 1: return name_;
+    case 2: return parent_->name_;
+    case 3: return parent_->parent_->name_;
+    default: return "";
+  }
+}
+
+QString AccountTreeNode::accountGroup() const {
+  switch (depth_) {
+    case 2: return name_;
+    case 3: return parent_->name_;
+    default: return "";
+  }
 }
 
 bool AccountTreeNode::insertChild(AccountTreeNode* child_node, int index) {
@@ -69,13 +84,20 @@ bool AccountTreeNode::setName(const QString& name) {
   if (!parent_ or parent_->childIndex(name) != -1) {
     return false;  // Found duplicate name.
   }
-  name_ = name;
+  this->name_ = name;
   return true;
+}
+
+void AccountTreeNode::clear() {
+  for (AccountTreeNode* child : children_) {
+    delete child;
+  }
+  children_.clear();
 }
 
 int AccountTreeNode::childIndex(const QString& name) const {
   for (int i = 0; i < children_.size(); ++i) {
-    if (children_.at(i)->name_ == name) {
+    if (children_.at(i)->name() == name) {
       return i;
     }
   }

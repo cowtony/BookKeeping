@@ -20,7 +20,8 @@ public:
   ~MainWindow();
 
 protected:
-  void closeEvent(QCloseEvent *event);
+  virtual void resizeEvent(QResizeEvent* event) override;
+  virtual void closeEvent(QCloseEvent *event) override;
 
 private slots:
   void on_actionAddTransaction_triggered();
@@ -40,6 +41,8 @@ private slots:
   void on_pushButton_MergeTransaction_clicked();
 
 private:
+  void resizeColumns();
+
   Ui::MainWindow *ui;
 
   AccountManager     *account_manager_;

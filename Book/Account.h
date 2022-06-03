@@ -8,18 +8,19 @@
 #endif
 
 #include <QString>
-#include "Currency.h"
+#include "currency.h"
 
 struct BOOKSHARED_EXPORT Account {
   typedef enum {Asset, Liability, Revenue, Expense, Equity} Type;
   static const QMap<Type, QString> kTableName;
 
-  explicit Account(Type table, const QString& category, const QString& name);
-  explicit Account(const QString& tableName, const QString& category, const QString& name);
+  explicit Account(Type account_type, const QString& category, const QString& name, const QString& comment = "");
+  explicit Account(const QString& account_type, const QString& category, const QString& name, const QString& comment = "");
 
   Type    type;
   QString category;
   QString name;
+  QString comment;
 
   QString typeName() const;
   QString getFinancialStatementName() const; // Income Statement, Balance Sheet, Cash Flow

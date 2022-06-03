@@ -1,7 +1,5 @@
 #include "book.h"
 
-//Book g_book;
-
 Book::Book(const QString& dbPath) {
   QFileInfo fileInfo(dbPath);
   if (fileInfo.exists()) {
@@ -269,33 +267,33 @@ Currency::Type Book::queryCurrencyType(const Account &account) const {
     }
 }
 
-QStringList Book::queryCategories(Account::Type p_tableType) const {
-    QStringList l_categories;
-    QSqlQuery l_query(database_);
-    l_query.prepare("SELECT DISTINCT Category FROM [" + Account::kTableName.value(p_tableType) + "] ORDER BY Category ASC");
-    if (!l_query.exec())
-        qDebug() << Q_FUNC_INFO << l_query.lastError();
-    while (l_query.next())
-    {
-        l_categories << l_query.value("Category").toString();
-    }
-    return l_categories;
+QStringList Book::queryCategories(Account::Type account_type) const {
+  QStringList categories;
+  QSqlQuery query(database_);
+  query.prepare("SELECT DISTINCT Category FROM [" + Account::kTableName.value(account_type) + "] ORDER BY Category ASC");
+  if (!query.exec()) {
+    qDebug() << Q_FUNC_INFO << query.lastError();
+  }
+  while (query.next()) {
+    categories << query.value("Category").toString();
+  }
+  return categories;
 }
 
-QStringList Book::queryAccountNames(Account::Type account_type, const QString& category) const {
-  QStringList names;
+QList<Account> Book::queryAccounts(Account::Type account_type, const QString& category) const {
   QSqlQuery query(database_);
-  query.prepare("SELECT Name FROM [" + Account::kTableName.value(account_type) + "] WHERE Category = :c ORDER BY Name ASC");
+  query.prepare("SELECT Name, Comment FROM [" + Account::kTableName.value(account_type) + "] WHERE Category = :c ORDER BY Name ASC");
   query.bindValue(":c", category);
 
   if (!query.exec()) {
     qDebug() << Q_FUNC_INFO << query.lastError();
     return {};
   }
+  QList<Account> accounts;
   while (query.next()) {
-    names << query.value("Name").toString();
+    accounts << Account(account_type, category, query.value("Name").toString(), query.value("Comment").toString());
   }
-  return names;
+  return accounts;
 }
 
 QList<Account> Book::queryAllAccountsFrom(QList<Account::Type> account_types) const {
@@ -306,40 +304,55 @@ QList<Account> Book::queryAllAccountsFrom(QList<Account::Type> account_types) co
     account_types = Account::kTableName.keys();
   }
   for (Account::Type account_type : account_types) {
-    query.prepare("SELECT Category, Name FROM [" + Account::kTableName.value(account_type) + "] ORDER BY Name ASC");
+    query.prepare("SELECT Category, Name, Comment FROM [" + Account::kTableName.value(account_type) + "] ORDER BY Name ASC");
     if (!query.exec()) {
       qDebug() << Q_FUNC_INFO << query.lastError();
     }
     while (query.next()) {
-      accounts << Account(account_type, query.value("Category").toString(), query.value("Name").toString());
+      accounts << Account(account_type, query.value("Category").toString(), query.value("Name").toString(), query.value("Comment").toString());
     }
   }
   return accounts;
 }
 
-QStringList Book::queryAccountNamesByLastUpdate(Account::Type tableType, const QString& category, const QDateTime& dateTime) const {
+QStringList Book::queryAccountNamesByLastUpdate(Account::Type account_type, const QString& category, const QDateTime& dateTime) const {
     QMultiMap<QDateTime, QString> accountNamesByDate;
-    for (const QString &accountName: queryAccountNames(tableType, category))
+    for (const Account& account: queryAccounts(account_type, category))
     {
         QSqlQuery query(database_);
-        query.prepare("SELECT MAX(Date) From Transactions WHERE " + Account::kTableName.value(tableType) + " LIKE :account AND Date <= :date");
-        query.bindValue(":account", "%[" + category + "|" + accountName + ":%");
+        query.prepare("SELECT MAX(Date) From Transactions WHERE " + Account::kTableName.value(account_type) + " LIKE :account AND Date <= :date");
+        query.bindValue(":account", "%[" + category + "|" + account.name + ":%");
         query.bindValue(":date", dateTime.toString(kDateTimeFormat));
         query.exec();
         if (query.next())
-            accountNamesByDate.insert(query.value("MAX(Date)").toDateTime(), accountName);
+            accountNamesByDate.insert(query.value("MAX(Date)").toDateTime(), account.name);
         else
-            accountNamesByDate.insert(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), accountName);
+            accountNamesByDate.insert(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), account.name);
     }
 
     QStringList accountNames;
     for (const QString &accountName: accountNamesByDate.values())
-        accountNames.push_front(accountName);  // This is reverse the list
+        accountNames.push_front(accountName);  // This reverses the list
     return accountNames;
 }
 
+bool Book::updateAccountComment(const Account& account, const QString& comment) const {
+  QSqlQuery query(database_);
+  query.prepare("UPDATE [" + account.typeName() + "] SET Comment = :c WHERE Category == :g AND Name = :n");
+  query.bindValue(":c", comment);
+  query.bindValue(":g", account.category);
+  query.bindValue(":n", account.name);
+
+  if (!query.exec()) {
+    qDebug() << Q_FUNC_INFO << query.lastError();
+    return false;
+  } else {
+    return true;
+  }
+}
+
 bool Book::insertCategory(const QString& account_type_name, const QString& category) const {
-  if (!queryAccountNames(Account::kTableName.key(account_type_name), category).empty()) {
+  if (!queryAccounts(Account::kTableName.key(account_type_name), category).empty()) {
     return false;
   }
   QSqlQuery query(database_);
@@ -411,7 +424,7 @@ bool Book::renameCategory(const QString &tableName, const QString &category, con
 }
 
 bool Book::insertAccount(const Account& account) const {
-  if (queryAccountNames(account.type, account.category).empty()) {
+  if (queryAccounts(account.type, account.category).empty()) {
     qDebug() << Q_FUNC_INFO << "Category " << account.category << " does not exist";
     return false;
   }

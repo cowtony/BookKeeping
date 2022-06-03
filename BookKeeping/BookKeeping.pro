@@ -35,14 +35,14 @@ INCLUDEPATH += GUI \
     Book
 
 SOURCES += \
+    main.cpp \
     GUI/BarChart.cpp \
     GUI/InvestmentAnalysis.cpp \
+    GUI/AddTransaction.cpp \
     account_manager/account_manager.cpp \
     account_manager/account_tree_node.cpp \
     account_manager/accounts_model.cpp \
     financial_statement/financial_statement.cpp \
-    main.cpp \
-    GUI/AddTransaction.cpp \
     main_window/book_model.cpp \
     main_window/main_window.cpp
 

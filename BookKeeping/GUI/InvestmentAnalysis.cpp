@@ -6,23 +6,25 @@ InvestmentAnalysis::InvestmentAnalysis(Book& book, QWidget *parent)
   ui->setupUi(this);
 
   // Scan, analysis and save all investment product:
-  QStringList investments = book_.queryAccountNames(Account::Revenue, "Investment");
+  QList<Account> investments = book_.queryAccounts(Account::Revenue, "Investment");
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  for (const QString& investmentName : investments) {
-    analysisInvestment(investmentName);
+  for (const Account& investment : investments) {
+    analysisInvestment(investment.name);
   }
   QApplication::restoreOverrideCursor();
 
   // Get all investment info into list:
   ui->investmentTableWidget->setRowCount(investments.size());
   for (int row = 0; row < investments.size(); row++) {
+    const QString investment_name = investments.at(row).name;
+
     ui->investmentTableWidget->setRowHeight(row, 20);
-    QTableWidgetItem* item = new QTableWidgetItem(investments.at(row));
+    QTableWidgetItem* item = new QTableWidgetItem(investment_name);
     item->setCheckState(Qt::Unchecked);   // To Show the checkbox.
     ui->investmentTableWidget->setItem(row, 0, item);
 
     // Set column 1: Discount Rate
-    double discount_rate = (discount_rates_.value(investments.at(row)) - 1.0) * 100;
+    double discount_rate = (discount_rates_.value(investment_name) - 1.0) * 100;
     QTableWidgetItem* discount_rate_item = new QTableWidgetItem(QString::number(discount_rate, 'f', 2) + "%");
     if (discount_rate < 0) {
       discount_rate_item->setForeground(Qt::red);
@@ -32,8 +34,8 @@ InvestmentAnalysis::InvestmentAnalysis(Book& book, QWidget *parent)
 
     // Set column 2: APR.
     double APR = 0;
-    if (return_histories_.contains(investments.at(row))) {
-      APR = (calculateAPR(return_histories_.value(investments.at(row))) - 1.0) * 100;
+    if (return_histories_.contains(investment_name)) {
+      APR = (calculateAPR(return_histories_.value(investment_name)) - 1.0) * 100;
     }
     QTableWidgetItem* apr_item = new QTableWidgetItem(QString::number(APR, 'f', 2) + "%");
     if (APR < 0) {
