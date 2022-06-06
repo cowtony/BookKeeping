@@ -18,6 +18,9 @@ public:
   explicit AccountsModel(Book& book, QObject *parent = nullptr);
   ~AccountsModel();
 
+  void setupAccounts(const QList<Account>& accounts);
+  static AccountTreeNode* getItem(const QModelIndex& index);
+
   // Header:
   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
@@ -59,11 +62,7 @@ public:
   bool removeItem(const QModelIndex& index);
 //  bool removeColumns(int column, int count, const QModelIndex &parent = QModelIndex()) override;
 
-  void setupAccounts(const QList<Account>& accounts);
-
 private:
-  AccountTreeNode* getItem(const QModelIndex& index) const;
-
   AccountTreeNode* root_;
   Book& book_;
 };

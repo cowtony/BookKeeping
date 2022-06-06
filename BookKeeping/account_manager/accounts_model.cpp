@@ -60,7 +60,7 @@ QModelIndex AccountsModel::index(int row, int column, const QModelIndex& parent)
   if (!parent.isValid()) {
     parent_node = root_;
   } else {
-    parent_node = static_cast<AccountTreeNode*>(parent.internalPointer());
+    parent_node = getItem(parent);
   }
   if (AccountTreeNode* node = parent_node->childAt(row)) {
     return createIndex(row, column, node);
@@ -74,7 +74,7 @@ QModelIndex AccountsModel::parent(const QModelIndex &index) const {
     return QModelIndex();  // Root won't have parent.
   }
 
-  AccountTreeNode* node = static_cast<AccountTreeNode*>(index.internalPointer());
+  AccountTreeNode* node = getItem(index);
   AccountTreeNode* parent_node = node->parent();
   if (parent_node == root_) {
     return QModelIndex();  // Root won't have ModelIndex.
@@ -86,7 +86,7 @@ int AccountsModel::rowCount(const QModelIndex& parent) const {
   if (!parent.isValid()) {
     return root_->childCount();
   }
-  AccountTreeNode* parent_node = static_cast<AccountTreeNode*>(parent.internalPointer());
+  AccountTreeNode* parent_node = getItem(parent);
   return parent_node->childCount();
 }
 
@@ -117,7 +117,6 @@ QVariant AccountsModel::data(const QModelIndex& index, int role) const {
   AccountTreeNode* node = getItem(index);
   switch (role) {
     case Qt::DisplayRole:
-    case Qt::EditRole:
       switch (index.column()) {
         case 0: return node->name();
         case 1: return node->comment();
@@ -136,6 +135,7 @@ QVariant AccountsModel::data(const QModelIndex& index, int role) const {
   return QVariant();
 }
 
+// TODO: Add default text when double clicked.
 bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int role) {
   if (data(index, role) == value) {
     return false;
@@ -161,6 +161,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
           QApplication::restoreOverrideCursor();
           if (success) {
             node->setName(value.toString());
+            // TODO: emit Category name Changed
           } else {
             return false;
           }
@@ -208,7 +209,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
                   return false;
                 }
               }
-
+              // TODO: emit account name Changed
               break;
             }
             case 1: { // Comment
@@ -220,6 +221,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
             }
             default: return false;
           }
+          break;
         default:
           return false;
       }
@@ -233,11 +235,10 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
 }
 
 Qt::ItemFlags AccountsModel::flags(const QModelIndex& index) const {
-  AccountTreeNode* node = getItem(index);
-  if (!index.isValid() or !node) {
+  if (!index.isValid()) {
     return QAbstractItemModel::flags(index);
   }
-  switch (node->depth()) {
+  switch (getItem(index)->depth()) {
     case 1:  // Account type
       return (Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled;
     case 2:  // Account group
@@ -334,11 +335,12 @@ bool AccountsModel::insertRows(int row, int count, const QModelIndex& parent) {
   if (!parent_node) {
     return false;
   }
-  beginInsertColumns(parent, row, row + count - 1);
+  beginInsertRows(parent, row, row + count - 1);
   for (int r = row; r < row + count; r++) {
+    // TODO: change the default value (which is datatime now.)
     parent_node->insertChild(new AccountTreeNode(QDateTime::currentDateTime().toString()), r);
   }
-  endInsertColumns();
+  endInsertRows();
   return true;
 }
 
@@ -352,9 +354,8 @@ QModelIndex AccountsModel::appendRow(const QModelIndex& parent, const QString& n
   endInsertRows();
   if (!success) {
     return QModelIndex();
-  } else {
-    return QModelIndex();
   }
+  return index(parent_node->childCount() - 1, 0, parent);
 }
 
 //bool AccountModel::insertColumns(int column, int count, const QModelIndex &parent)
@@ -369,6 +370,11 @@ bool AccountsModel::removeRows(int row, int count, const QModelIndex& parent) {
   AccountTreeNode* parent_node = getItem(parent);
   parent_node->removeChildren(row, count);
   endRemoveRows();
+
+  // Do not leave an empty category.
+  if(parent_node->depth() == 2 and parent_node->childCount() == 0) {
+    return removeItem(parent);
+  }
   return true;
 }
 
@@ -383,6 +389,7 @@ bool AccountsModel::removeItem(const QModelIndex& index) {
 //  endRemoveColumns();
 //}
 
-AccountTreeNode* AccountsModel::getItem(const QModelIndex& index) const {
+// static
+AccountTreeNode* AccountsModel::getItem(const QModelIndex& index) {
   return static_cast<AccountTreeNode*>(index.internalPointer());
 }

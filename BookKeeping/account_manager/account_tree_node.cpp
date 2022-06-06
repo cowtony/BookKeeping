@@ -76,8 +76,14 @@ bool AccountTreeNode::insertChild(AccountTreeNode* child_node, int index) {
 }
 
 void AccountTreeNode::removeChildren(int index, int count) {
-  // TODO: boundary check.
-  children_.remove(index, count);
+  for (int i = 0; i < count; ++i) {
+    if (index < 0 or index >= children_.size()) {
+      return;  // Out of boundary.
+    }
+    AccountTreeNode* item = children_.at(index);
+    children_.remove(index);
+    delete item;
+  }
 }
 
 bool AccountTreeNode::setName(const QString& name) {

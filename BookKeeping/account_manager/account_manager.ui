@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>344</width>
-    <height>371</height>
+    <height>512</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,23 +19,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="2">
-     <layout class="QGridLayout" name="gridLayout_7">
-      <item row="0" column="0">
-       <widget class="QPushButton" name="pushButton_Delete">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="text">
-         <string>Delete</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="0" column="2">
-     <layout class="QGridLayout" name="gridLayout_4"/>
-    </item>
     <item row="1" column="0">
      <layout class="QGridLayout" name="gridLayout_5">
       <item row="0" column="0">
@@ -54,11 +37,14 @@
      </layout>
     </item>
     <item row="1" column="1">
-     <layout class="QGridLayout" name="gridLayout_6">
+     <layout class="QGridLayout" name="gridLayout_7">
       <item row="0" column="0">
-       <widget class="QPushButton" name="pushButton_Rename">
+       <widget class="QPushButton" name="pushButton_Delete">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="text">
-         <string>Rename</string>
+         <string>Delete</string>
         </property>
        </widget>
       </item>
@@ -68,7 +54,7 @@
      <layout class="QGridLayout" name="gridLayout_2"/>
     </item>
     <item row="0" column="1">
-     <layout class="QGridLayout" name="gridLayout_3"/>
+     <layout class="QGridLayout" name="gridLayout_4"/>
     </item>
    </layout>
   </widget>
