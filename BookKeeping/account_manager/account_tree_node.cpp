@@ -30,13 +30,12 @@ int AccountTreeNode::index() const {
   return index;
 }
 
-Account AccountTreeNode::account() const {
+std::shared_ptr<Account> AccountTreeNode::account() const {
   if (depth_ != 3) {
-    return Account("Invalid", "Invalid", "Invalid");
+    // Return an invalid account.
+    return FactoryCreateAccount(Account::kTableName.key("Liability"), "", "");
   }
-  QString category = parent_->name_;
-  QString type = parent_->parent_->name_;
-  return Account(type, category, name_, comment_);
+  return FactoryCreateAccount(Account::kTableName.key(parent_->parent_->name_), parent_->name_, name_, comment_);
 }
 
 QString AccountTreeNode::accountType() const {
@@ -92,6 +91,12 @@ bool AccountTreeNode::setName(const QString& name) {
   }
   this->name_ = name;
   return true;
+}
+
+void AccountTreeNode::setIsInvestment(bool is_investment) {
+  if (depth_ == 3 and accountType() == "Asset") {
+    is_investment_ = is_investment;
+  }
 }
 
 void AccountTreeNode::clear() {

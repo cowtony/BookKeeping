@@ -296,20 +296,26 @@ QList<Account> Book::queryAccounts(Account::Type account_type, const QString& ca
   return accounts;
 }
 
-QList<Account> Book::queryAllAccountsFrom(QList<Account::Type> account_types) const {
-  QList<Account> accounts;
+QList<std::shared_ptr<Account>> Book::queryAllAccountsFrom(QList<Account::Type> account_types) const {
+  QList<std::shared_ptr<Account>> accounts;
   QSqlQuery query(database_);
   // Empty input will query all account types.
   if (account_types.empty()) {
     account_types = Account::kTableName.keys();
   }
   for (Account::Type account_type : account_types) {
-    query.prepare("SELECT Category, Name, Comment FROM [" + Account::kTableName.value(account_type) + "] ORDER BY Name ASC");
+    query.prepare("SELECT * FROM [" + Account::kTableName.value(account_type) + "] ORDER BY Category ASC, Name ASC");
     if (!query.exec()) {
       qDebug() << Q_FUNC_INFO << query.lastError();
     }
     while (query.next()) {
-      accounts << Account(account_type, query.value("Category").toString(), query.value("Name").toString(), query.value("Comment").toString());
+      std::shared_ptr<Account> account = FactoryCreateAccount(account_type, query.value("Category").toString(),
+                                                            query.value("Name").toString(),
+                                                            query.value("Comment").toString());
+      if (account_type == Account::Asset) {
+        static_cast<AssetAccount*>(account.get())->is_investment = query.value("IsInvestment").toBool();
+      }
+      accounts << account;
     }
   }
   return accounts;
@@ -351,6 +357,32 @@ bool Book::updateAccountComment(const Account& account, const QString& comment) 
   }
 }
 
+QString Book::setInvestment(const AssetAccount& asset, bool is_investment) const {
+  if (!is_investment) {
+    QSqlQuery query(database_);
+    query.prepare("SELECT * FROM Transactions WHERE Revenue LIKE :exp");
+    query.bindValue(":exp", "%[Investment|" + asset.name + ":%");
+    if (!query.exec()) {
+      return query.lastError().text();
+    }
+    if (query.next()) {
+      return "Error: Cannot remove " + asset.name + " from investment since there still are transactions associate with it.";
+    }
+  }
+  QSqlQuery query(database_);
+  query.prepare("UPDATE Asset SET IsInvestment = :i WHERE Category == :g AND Name = :n");
+  query.bindValue(":g", asset.category);
+  query.bindValue(":n", asset.name);
+  query.bindValue(":i", is_investment);
+
+  if (!query.exec()) {
+    qDebug() << Q_FUNC_INFO << query.lastError();
+    return query.lastError().text();
+  } else {
+    return "";
+  }
+}
+
 bool Book::insertCategory(const QString& account_type_name, const QString& category) const {
   if (!queryAccounts(Account::kTableName.key(account_type_name), category).empty()) {
     return false;
@@ -367,19 +399,6 @@ bool Book::insertCategory(const QString& account_type_name, const QString& categ
   }
 }
 
-bool Book::removeCategory(const QString &tableName, const QString &category) const
-{
-    QSqlQuery query(database_);
-    query.prepare("DELETE FROM [" + tableName + "] WHERE Category = :c AND Name IS NULL");
-    query.bindValue(":c", category);
-    query.exec();
-
-    query.prepare("SELECT * FROM [" + tableName + "] WHERE Category = :c");
-    query.bindValue(":c", category);
-    query.exec();
-
-    return !query.next();
-}
 
 bool Book::categoryExist(const QString &tableName, const QString &category) const
 {

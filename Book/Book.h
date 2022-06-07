@@ -31,15 +31,15 @@ public:
   void removeTransaction(const QDateTime& p_dateTime) const;
 
   // Account
-  QList<Account> queryAllAccountsFrom(QList<Account::Type> account_types = {}) const;
+  QList<std::shared_ptr<Account>> queryAllAccountsFrom(QList<Account::Type> account_types = {}) const;
   Currency::Type queryCurrencyType(const Account& account) const;
   QStringList    queryCategories  (Account::Type account_type) const;
   QList<Account> queryAccounts(Account::Type account_type, const QString& category) const;
   QStringList    queryAccountNamesByLastUpdate(Account::Type account_type, const QString& category, const QDateTime& date_time) const;
   bool updateAccountComment(const Account& account, const QString& comment) const;
+  QString setInvestment(const AssetAccount& asset, bool is_investment) const;
 
   bool insertCategory(const QString& tableName, const QString& category) const;
-  bool removeCategory(const QString& tableName, const QString& category) const;
   bool categoryExist (const QString& tableName, const QString& category) const;
   bool renameCategory(const QString& tableName, const QString& category, const QString& newCategory) const;
   bool insertAccount (const Account& account) const;

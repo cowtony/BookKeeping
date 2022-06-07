@@ -19,7 +19,8 @@ public:
   int index() const;
   QString name() const { return name_; }
   QString comment() const { return comment_; }
-  Account account() const;
+  bool isInvestment() const { return is_investment_; }
+  std::shared_ptr<Account> account() const;
   QString accountType() const;
   QString accountGroup() const;
 
@@ -28,6 +29,7 @@ public:
   void removeChildren(int index, int count);
   bool setName(const QString& name);
   void setComment(const QString& comment) { comment_ = comment; }
+  void setIsInvestment(bool is_investment);
   void clear();
 
 private:
@@ -39,6 +41,7 @@ private:
   // Tree Node Data:
   QString name_;
   QString comment_;
+  bool is_investment_;
 };
 
 #endif // ACCOUNTTREENODE_H

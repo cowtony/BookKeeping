@@ -20,6 +20,7 @@ public:
 
 private slots:
   void onCurrentItemChanged(const QModelIndex& current, const QModelIndex& previous);
+  void onReceiveErrorMessage(const QString& message);
 
   void on_pushButton_Add_clicked();
   void on_pushButton_Delete_clicked();

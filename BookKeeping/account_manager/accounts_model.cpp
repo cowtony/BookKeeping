@@ -12,17 +12,20 @@ AccountsModel::~AccountsModel() {
   delete root_;
 }
 
-void AccountsModel::setupAccounts(const QList<Account>& accounts) {
+void AccountsModel::setupAccounts(const QList<std::shared_ptr<Account>>& accounts) {
   root_->clear();
-  for (const Account& account : accounts) {
+  for (const std::shared_ptr<Account>& account : accounts) {
     AccountTreeNode* current_node = root_;
-    for (const QString& name : {account.typeName(), account.category, account.name}) {
+    for (const QString& name : {account->typeName(), account->category, account->name}) {
       if (current_node->childAt(name) == nullptr) {
         current_node->insertChild(new AccountTreeNode(name));
       }
       current_node = current_node->childAt(name);
       if (current_node->depth() == 3) {
-        current_node->setComment(account.comment);
+        current_node->setComment(account->comment);
+        if (account->type == Account::Asset) {
+          current_node->setIsInvestment(static_cast<AssetAccount*>(account.get())->is_investment);
+        }
       }
     }
   }
@@ -35,6 +38,7 @@ QVariant AccountsModel::headerData(int section, Qt::Orientation orientation, int
       switch (section) {
         case 0: return "Account Name";
         case 1: return "Comment";
+        case 2: return "Is Investment?";
         default: return QVariant();
       }
     }
@@ -91,7 +95,7 @@ int AccountsModel::rowCount(const QModelIndex& parent) const {
 }
 
 int AccountsModel::columnCount(const QModelIndex& /* parent */) const {
-  return 2;
+  return 3;
 }
 
 //bool AccountModel::hasChildren(const QModelIndex &parent) const
@@ -130,6 +134,12 @@ QVariant AccountsModel::data(const QModelIndex& index, int role) const {
         case 3: return kAccountFont;
         default: break;
       }
+      break;
+    case Qt::CheckStateRole:
+      if (index.column() == 2 and node->depth() == 3 and node->accountType() == "Asset") {
+        return node->isInvestment()? Qt::Checked : Qt::Unchecked;
+      }
+      break;
     default: break;
   }
   return QVariant();
@@ -151,9 +161,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
             return false;
           }
           if (book_.categoryExist(node->accountType(), value.toString())) {
-            QMessageBox message_box;
-            message_box.setText("Group name " + value.toString() + " already exist.");
-            message_box.exec();
+            emit errorMessage("Group name " + value.toString() + " already exist.");
             return false;
           }
           QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -173,16 +181,14 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
               if (value.toString().isEmpty()) {
                 return false;
               }
-              Account old_account = node->account();
+              Account old_account = *node->account();
               Account new_account = old_account;
               new_account.name = value.toString();
               bool account_exist = book_.accountExist(new_account);
 
               if (account_exist) {  // new_account_name exist, perform merge.
                 if (!node->comment().isEmpty()) {
-                  QMessageBox message_box;
-                  message_box.setText("The account to be merged still have unempty comment.");
-                  message_box.exec();
+                  emit errorMessage("The account to be merged still have unempty comment.");
                   return false;
                 }
                 QMessageBox message_box;
@@ -213,7 +219,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
               break;
             }
             case 1: { // Comment
-              if(!book_.updateAccountComment(node->account(), value.toString())) {
+              if(!book_.updateAccountComment(*node->account(), value.toString())) {
                 return false;
               }
               node->setComment(value.toString());
@@ -224,6 +230,17 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
           break;
         default:
           return false;
+      }
+      break;
+    case Qt::CheckStateRole:
+      if (index.column() == 2 and node->depth() == 3 and node->accountType() == "Asset") {
+        // TODO: Connect to database.
+        QString error = book_.setInvestment(*static_cast<AssetAccount*>(node->account().get()), value.toBool());
+        if (!error.isEmpty()) {
+          emit errorMessage(error);
+          return false;
+        }
+        node->setIsInvestment(value.toBool());
       }
       break;
     default:
@@ -244,7 +261,11 @@ Qt::ItemFlags AccountsModel::flags(const QModelIndex& index) const {
     case 2:  // Account group
       return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled;
     case 3:  // Account name
-      return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled;
+      if (getItem(index)->accountType() == "Asset" and index.column() == 2) {
+        return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable);
+      } else {
+        return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled;
+      }
   }
   return Qt::NoItemFlags;
 }

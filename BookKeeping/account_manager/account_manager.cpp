@@ -22,12 +22,17 @@ AccountManager::AccountManager(Book& book, QWidget *parent)
   tree_view_->setDropIndicatorShown(true);
   tree_view_->setColumnWidth(0, 200);
 
+  connect(&account_model_, &AccountsModel::errorMessage, this, &AccountManager::onReceiveErrorMessage);
   connect(tree_view_->selectionModel(), &QItemSelectionModel::currentChanged, this, &AccountManager::onCurrentItemChanged);
 }
 
 void AccountManager::onCurrentItemChanged(const QModelIndex& current, const QModelIndex& /* previous */) {
   ui_->pushButton_Add   ->setEnabled(AccountsModel::getItem(current)->depth() != 3);  // Can add under type or category.
   ui_->pushButton_Delete->setEnabled(AccountsModel::getItem(current)->depth() == 3);  // Can delete meta account.
+}
+
+void AccountManager::onReceiveErrorMessage(const QString& message) {
+  QMessageBox::warning(this, "WARNING", message, QMessageBox::Ok);
 }
 
 void AccountManager::on_pushButton_Add_clicked() {
@@ -70,7 +75,7 @@ void AccountManager::on_pushButton_Delete_clicked() {
     QMessageBox::warning(this, "Warning", "Cannot delete the whole type or category.", QMessageBox::Ok);
     return;
   }
-  if (!book_.removeAccount(item->account())) {
+  if (!book_.removeAccount(*item->account())) {
     QMessageBox::warning(this, "Cannot delete!", "The account still have transactions link to it!", QMessageBox::Ok);
     return;
   }

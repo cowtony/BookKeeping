@@ -1,4 +1,4 @@
-#include "Account.h"
+#include "account.h"
 
 const QMap<Account::Type, QString> Account::kTableName =
     {{Asset, "Asset"},
@@ -6,9 +6,6 @@ const QMap<Account::Type, QString> Account::kTableName =
      {Revenue, "Revenue"},
      {Expense, "Expense"},
      {Equity, "Equity"}};
-
-Account::Account(Type account_type, const QString& category, const QString& name, const QString& comment)
-  : type(account_type), category(category), name(name), comment(comment) {}
 
 Account::Account(const QString& account_type, const QString& category, const QString& name, const QString& comment)
   : category(category), name(name), comment(comment) {
@@ -47,4 +44,13 @@ bool Account::operator <(const Account &p_account) const {
 
 bool Account::operator ==(const Account &account) const {
   return account.type == type and account.category == category and account.name == name;
+}
+
+std::shared_ptr<Account> FactoryCreateAccount(Account::Type account_type, const QString& category, const QString& name, const QString& comment) {
+  switch (account_type) {
+    case Account::Asset:
+      return std::make_shared<AssetAccount>(account_type, category, name, comment);
+    default:
+      return std::make_shared<Account>(account_type, category, name, comment);
+  }
 }
