@@ -277,10 +277,29 @@ QStringList Book::queryCategories(Account::Type account_type) const {
   while (query.next()) {
     categories << query.value("Category").toString();
   }
+  // TODO: remove the `contains` once Investment is deprecated from table.
+  if (account_type == Account::Revenue and !categories.contains("Investment")) {
+    categories << "Investment";
+  }
   return categories;
 }
 
 QList<Account> Book::queryAccounts(Account::Type account_type, const QString& category) const {
+  QList<Account> accounts;
+
+  // Special treatment for retriving Revenue::Investment.
+  if (account_type == Account::Revenue and category == "Investment") {
+    QSqlQuery query(database_);
+    if (!query.exec("SELECT Name, Comment FROM Asset WHERE IsInvestment = True ORDER BY Name ASC")) {
+      qDebug() << Q_FUNC_INFO << query.lastError();
+      return {};
+    }
+    while (query.next()) {
+      accounts << Account(Account::Revenue, "Investment", query.value("Name").toString(), query.value("Comment").toString());
+    }
+    return accounts;
+  }
+
   QSqlQuery query(database_);
   query.prepare("SELECT Name, Comment FROM [" + Account::kTableName.value(account_type) + "] WHERE Category = :c ORDER BY Name ASC");
   query.bindValue(":c", category);
@@ -289,7 +308,6 @@ QList<Account> Book::queryAccounts(Account::Type account_type, const QString& ca
     qDebug() << Q_FUNC_INFO << query.lastError();
     return {};
   }
-  QList<Account> accounts;
   while (query.next()) {
     accounts << Account(account_type, category, query.value("Name").toString(), query.value("Comment").toString());
   }
@@ -322,24 +340,25 @@ QList<std::shared_ptr<Account>> Book::queryAllAccountsFrom(QList<Account::Type> 
 }
 
 QStringList Book::queryAccountNamesByLastUpdate(Account::Type account_type, const QString& category, const QDateTime& dateTime) const {
-    QMultiMap<QDateTime, QString> accountNamesByDate;
-    for (const Account& account: queryAccounts(account_type, category))
-    {
-        QSqlQuery query(database_);
-        query.prepare("SELECT MAX(Date) From Transactions WHERE " + Account::kTableName.value(account_type) + " LIKE :account AND Date <= :date");
-        query.bindValue(":account", "%[" + category + "|" + account.name + ":%");
-        query.bindValue(":date", dateTime.toString(kDateTimeFormat));
-        query.exec();
-        if (query.next())
-            accountNamesByDate.insert(query.value("MAX(Date)").toDateTime(), account.name);
-        else
-            accountNamesByDate.insert(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), account.name);
+  QMultiMap<QDateTime, QString> accountNamesByDate;
+  for (const Account& account: queryAccounts(account_type, category)) {
+    QSqlQuery query(database_);
+    query.prepare("SELECT MAX(Date) From Transactions WHERE " + Account::kTableName.value(account_type) + " LIKE :account AND Date <= :date");
+    query.bindValue(":account", "%[" + category + "|" + account.name + ":%");
+    query.bindValue(":date", dateTime.toString(kDateTimeFormat));
+    query.exec();
+    if (query.next()) {
+      accountNamesByDate.insert(query.value("MAX(Date)").toDateTime(), account.name);
+    } else {
+      accountNamesByDate.insert(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), account.name);
     }
+  }
 
-    QStringList accountNames;
-    for (const QString &accountName: accountNamesByDate.values())
-        accountNames.push_front(accountName);  // This reverses the list
-    return accountNames;
+  QStringList accountNames;
+  for (const QString &accountName: accountNamesByDate.values()) {
+    accountNames.push_front(accountName);  // This reverses the list
+  }
+  return accountNames;
 }
 
 bool Book::updateAccountComment(const Account& account, const QString& comment) const {

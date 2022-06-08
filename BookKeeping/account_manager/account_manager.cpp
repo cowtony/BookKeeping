@@ -42,6 +42,10 @@ void AccountManager::on_pushButton_Add_clicked() {
       bool ok;
       QString category_name = QInputDialog::getText(this, "Add category into table: " + item->name(), "Category:", QLineEdit::Normal, "", &ok);
       if (ok and !category_name.isEmpty()) {
+        if (item->accountType() == "Revenue" && category_name == "Investment") {
+          QMessageBox::warning(this, "Insert Failed", "Cannot add Revenue::Investment since 'Investment' is reserved.", QMessageBox::Ok);
+          return;
+        }
         if (book_.insertCategory(item->accountType(), category_name)) {
           QModelIndex category_index = account_model_.appendRow(tree_view_->currentIndex(), category_name);
           account_model_.appendRow(category_index, category_name);

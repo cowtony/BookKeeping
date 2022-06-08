@@ -252,16 +252,20 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
 }
 
 Qt::ItemFlags AccountsModel::flags(const QModelIndex& index) const {
+  auto node = getItem(index);
   if (!index.isValid()) {
     return QAbstractItemModel::flags(index);
   }
-  switch (getItem(index)->depth()) {
+  if (node->accountType() == "Revenue" and node->accountGroup() == "Investment") {
+    return QAbstractItemModel::flags(index) & ~Qt::ItemIsEnabled;
+  }
+  switch (node->depth()) {
     case 1:  // Account type
       return (Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled;
     case 2:  // Account group
       return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled;
     case 3:  // Account name
-      if (getItem(index)->accountType() == "Asset" and index.column() == 2) {
+      if (node->accountType() == "Asset" and index.column() == 2) {
         return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable);
       } else {
         return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled;
