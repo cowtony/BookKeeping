@@ -296,7 +296,7 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem* item, int /*
 
       QStringList xAxis;
       for (int i = 0; i < m_records.size(); i++)
-          xAxis.push_front(m_records.at(i).description_);
+          xAxis.push_front(m_records.at(i).description);
       barChart->setAxisX(xAxis);
 
       QList<qreal> yAxis1;
@@ -323,7 +323,7 @@ void FinancialStatement::on_pushButtonShowMore_clicked() {
   }
 
   ui->treeWidget->setColumnCount(index + 2);
-  ui->treeWidget->headerItem()->setText(index + 1, m_records.at(index).description_);
+  ui->treeWidget->headerItem()->setText(index + 1, m_records.at(index).description);
 
   for (const Account& account : m_records.at(index).getAccounts()) {
     MoneyArray moneyArray = m_records.at(index).getMoneyArray(account);

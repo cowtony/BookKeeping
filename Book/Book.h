@@ -32,12 +32,14 @@ public:
 
   // Account
   QList<std::shared_ptr<Account>> queryAllAccountsFrom(QList<Account::Type> account_types = {}) const;
+  QStringList queryAccounts(Account::Type account_type, const QString& category) const;
+  QList<AssetAccount> getInvestmentAccounts() const;
   Currency::Type queryCurrencyType(const Account& account) const;
   QStringList    queryCategories  (Account::Type account_type) const;
-  QList<Account> queryAccounts(Account::Type account_type, const QString& category) const;
   QStringList    queryAccountNamesByLastUpdate(Account::Type account_type, const QString& category, const QDateTime& date_time) const;
   bool updateAccountComment(const Account& account, const QString& comment) const;
   QString setInvestment(const AssetAccount& asset, bool is_investment) const;
+  bool IsInvestment(const Account& account) const;
 
   bool insertCategory(const QString& tableName, const QString& category) const;
   bool categoryExist (const QString& tableName, const QString& category) const;
@@ -45,7 +47,8 @@ public:
   bool insertAccount (const Account& account) const;
   bool removeAccount (const Account& account) const;
   bool accountExist  (const Account& account) const;
-  bool moveAccount   (const Account& account, const Account& newAccount) const;
+  // Return the error string, empty if no error.
+  QString moveAccount(const Account& old_account, const Account& new_account) const;
 
   QDateTime getFirstTransactionDateTime() const;
   QDateTime getLastTransactionDateTime() const;
@@ -58,7 +61,7 @@ private:
   QDateTime start_time_;
   void logUsageTime();
 
-  bool logging(const QSqlQuery& query) const; // Log all the modifier actions
+  bool Logging(const QSqlQuery& query) const; // Log all the modifier actions
 };
 
 //BOOKSHARED_EXPORT extern Book g_book;

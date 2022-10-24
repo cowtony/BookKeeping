@@ -144,7 +144,7 @@ void TreeWidget::dropEvent(QDropEvent *event) {
       case QMessageBox::Ok:
         QApplication::setOverrideCursor(Qt::WaitCursor);
         if (book_.moveAccount(Account(drag_from_.at(0), drag_from_.at(1), drag_from_.at(2)),
-                               Account(dragTo.at(0),   dragTo.at(1), drag_from_.at(2)))) {
+                              Account(dragTo.at(0),     dragTo.at(1),     drag_from_.at(2))).isEmpty()) {
           delete currentItem();
         }
         QApplication::restoreOverrideCursor();

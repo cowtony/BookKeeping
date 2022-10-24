@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>CreateDatabase.sql</file>
+        <file>CreateDbBook.sql</file>
     </qresource>
 </RCC>

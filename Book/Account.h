@@ -30,10 +30,12 @@ struct BOOKSHARED_EXPORT Account {
   bool operator ==(const Account& account) const;
 
 private:
-  int id_;  // Primary key in database, not used.
+  // int id_;  // Primary key in database, not used.
 };
 
 struct BOOKSHARED_EXPORT AssetAccount : public Account {
+  AssetAccount(Account account) : Account(account.type, account.category, account.name, account.comment), is_investment(false) {}
+
   explicit AssetAccount(Type account_type, const QString& category, const QString& name, const QString& comment = "", bool is_investment = false)
     : Account(account_type, category, name, comment),
       is_investment(is_investment) {}

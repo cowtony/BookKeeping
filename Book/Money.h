@@ -32,7 +32,7 @@ public:
   Money round() const;
 
   Currency::Type currency() const;
-  void changeCurrency(Currency::Type currency_e);
+  Money& changeCurrency(Currency::Type currency_e);
 
 protected:
   Currency::Type currency_; // Making this private because change this value will cause m_amounts change as well.

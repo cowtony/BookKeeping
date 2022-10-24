@@ -70,6 +70,7 @@ bool AccountTreeNode::insertChild(AccountTreeNode* child_node, int index) {
   }
   child_node->parent_ = this;
   child_node->depth_ = depth_ + 1;
+  child_node->is_investment_ = false;
   children_.insert(index, child_node);
   return true;
 }

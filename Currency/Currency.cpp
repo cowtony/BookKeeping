@@ -31,7 +31,7 @@ void Currency::openDatabase(const QString &dbPath) {
     database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
     database_.setDatabaseName(dbPath);
     Q_INIT_RESOURCE(Currency);
-    QFile DDL(":/CreateDatabase.sql");
+    QFile DDL(":/CreateDbCurrency.sql");
     if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
       QString statement;
       while (!DDL.atEnd()) {

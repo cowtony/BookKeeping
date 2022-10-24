@@ -10,7 +10,7 @@
 #include <QDateTime>
 #include <QMap>
 #include "currency.h"
-#include "Money.h"
+#include "money.h"
 #include "account.h"
 
 const QString kDateTimeFormat = "yyyy-MM-dd HH:mm";
@@ -40,8 +40,8 @@ public:
   MoneyArray getRetainedEarnings() const;
   MoneyArray getXXXContributedCapital() const;  // not used yet
 
-  QDateTime date_time_;
-  QString description_;
+  QDateTime date_time;
+  QString description;
 
 protected:
 
@@ -57,14 +57,14 @@ struct BOOKSHARED_EXPORT TransactionFilter : public Transaction {
   TransactionFilter& fromTime(const QDateTime& start_time);
   TransactionFilter& toTime(const QDateTime& start_time);
   TransactionFilter& setDescription(const QString& description);
-  TransactionFilter& useAnd();
   TransactionFilter& useOr();
+  TransactionFilter& useAnd();
   TransactionFilter& orderByAscending();
   TransactionFilter& orderByDescending();
   TransactionFilter& setLimit(int limit);
 
   QDateTime end_date_time_ = QDateTime(QDate(2200, 01, 01), QTime(23, 59, 59));
-  bool use_union_ = false;
+  bool use_or_ = false;
   bool ascending_order_ = true;
   int limit_ = INT_MAX;
 };

@@ -7,7 +7,7 @@
 #include "transaction.h"
 #include "AddTransaction.h"
 #include "currency.h"
-#include "InvestmentAnalysis.h"
+#include "investment_analysis.h"
 
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent),
@@ -87,7 +87,7 @@ void MainWindow::refreshTable() {
                              .fromTime(QDateTime(start_date_->date(), QTime(00, 00, 00)))
                              .toTime(QDateTime(end_date_->date(), QTime(23, 59, 59)))
                              .setDescription(description_->text())
-                             .useOr()
+                             .useAnd()
                              .orderByDescending()
                              .setLimit(BookModel::kMaximumTransactions);
   for (int i = 0; i < kTableList.size(); i++) {
@@ -102,7 +102,7 @@ void MainWindow::refreshTable() {
 
 void MainWindow::on_tableView_transactions_doubleClicked(const QModelIndex &index) {
   Transaction transaction = book_model_.getTransaction(index);
-  if (transaction.description_ == "") {
+  if (transaction.description == "") {
     QMessageBox::warning(this, "Warning", "Please do not double click on non-transaction rows.", QMessageBox::Ok);
     return;
   }
@@ -131,8 +131,8 @@ void MainWindow::on_pushButton_MergeTransaction_clicked() {
   warningMsgBox.setText("Are you sure you want to merge the following transactions?");
   for (const Transaction& transaction : selected_transactions) {
     warningMsgBox.setInformativeText(warningMsgBox.informativeText()
-                                     + '\n' + transaction.date_time_.toString(kDateTimeFormat)
-                                     + ": " + transaction.description_);
+                                     + '\n' + transaction.date_time.toString(kDateTimeFormat)
+                                     + ": " + transaction.description);
   }
   warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
   warningMsgBox.setDefaultButton(QMessageBox::Cancel);
@@ -141,7 +141,7 @@ void MainWindow::on_pushButton_MergeTransaction_clicked() {
     Transaction merged_transaction;
     for (const Transaction& transaction : selected_transactions) {
       merged_transaction += transaction;
-      book_.removeTransaction(transaction.date_time_);
+      book_.removeTransaction(transaction.date_time);
     }
     book_.insertTransaction(merged_transaction);
     refreshTable();
@@ -200,14 +200,14 @@ void MainWindow::on_pushButtonDeleteTransactions_clicked() {
   warningMsgBox.setText("Are you sure you want to delete the following transactions?");
   for (const Transaction& transaction : selected_transactions)
       warningMsgBox.setInformativeText(warningMsgBox.informativeText()
-                                       + '\n' + transaction.date_time_.toString(kDateTimeFormat)
-                                       + ": " + transaction.description_);
+                                       + '\n' + transaction.date_time.toString(kDateTimeFormat)
+                                       + ": " + transaction.description);
   warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
   warningMsgBox.setDefaultButton(QMessageBox::Cancel);
   switch (warningMsgBox.exec()) {
   case QMessageBox::Ok:
     for (const Transaction& transaction : selected_transactions) {
-      book_.removeTransaction(transaction.date_time_);
+      book_.removeTransaction(transaction.date_time);
     }
     refreshTable();
     break;
@@ -251,8 +251,8 @@ void MainWindow::on_actionTransactionValidation_triggered() {
   // Query ALL transactions.
   for (const Transaction& transaction : book_.queryTransactions()) {
     if (!transaction.validate().empty()) {
-      errorMessage += transaction.date_time_.toString("yyyy/MM/dd HH:mm:ss") + ": ";
-      errorMessage += transaction.description_ + '\n';
+      errorMessage += transaction.date_time.toString("yyyy/MM/dd HH:mm:ss") + ": ";
+      errorMessage += transaction.description + '\n';
       errorMessage += "\t" + transaction.validate().join("; ") + "\n\n";
     }
   }

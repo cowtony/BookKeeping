@@ -83,9 +83,8 @@ bool Money::operator <(Money money) const {
   return amount_ < money.amount_;
 }
 
-void Money::operator +=(const Money &money)
-{
-    *this = *this + money;
+void Money::operator +=(const Money &money) {
+  *this = *this + money;
 }
 
 void Money::operator -=(const Money &money)
@@ -93,9 +92,10 @@ void Money::operator -=(const Money &money)
     *this = *this - money;
 }
 
-void Money::changeCurrency(Currency::Type currency_e) {
+Money& Money::changeCurrency(Currency::Type currency_e) {
   amount_  *= g_currency.getExchangeRate(date_, currency_, currency_e);
   currency_ = currency_e;
+  return *this;
 }
 
 QString Money::toString() const {

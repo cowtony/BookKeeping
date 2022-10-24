@@ -79,15 +79,15 @@ void AddTransaction::setTransaction(const Transaction &transaction) {
   ui->pushButton_Insert->setText("Replace");
 
   // Date time
-  replacedDateTime = transaction.date_time_;
-  ui->dateTimeEdit->setDateTime(transaction.date_time_);
+  replacedDateTime = transaction.date_time;
+  ui->dateTimeEdit->setDateTime(transaction.date_time);
 
   // Description
-  if (transaction.description_.contains("[R]")) {
+  if (transaction.description.contains("[R]")) {
     ui->checkBox_RecursiveTransaction->setChecked(true);
     ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));
   }
-  ui->lineEdit_Description->setText(QString(transaction.description_).remove("[R]"));
+  ui->lineEdit_Description->setText(QString(transaction.description).remove("[R]"));
 
   for (const Account &account : transaction.getAccounts()) {
     setTableRow(tableMap.value(account.type), account, transaction.getMoneyArray(account));
@@ -98,8 +98,8 @@ void AddTransaction::setTransaction(const Transaction &transaction) {
 
 Transaction AddTransaction::getTransaction() {
   Transaction retTransaction;
-  retTransaction.date_time_ = ui->dateTimeEdit->dateTime();
-  retTransaction.description_ = ui->lineEdit_Description->text();
+  retTransaction.date_time = ui->dateTimeEdit->dateTime();
+  retTransaction.description = ui->lineEdit_Description->text();
 
   for (QTableWidget* tableWidget : {ui->tableWidget_Assets,
                                     ui->tableWidget_Expenses,
@@ -171,10 +171,10 @@ void AddTransaction::on_pushButton_Insert_clicked() {
 
   book_.insertTransaction(t);
   if (ui->checkBox_RecursiveTransaction->isChecked()) {
-    t.date_time_ = ui->dateEdit_nextTransaction->dateTime();
-    t.description_ = "[R]" + ui->lineEdit_Description->text();
-    while (book_.dateTimeExist(t.date_time_)) {
-      t.date_time_ = t.date_time_.addSecs(1);
+    t.date_time = ui->dateEdit_nextTransaction->dateTime();
+    t.description = "[R]" + ui->lineEdit_Description->text();
+    while (book_.dateTimeExist(t.date_time)) {
+      t.date_time = t.date_time.addSecs(1);
     }
     book_.insertTransaction(t);
   }

@@ -14,6 +14,12 @@ AccountsModel::~AccountsModel() {
 
 void AccountsModel::setupAccounts(const QList<std::shared_ptr<Account>>& accounts) {
   root_->clear();
+
+  // Preset 4 basic account type in case there is no account for one of them.
+  for (const QString& type_name : {"Asset", "Liability", "Revenue", "Expense"}) {
+    root_->insertChild(new AccountTreeNode(type_name));
+  }
+
   for (const std::shared_ptr<Account>& account : accounts) {
     AccountTreeNode* current_node = root_;
     for (const QString& name : {account->typeName(), account->category, account->name}) {
@@ -203,9 +209,10 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
               }
 
               QApplication::setOverrideCursor(Qt::WaitCursor);
-              bool success = book_.moveAccount(old_account, new_account);
+              QString error_msg = book_.moveAccount(old_account, new_account);
               QApplication::restoreOverrideCursor();
-              if (!success) {
+              if (!error_msg.isEmpty()) {
+                emit errorMessage(error_msg);
                 return false;
               }
               if (account_exist) {

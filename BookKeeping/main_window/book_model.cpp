@@ -9,8 +9,8 @@ void BookModel::SetTransactions(const QList<Transaction>& transactions) {
   for (const Transaction& transaction : transactions) {
     sum_transaction_ += transaction;
   }
-  sum_transaction_.date_time_ = QDateTime();
-  sum_transaction_.description_ = "SUM:";
+  sum_transaction_.date_time = QDateTime();
+  sum_transaction_.description = "SUM:";
   QModelIndex top_left = createIndex(2, 0);
   QModelIndex bottom_right = createIndex(kReservedFilterRow + transactions_.size(), columnCount() - 1);
   emit dataChanged(top_left, bottom_right, {Qt::DisplayRole});
@@ -48,32 +48,46 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
   if (!index.isValid()) {
     return QVariant();
   }
-  if (role == Qt::FontRole and index.row() == kReservedFilterRow + transactions_.size()) {
-    QFont font;
-    font.setBold(true);
-    return font;
+
+  const Transaction& transaction =
+      index.row() - kReservedFilterRow == transactions_.size()
+      ? sum_transaction_
+      : transactions_.at(index.row() - kReservedFilterRow);
+
+  switch (role) {
+    case Qt::FontRole:
+      // Bold the sum row.
+      if (index.row() == kReservedFilterRow + transactions_.size()) {
+        QFont font;
+        font.setBold(true);
+        return font;
+      }
+      break;
+    case Qt::BackgroundRole: {
+        // Descriptions need pay attention.
+        if (transaction.description.startsWith("!!!") or transaction.description.startsWith("[R]")) {
+          if (index.column() == 1) {
+            return QColor(Qt::red);
+          }
+        }
+      } break;
+    case Qt::DisplayRole:
+      Q_ASSERT(index.row() < kReservedFilterRow + transactions_.size() + 1);
+      if (index.row() < kReservedFilterRow) {
+        return QVariant();
+      }
+      switch (index.column()) {
+        case 0: return transaction.date_time.toString(kDateTimeFormat);
+        case 1: return transaction.description;
+        case 2: // Fall through
+        case 3: // Fall through
+        case 4: // Fall through
+        case 5: return transaction.dataToString(kTableList.at(index.column() - 2)).replace("; ", "\n");
+      } break;
+    default:
+      break;
   }
-  if (role == Qt::DisplayRole) {
-    Q_ASSERT(index.row() < kReservedFilterRow + transactions_.size() + 1);
-    if (index.row() < kReservedFilterRow) {
-      return QVariant();
-    }
-    const Transaction& transaction =
-        index.row() - kReservedFilterRow == transactions_.size()
-        ? sum_transaction_
-        : transactions_.at(index.row() - kReservedFilterRow);
-    switch (index.column()) {
-    case 0:
-      return transaction.date_time_.toString(kDateTimeFormat);
-    case 1:
-      return transaction.description_;
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-      return transaction.dataToString(kTableList.at(index.column() - 2)).replace("; ", "\n");
-    }
-  }
+
   return QVariant();
 }
 
