@@ -49,11 +49,6 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
     return QVariant();
   }
 
-  const Transaction& transaction =
-      index.row() - kReservedFilterRow == transactions_.size()
-      ? sum_transaction_
-      : transactions_.at(index.row() - kReservedFilterRow);
-
   switch (role) {
     case Qt::FontRole:
       // Bold the sum row.
@@ -64,18 +59,25 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
       }
       break;
     case Qt::BackgroundRole: {
-        // Descriptions need pay attention.
+      // Descriptions need pay attention.
+      if (index.row() - kReservedFilterRow >= 0 and index.row() - kReservedFilterRow < transactions_.size()) {
+        const Transaction& transaction = transactions_.at(index.row() - kReservedFilterRow);
         if (transaction.description.startsWith("!!!") or transaction.description.startsWith("[R]")) {
           if (index.column() == 1) {
             return QColor(Qt::red);
           }
         }
-      } break;
-    case Qt::DisplayRole:
+      }
+    } break;
+    case Qt::DisplayRole: {
       Q_ASSERT(index.row() < kReservedFilterRow + transactions_.size() + 1);
       if (index.row() < kReservedFilterRow) {
         return QVariant();
       }
+      const Transaction& transaction =
+          index.row() - kReservedFilterRow == transactions_.size()
+          ? sum_transaction_
+          : transactions_.at(index.row() - kReservedFilterRow);
       switch (index.column()) {
         case 0: return transaction.date_time.toString(kDateTimeFormat);
         case 1: return transaction.description;
@@ -84,6 +86,7 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
         case 4: // Fall through
         case 5: return transaction.dataToString(kTableList.at(index.column() - 2)).replace("; ", "\n");
       } break;
+    } break;
     default:
       break;
   }

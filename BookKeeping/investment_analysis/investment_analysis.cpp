@@ -41,7 +41,7 @@ InvestmentAnalysis::InvestmentAnalysis(Book& book, QWidget *parent)
 
     // Set column 2: APR.
     double apr = 0;
-    apr = (InvestmentAnalyzer::calculateAPR(analyzer.return_history_) - 1.0) * 100;
+//    apr = (InvestmentAnalyzer::calculateAPR(analyzer.getIrrHistory()) - 1.0) * 100;
 
     QTableWidgetItem* apr_item = new QTableWidgetItem(QString::number(apr, 'f', 2) + "%");
     if (apr < 0) {
@@ -112,33 +112,46 @@ void InvestmentAnalysis::plotInvestments() {
   axisYlog->setGridLineColor(Qt::darkGray);
   chart->addAxis(axisYlog, Qt::AlignRight);
 
+
+
+
   double minY = 1e12, maxY = -1e12;
   for (int i = 0; i < ui->investmentTableWidget->rowCount(); i++) {
     if (ui->investmentTableWidget->item(i, 0)->checkState() == Qt::Checked) {
       QString investmentName = ui->investmentTableWidget->item(i, 0)->text();
-      QLineSeries* lineSeries = new QLineSeries();
-      lineSeries->setName(investmentName);
+      QLineSeries* line_series = new QLineSeries();
+      QLineSeries* asset = new QLineSeries();
+      line_series->setName(investmentName);
 
       double value = 0;
       QDate previousDate = ui->startDateEdit->date();
-      lineSeries->append(ui->startDateEdit->dateTime().toMSecsSinceEpoch(), value);  // Add first data point as begin.
-      for (const QDate& date : investments_.value(investmentName).return_history_.keys()) {
+      line_series->append(ui->startDateEdit->dateTime().toMSecsSinceEpoch(), value);  // Add first data point as begin.
+      for (const QDate& date : investments_.value(investmentName).getIrrHistory().keys()) {
         if (date <= ui->startDateEdit->date()) {
           continue;
         }
-        value += previousDate.daysTo(date) * investments_.value(investmentName).return_history_.value(date);
-        lineSeries->append(QDateTime(date, QTime(0, 0, 0)).toMSecsSinceEpoch(), value);
+//        value += previousDate.daysTo(date) * investments_.value(investmentName).getIrrHistory().value(date);
+        value = investments_.value(investmentName).getIrrHistory().value(date) * 365;
+        line_series->append(QDateTime(date, QTime(0, 0, 0)).toMSecsSinceEpoch(), value);
+        asset      ->append(QDateTime(date, QTime(0, 0, 0)).toMSecsSinceEpoch(), investments_.value(investmentName).getCashFlow().value(date));
 
-        minY = value < minY ? value : minY;
-        maxY = value > maxY ? value : maxY;
+        minY = qMin(value, minY);
+        maxY = qMax(value, maxY);
         previousDate = date;
       }
-      lineSeries->append(QDateTime::currentDateTime().toMSecsSinceEpoch(), value);  // Add last data point as current.
+      line_series->append(QDateTime::currentDateTime().toMSecsSinceEpoch(), value);  // Add last data point as current.
 
-      chart->addSeries(lineSeries);
+      QValueAxis *axisY2 = new QValueAxis;
+      axisY->setLinePenColor(asset->pen().color());
+      chart->addAxis(axisY2, Qt::AlignLeft);
+
+      chart->addSeries(line_series);
+      chart->addSeries(asset);
       // Attach axis must after chart->addSeries().
-      lineSeries->attachAxis(axisX);
-      lineSeries->attachAxis(axisY);
+      line_series->attachAxis(axisX);
+      line_series->attachAxis(axisY);
+      asset->attachAxis(axisY2);
+      asset->attachAxis(axisX);
     }
   }
 
@@ -146,7 +159,7 @@ void InvestmentAnalysis::plotInvestments() {
   QObject::connect(axisX, &QDateTimeAxis::rangeChanged, this, &InvestmentAnalysis::on_axisX_rangeChanged);
 
   double extra = (maxY - minY) * 0.05;
-  axisY->setRange(minY - extra, maxY + extra);
+  axisY->setRange(qMax(minY - extra, qLn(0.5) / qLn(2)), qMin(maxY + extra, qLn(1.5) / qLn(2)));
   axisY->applyNiceNumbers();
 
   int tickCount = 15;

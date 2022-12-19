@@ -251,42 +251,40 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem* item, int /*
   switch (pathway.size()) {
   case 1: // click on financial statement
   case 2: // click on table
-  case 3: // click on category
-  {
-      BarChart *barChart = new BarChart(this);
-      barChart->setAttribute(Qt::WA_DeleteOnClose);
-      barChart->setTitle(pathway.join("::"));
+  case 3: { // click on category
+    BarChart *barChart = new BarChart(this);
+    barChart->setAttribute(Qt::WA_DeleteOnClose);
+    barChart->setTitle(pathway.join("::"));
 
-      QStringList xAxis;
-      QList<qreal> sum;
-      for (int col = 1; col < ui->treeWidget->columnCount(); col++)
-      {
-          xAxis.push_front(ui->treeWidget->headerItem()->text(col));
-          sum.push_front(Money(QDate(), item->text(col)).amount_);
+    QStringList xAxis;
+    QList<qreal> sum;
+    for (int col = 1; col < ui->treeWidget->columnCount(); col++) {
+      xAxis.push_front(ui->treeWidget->headerItem()->text(col));
+      sum.push_front(Money(QDate(), item->text(col)).amount_);
+    }
+    barChart->setAxisX(xAxis);
+    barChart->addLine(item->text(0), sum);
+
+    for (int index = 0; index < item->childCount(); index++) {
+      QList<qreal> data;
+      for (int j = 0; j < xAxis.size(); j++) {
+        Money money(QDate::fromString(xAxis.at(j)), item->child(index)->text(j + 1));
+        money.changeCurrency(Currency::USD);
+        if (item->text(0) == "Balance Sheet"    and item->child(index)->text(0) == "Equity") {
+          continue;
+        }
+        if ((item->text(0) == "Income Statement" and item->child(index)->text(0) == "Expense") or
+            (item->text(0) == "Balance Sheet"    and item->child(index)->text(0) == "Liability")) {
+          data.push_front(-money.amount_);
+        } else {
+          data.push_front(money.amount_);
+        }
       }
-      barChart->setAxisX(xAxis);
-      barChart->addLine(item->text(0), sum);
+      barChart->addBarSetToStackedBarSeries(item->child(index)->text(0), data);
+    }
 
-      for (int index = 0; index < item->childCount(); index++)
-      {
-          QList<qreal> data;
-          for (int j = 0; j < xAxis.size(); j++)
-          {
-              Money money(QDate::fromString(xAxis.at(j)), item->child(index)->text(j + 1));
-              money.changeCurrency(Currency::USD);
-              if (item->text(0) == "Balance Sheet"    and item->child(index)->text(0) == "Equity")
-                  continue;
-              if ((item->text(0) == "Income Statement" and item->child(index)->text(0) == "Expense") or
-                  (item->text(0) == "Balance Sheet"    and item->child(index)->text(0) == "Liability"))
-                  data.push_front(-money.amount_);
-              else
-                  data.push_front(money.amount_);
-          }
-          barChart->addBarSetToStackedBarSeries(item->child(index)->text(0), data);
-      }
-
-      barChart->showStackedBarChart();
-      break;
+    barChart->showStackedBarChart();
+    break;
   }
   case 4: // click on account
   {
