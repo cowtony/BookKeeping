@@ -23,6 +23,11 @@
         <height>16777215</height>
        </size>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
      </widget>
     </item>
     <item row="1" column="0">
@@ -49,6 +54,11 @@
      <width>692</width>
      <height>21</height>
     </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
    </property>
    <widget class="QMenu" name="menuFunctions">
     <property name="title">
@@ -83,6 +93,11 @@
    <property name="text">
     <string>Add Transaction</string>
    </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
   </action>
   <action name="actionAccountManager">
    <property name="icon">
@@ -91,6 +106,11 @@
    </property>
    <property name="text">
     <string>Account Editor</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
    </property>
   </action>
   <action name="actionInvestmentAnalysis">
@@ -104,6 +124,11 @@
    <property name="toolTip">
     <string>Investment Analysis</string>
    </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
   </action>
   <action name="actionFinancialStatement">
    <property name="icon">
@@ -116,10 +141,20 @@
    <property name="toolTip">
     <string>Financial Statement</string>
    </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
   </action>
   <action name="actionTransactionValidation">
    <property name="text">
     <string>Transaction Validation</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
    </property>
   </action>
  </widget>

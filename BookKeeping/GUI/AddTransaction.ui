@@ -10,6 +10,11 @@
     <height>546</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <pointsize>8</pointsize>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Add Transaction</string>
   </property>
@@ -44,6 +49,11 @@
            <width>160000</width>
            <height>160000</height>
           </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
          </property>
         </widget>
        </item>
@@ -193,6 +203,11 @@
          <height>16777215</height>
         </size>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <column>
         <property name="text">
          <string>Category</string>
@@ -216,6 +231,11 @@
          <height>0</height>
         </size>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <column>
         <property name="text">
          <string>Category</string>
@@ -233,6 +253,11 @@
        </column>
       </widget>
       <widget class="QTableWidget" name="tableWidget_Revenues">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <column>
         <property name="text">
          <string>Category</string>
@@ -260,6 +285,11 @@
        </column>
       </widget>
       <widget class="QTableWidget" name="tableWidget_Expenses">
+       <property name="font">
+        <font>
+         <pointsize>9</pointsize>
+        </font>
+       </property>
        <column>
         <property name="text">
          <string>Category</string>
@@ -299,8 +329,19 @@
      <height>21</height>
     </rect>
    </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
+  </widget>
  </widget>
  <resources>
   <include location="../resources.qrc"/>

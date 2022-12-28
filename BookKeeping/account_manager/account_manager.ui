@@ -18,6 +18,11 @@
     <normaloff>:/resource/Transactions.png</normaloff>:/resource/Transactions.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
    <layout class="QGridLayout" name="gridLayout">
     <item row="1" column="0">
      <layout class="QGridLayout" name="gridLayout_5">
