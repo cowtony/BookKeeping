@@ -90,14 +90,21 @@
        <item>
         <widget class="QRadioButton" name="radioButton_1">
          <property name="text">
-          <string>Person 1</string>
+          <string>P1</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QRadioButton" name="radioButton_2">
          <property name="text">
-          <string>Person 2</string>
+          <string>P2</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="radioButton_3">
+         <property name="text">
+          <string>P3</string>
          </property>
         </widget>
        </item>

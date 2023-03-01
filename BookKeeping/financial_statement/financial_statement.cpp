@@ -188,22 +188,24 @@ void FinancialStatement::on_treeWidget_itemExpanded(QTreeWidgetItem* /* item */)
   }
 }
 
-void FinancialStatement::on_radioButton_all_clicked()
-{
-    m_viewSelection = -1;
-    display();
+void FinancialStatement::on_radioButton_all_clicked() {
+  m_viewSelection = -1;
+  display();
 }
 
-void FinancialStatement::on_radioButton_1_clicked()
-{
-    m_viewSelection = 0;
-    display();
+void FinancialStatement::on_radioButton_1_clicked() {
+  m_viewSelection = 0;
+  display();
 }
 
-void FinancialStatement::on_radioButton_2_clicked()
-{
-    m_viewSelection = 1;
-    display();
+void FinancialStatement::on_radioButton_2_clicked() {
+  m_viewSelection = 1;
+  display();
+}
+
+void FinancialStatement::on_radioButton_3_clicked() {
+  m_viewSelection = 2;
+  display();
 }
 
 void FinancialStatement::on_pushButtonExport_clicked()
@@ -344,3 +346,4 @@ void FinancialStatement::on_pushButton_clicked() {
     on_pushButtonShowMore_clicked();
   }
 }
+

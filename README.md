@@ -10,6 +10,7 @@
 - Logging: how to show the recent string.
 - After adding a transaction, the list always goes to the top
 - Separated bar chart
+- Account Manager: Add currency selection
 
 BookKeeping:
 MAC dynamic library

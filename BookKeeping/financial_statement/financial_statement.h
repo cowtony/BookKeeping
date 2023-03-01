@@ -25,6 +25,7 @@ private slots:
   void on_radioButton_all_clicked();
   void on_radioButton_1_clicked();
   void on_radioButton_2_clicked();
+  void on_radioButton_3_clicked();
   void on_pushButtonExport_clicked();
   void on_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
 
