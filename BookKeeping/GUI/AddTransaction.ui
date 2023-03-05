@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>894</width>
-    <height>546</height>
+    <width>1000</width>
+    <height>500</height>
    </rect>
   </property>
   <property name="font">
@@ -270,7 +270,7 @@
        </column>
        <column>
         <property name="text">
-         <string>Person 1</string>
+         <string>牛牧</string>
         </property>
        </column>
        <column>
@@ -281,6 +281,11 @@
        <column>
         <property name="text">
          <string>Person 3</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Phoebe 妹妹</string>
         </property>
        </column>
       </widget>
@@ -315,6 +320,11 @@
          <string>Person 3</string>
         </property>
        </column>
+       <column>
+        <property name="text">
+         <string>Person 4</string>
+        </property>
+       </column>
       </widget>
      </widget>
     </item>
@@ -325,7 +335,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>894</width>
+     <width>1000</width>
      <height>21</height>
     </rect>
    </property>

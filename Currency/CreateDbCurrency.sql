@@ -1,5 +1,5 @@
 CREATE TABLE [Currency](
-  [Date] TEXT PRIMARY KEY ASC, 
+  [Date] TEXT PRIMARY KEY DESC, 
   [EUR] REAL, 
   [USD] REAL, 
   [CNY] REAL, 

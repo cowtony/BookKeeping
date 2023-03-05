@@ -24,7 +24,7 @@ public:
 
   // Transactions
   bool dateTimeExist(const QDateTime& dt) const;
-  bool insertTransaction(const Transaction& transaction) const;
+  bool insertTransaction(const Transaction& transaction, bool ignore_error = false) const;
   Transaction queryTransaction(const QDateTime& date_time) const;  // Not used.
   QList<Transaction> queryTransactions(const TransactionFilter& filter = TransactionFilter()) const;
   QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;

@@ -60,8 +60,8 @@ bool Book::dateTimeExist(const QDateTime &dt) const
     return query.next();
 }
 
-bool Book::insertTransaction(const Transaction &transaction) const {
-  if (!transaction.validate().isEmpty()) {
+bool Book::insertTransaction(const Transaction &transaction, bool ignore_error) const {
+  if (!ignore_error && !transaction.validate().isEmpty()) {
     return false;
   }
 

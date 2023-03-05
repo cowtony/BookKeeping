@@ -52,22 +52,22 @@ void AddTransaction::initialization() {
     while (tableWidget->rowCount() > 0) {
       tableWidget->removeRow(0);
     }
-
+    // Set cell width & height.
     tableWidget->insertRow(0);
     tableWidget->setRowHeight(0, 20);
     tableWidget->setColumnWidth(0, 100);
     tableWidget->setColumnWidth(1, 200);
-    for (int col = 2; col < tableWidget->columnCount(); col++) {
+    for (int col = 2; col < tableWidget->columnCount(); ++col) {
       tableWidget->setColumnWidth(col, 80);
     }
 
-    QPushButton* addRow = new QPushButton;
-    addRow->setText("Add");
-    connect(addRow, &QPushButton::clicked, [this, tableWidget](){ this->insertTableRow(tableWidget); } );
-    tableWidget->setCellWidget(0, 0, addRow);
+    QPushButton* add_row = new QPushButton;
+    add_row->setText("Add");
+    connect(add_row, &QPushButton::clicked, [this, tableWidget](){ this->insertTableRow(tableWidget); } );
+    tableWidget->setCellWidget(0, 0, add_row);
     tableWidget->cellWidget(0, 0)->setToolTip("Add a new row");
-
-    for (int col = 1; col <= 3; col++) {
+    // Disable all cells on the right of `AddRow` button.
+    for (int col = 1; col < tableWidget->columnCount(); ++col) {
       QTableWidgetItem* item = new QTableWidgetItem();
       tableWidget->setItem(0, col, item);
       item->setFlags(item->flags() & ~Qt::ItemIsEnabled);  // set to disable
@@ -176,7 +176,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
     while (book_.dateTimeExist(t.date_time)) {
       t.date_time = t.date_time.addSecs(1);
     }
-    book_.insertTransaction(t);
+    book_.insertTransaction(t, /*ignore_error=*/true);
   }
 
   emit insertTransactionFinished(this);
