@@ -82,8 +82,8 @@ double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_sy
     requested_date_.insert(date);
     QUrl url("http://data.fixer.io/api/"
              + date.toString("yyyy-MM-dd") + "?"
-             "access_key=077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
-//             "access_key=b6ec9d9dd5efa56c094fc370fd68fbc8"    // cowtony@163.com        19900525
+//             "access_key=077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
+             "access_key=b6ec9d9dd5efa56c094fc370fd68fbc8"    // cowtony@163.com        19900525
 //             "access_key=af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
 //             "&base=EUR"    // This is for paid user only.
              "&symbols=" + kCurrencyToCode.values().join(','));
