@@ -16,7 +16,7 @@ void AccountsModel::setupAccounts(const QList<std::shared_ptr<Account>>& account
   root_->clear();
 
   // Preset 4 basic account type in case there is no account for one of them.
-  for (const QString& type_name : {"Asset", "Liability", "Revenue", "Expense"}) {
+  for (const char* const& type_name : {"Asset", "Liability", "Revenue", "Expense"}) {
     root_->insertChild(new AccountTreeNode(type_name));
   }
 

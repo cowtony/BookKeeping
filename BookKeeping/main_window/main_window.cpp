@@ -14,11 +14,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui(new Ui::MainWindow),
     book_("Book.db") {
   ui->setupUi(this);
-
   g_currency.openDatabase();
   account_manager_     = new AccountManager(book_, this);
   financial_statement_ = new FinancialStatement(book_, this);
-
   ui->tableView_transactions->setModel(&book_model_);
 
   // Init the filter elements.

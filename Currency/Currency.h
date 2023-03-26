@@ -23,7 +23,7 @@ public:
   static const QMap<Type, QString> kCurrencyToSymbol;  // Example: "$".
   static const QMap<Type, QString> kCurrencyToCode;  // Three letter code such as "USD".
 
-  void openDatabase(const QString& p_dbPath = "Currency.db");
+  bool openDatabase();
   void closeDatabase();
   double getExchangeRate(const QDate& date, Type fromSymbol, Type toSymbol);
 
