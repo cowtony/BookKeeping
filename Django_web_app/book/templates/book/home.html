@@ -1,0 +1,40 @@
+{% extends "book/layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block content %}
+    <h2>Transactions</h2>
+
+    {% if transaction_list %}
+        <table class="transaction_list">
+            <thead>
+            <tr>
+                <th>DateTime</th>
+                <th>Description</th>
+                <th>Expense</th>
+                <th>Revenue</th>
+                <th>Asset</th>
+                <th>Liability</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for transaction in transaction_list %}
+                <tr>
+                    <td>{{ transaction.DateTime | date:'Y/m/d H:i:s' }}</td>
+                    <td>{{ transaction.description }}</td>
+                    <td>{{ transaction.expense }}</td>
+                    <td>{{ transaction.revenue }}</td>
+                    <td>{{ transaction.asset }}</td>
+                    <td>{{ transaction.liability }}</td>
+                    <td><a href="{% url 'update_transaction' transaction.id %}">Edit</a></td>
+                    <td><a href="{% url 'delete_transaction' transaction.id %}">Delete</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No messages have been logged. Use the <a href="{% url 'add_transaction' %}">Add Transaction</a>.</p>
+    {% endif %}
+{% endblock %}
