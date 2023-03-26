@@ -1,11 +1,1 @@
 *.pro.user
-__pycache__/
-local_settings.py
-static_collected/
-staticfiles/
-workspace.code-workspace
-*.log
-*.pot
-*.pyc
-.venv/
-*.env
