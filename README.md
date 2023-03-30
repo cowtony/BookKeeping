@@ -4,6 +4,7 @@
 
 ## TODO
 
+- Use JSON for transaction row.
 - Person 1, Person 2, etc. capably of rename people.
 - keep copy-to-clipboard as all months.
 - Logging feature: only keep the recent 100 logs.

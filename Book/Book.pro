@@ -25,9 +25,9 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 
 SOURCES += \
     account.cpp \
-    transaction.cpp \
     book.cpp \
-    money.cpp
+    money.cpp \
+    transaction.cc
 
 HEADERS += \
     account.h \

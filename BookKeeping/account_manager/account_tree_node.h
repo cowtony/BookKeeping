@@ -4,6 +4,7 @@
 // Note: Used for accounts_model.
 
 #include "account.h"
+#include <QList>
 
 class AccountTreeNode {
 public:

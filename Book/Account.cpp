@@ -1,4 +1,5 @@
 #include "account.h"
+#include <QDebug>
 
 const QMap<Account::Type, QString> Account::kTableName =
     {{Asset, "Asset"},
@@ -9,11 +10,11 @@ const QMap<Account::Type, QString> Account::kTableName =
 
 Account::Account(const QString& account_type, const QString& category, const QString& name, const QString& comment)
   : category(category), name(name), comment(comment) {
-  if (kTableName.values().contains(account_type)) {
-    type = kTableName.key(account_type);
-  } else {
-    qDebug() << Q_FUNC_INFO << "table name doesn't exist!" << account_type;
-  }
+    if (kTableName.values().contains(account_type)) {
+        type = kTableName.key(account_type);
+    } else {
+        qDebug() << Q_FUNC_INFO << "table name doesn't exist!" << account_type;
+    }
 }
 
 QString Account::typeName() const {

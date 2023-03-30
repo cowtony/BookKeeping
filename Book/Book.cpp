@@ -60,28 +60,28 @@ bool Book::dateTimeExist(const QDateTime &dt) const
     return query.next();
 }
 
-bool Book::insertTransaction(const Transaction &transaction, bool ignore_error) const {
-  if (!ignore_error && !transaction.validate().isEmpty()) {
-    return false;
-  }
+bool Book::insertTransaction(const Transaction& transaction, bool ignore_error) const {
+    if (!ignore_error && !transaction.validate().isEmpty()) {
+        return false;
+    }
 
-  QSqlQuery query(database_);
-  query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
-                "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
-  query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
-  query.bindValue(":description", transaction.description);
-  query.bindValue(":expense",     transaction.dataToString(Account::Expense));
-  query.bindValue(":revenue",     transaction.dataToString(Account::Revenue));
-  query.bindValue(":asset",       transaction.dataToString(Account::Asset));
-  query.bindValue(":liability",   transaction.dataToString(Account::Liability));
+    QSqlQuery query(database_);
+    query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
+                  "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
+    query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
+    query.bindValue(":description", transaction.description);
+    query.bindValue(":expense",     transaction.dataToString(Account::Expense));
+    query.bindValue(":revenue",     transaction.dataToString(Account::Revenue));
+    query.bindValue(":asset",       transaction.dataToString(Account::Asset));
+    query.bindValue(":liability",   transaction.dataToString(Account::Liability));
 
-  if (query.exec()) {
-    Logging(query);  // TODO: get the binded string from query.
-    return true;
-  } else {
-    qDebug() << Q_FUNC_INFO << "#Error Insert a transaction:" << query.lastError().text();
-    return false;
-  }
+    if (query.exec()) {
+        Logging(query);  // TODO: get the binded string from query.
+        return true;
+    } else {
+        qDebug() << Q_FUNC_INFO << "#Error Insert a transaction:" << query.lastError().text();
+        return false;
+    }
 }
 
 Transaction Book::queryTransaction(const QDateTime &date_time) const {
