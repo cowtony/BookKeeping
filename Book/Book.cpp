@@ -131,53 +131,57 @@ Transaction Book::queryTransaction(const QDateTime &date_time) const {
 }
 
 QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) const {
-  QStringList statements;
-  for (const Account& account : filter.getAccounts()) {
-    if (!account.category.isEmpty()) {
-      statements << "(" + account.typeName() + " LIKE \"%[" + account.category + "|" + account.name + ":%\")";
+    QStringList statements;
+    for (const Account& account : filter.getAccounts()) {
+        if (!account.category.isEmpty()) {
+//            statements << "(" + account.typeName() + " LIKE \"%[" + account.category + "|" + account.name + ":%\")";  // TODO: depreacted, this is for the OLD 4 columns (Expense, Asset, etc.) schema.
+            statements << QString(R"sql((json_extract(detail, '$.%1.%2|%3') NOT NULL))sql").arg(account.typeName(), account.category, account.name);
+        }
     }
-  }
 
-  QSqlQuery query(database_);
-  query.prepare(QString("SELECT * FROM Transactions WHERE (Date BETWEEN :startDate AND :endDate) AND (Description LIKE :description)") +
-                (statements.empty()? "" : " AND ") +
-                statements.join(filter.use_or_? " OR " : " AND ") +
-                " ORDER BY Date " + (filter.ascending_order_? "ASC" : "DESC") +
-                " LIMIT :limit");
+    QSqlQuery query(database_);
+    query.prepare(QString("SELECT * FROM Transactions WHERE (Date BETWEEN :startDate AND :endDate) AND (Description LIKE :description)") +
+                 (statements.empty()? "" : " AND ") +
+                 statements.join(filter.use_or_? " OR " : " AND ") +
+                 " ORDER BY Date " + (filter.ascending_order_? "ASC" : "DESC") +
+                 " LIMIT :limit");
 
-  query.bindValue(":startDate", filter.date_time.toString(kDateTimeFormat));
-  query.bindValue(":endDate",   filter.end_date_time_.toString(kDateTimeFormat));
-  query.bindValue(":description", "%" + filter.description + "%");
-  query.bindValue(":limit", filter.limit_);
+    query.bindValue(":startDate", filter.date_time.toString(kDateTimeFormat));
+    query.bindValue(":endDate",   filter.end_date_time_.toString(kDateTimeFormat));
+    query.bindValue(":description", "%" + filter.description + "%");
+    query.bindValue(":limit", filter.limit_);
+    qDebug() << query.lastQuery();
 
-  if (!query.exec()) {
-    qDebug() << Q_FUNC_INFO << query.lastError();
-    return {};
-  }
 
-  QList<Transaction> result;
-  while (query.next()) {
-    Transaction transaction;
-    transaction.description = query.value("Description").toString();
-    transaction.date_time = query.value("Date").toDateTime();
-    // TODO: somehow several outbounded transaction will also be selected.
-    // This hard code is to remove them.
-    if (transaction.date_time < filter.date_time or transaction.date_time > filter.end_date_time_) {
-      continue;
+
+    if (!query.exec()) {
+        qDebug() << Q_FUNC_INFO << query.lastError();
+        return {};
     }
-    if (query.value("detail").isNull()) {
-        transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
-        transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
-        transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
-        transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
-    } else {
-        auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-        transaction.setData(json_document.object());
-    }
-    result.push_back(transaction);
-  }
 
-  return result;
+    QList<Transaction> result;
+    while (query.next()) {
+        Transaction transaction;
+        transaction.description = query.value("Description").toString();
+        transaction.date_time = query.value("Date").toDateTime();
+        // TODO: somehow several outbounded transaction will also be selected.
+        // This hard code is to remove them.
+        if (transaction.date_time < filter.date_time or transaction.date_time > filter.end_date_time_) {
+            continue;
+        }
+        if (query.value("detail").isNull()) {
+            transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
+            transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
+            transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
+            transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
+        } else {
+            auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
+            transaction.setData(json_document.object());
+        }
+        result.push_back(transaction);
+    }
+
+    return result;
 }
 
 QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const {
