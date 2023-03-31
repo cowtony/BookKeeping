@@ -1,58 +1,85 @@
 #include "book.h"
 
-namespace {
-
-
-
-}  // unnamed namespace
-
 Book::Book(const QString& dbPath) {
-  QFileInfo fileInfo(dbPath);
-  if (fileInfo.exists()) {
-    database_ = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
-    database_.setDatabaseName(fileInfo.absoluteFilePath());
-    if (!database_.open()) {
-      qDebug() << Q_FUNC_INFO << "Error: connection with database fail.";
-      return;
-    }
-  } else {
-    database_ = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
-    database_.setDatabaseName(dbPath);
-    Q_INIT_RESOURCE(Book);
-    QFile DDL(":/CreateDbBook.sql");
-    if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
-      QString statement;
-      while (!DDL.atEnd()) {
-        QString line = DDL.readLine();
-        statement += line;
-        if (statement.contains(';')) {
-          QSqlQuery(statement, database_);
-          statement.clear();
+    QFileInfo fileInfo(dbPath);
+    if (fileInfo.exists()) {
+        database_ = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
+        database_.setDatabaseName(fileInfo.absoluteFilePath());
+        if (!database_.open()) {
+            qDebug() << Q_FUNC_INFO << "Error: connection with database fail.";
+            return;
         }
-      }
-      DDL.close();
     } else {
-      qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened";
-      return;
+        database_ = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
+        database_.setDatabaseName(dbPath);
+        Q_INIT_RESOURCE(Book);
+        QFile DDL(":/CreateDbBook.sql");
+        if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QString statement;
+            while (!DDL.atEnd()) {
+                QString line = DDL.readLine();
+                statement += line;
+                if (statement.contains(';')) {
+                    QSqlQuery(statement, database_);
+                    statement.clear();
+                }
+            }
+            DDL.close();
+        } else {
+            qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened";
+            return;
+        }
     }
-  }
-  QSqlQuery("PRAGMA case_sensitive_like = false", database_);
-  start_time_ = QDateTime::currentDateTime();
+    QSqlQuery("PRAGMA case_sensitive_like = false", database_);
+    start_time_ = QDateTime::currentDateTime();
+
+    // Some schema migration work can be done here.
+    if (false) {
+        QList<Transaction> transactions;
+        QSqlQuery query(database_);
+        query.prepare("SELECT * FROM Transactions");
+        query.exec();
+        while (query.next()) {
+            Transaction transaction;
+            transaction.date_time = query.value("Date").toDateTime();
+            transaction.description = query.value("Description").toString();
+            if (query.value("detail").isNull()) {
+                transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
+                transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
+                transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
+                transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
+            }
+            else {
+                auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
+                transaction.setData(json_document.object());
+            }
+            transactions.push_back(transaction);
+        }
+        qDebug() << transactions.size();
+        for (auto transaction : transactions) {
+            QSqlQuery query(database_);
+            query.prepare("UPDATE Transactions SET detail = :detail, Expense = 'Empty', Revenue = 'Empty', Liability = 'Empty', Asset = 'Empty' WHERE Date = :dateTime");
+            query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
+            query.bindValue(":detail",      QJsonDocument(transaction.toJson()).toJson(QJsonDocument::Indented).toStdString().c_str());
+            if (!query.exec()) {
+                qDebug() << "Error: " << transaction.date_time;
+            }
+        }
+    }
 }
 
 Book::~Book() {
-  logUsageTime();
-  closeDatabase();
+    logUsageTime();
+    closeDatabase();
 }
 
 void Book::closeDatabase() {
-  if (database_.isOpen()) {
-    database_.close();
-  }
+    if (database_.isOpen()) {
+        database_.close();
+    }
 }
 
-bool Book::dateTimeExist(const QDateTime &dt) const
-{
+bool Book::dateTimeExist(const QDateTime &dt) const {
     QSqlQuery query(database_);
     query.prepare("SELECT * FROM Transactions WHERE Date = :d");
     query.bindValue(":d", dt.toString(kDateTimeFormat));
@@ -66,14 +93,10 @@ bool Book::insertTransaction(const Transaction& transaction, bool ignore_error) 
     }
 
     QSqlQuery query(database_);
-    query.prepare("INSERT INTO Transactions (Date, Description, Expense, Revenue, Asset, Liability) "
-                  "VALUES (:dateTime, :description, :expense, :revenue, :asset, :liability)");
+    query.prepare("INSERT INTO Transactions (Date,  Description, detail) VALUES (:dateTime, :description, :detail)");
     query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
     query.bindValue(":description", transaction.description);
-    query.bindValue(":expense",     transaction.dataToString(Account::Expense));
-    query.bindValue(":revenue",     transaction.dataToString(Account::Revenue));
-    query.bindValue(":asset",       transaction.dataToString(Account::Asset));
-    query.bindValue(":liability",   transaction.dataToString(Account::Liability));
+    query.bindValue(":detail",      QJsonDocument(transaction.toJson()).toJson(QJsonDocument::Indented).toStdString().c_str());
 
     if (query.exec()) {
         Logging(query);  // TODO: get the binded string from query.
@@ -85,21 +108,26 @@ bool Book::insertTransaction(const Transaction& transaction, bool ignore_error) 
 }
 
 Transaction Book::queryTransaction(const QDateTime &date_time) const {
-  Transaction transaction;
+    Transaction transaction;
 
-  QSqlQuery query(database_);
-  query.prepare("SELECT * FROM Transactions WHERE Date = :d");
-  query.bindValue(":d", date_time.toString(kDateTimeFormat));
-  query.exec();
-  if (query.next()) {
-    transaction.date_time = date_time;
-    transaction.description = query.value("Description").toString();
-    transaction.stringToData(Account::Expense,   query.value("Expense").toString());
-    transaction.stringToData(Account::Revenue,   query.value("Revenue").toString());
-    transaction.stringToData(Account::Asset,     query.value("Asset").toString());
-    transaction.stringToData(Account::Liability, query.value("Liability").toString());
-  }
-  return transaction;
+    QSqlQuery query(database_);
+    query.prepare("SELECT * FROM Transactions WHERE Date = :d");
+    query.bindValue(":d", date_time.toString(kDateTimeFormat));
+    query.exec();
+    if (query.next()) {
+        transaction.date_time = date_time;
+        transaction.description = query.value("Description").toString();
+        if (query.value("detail").isNull()) {
+            transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
+            transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
+            transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
+            transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
+        } else {
+            auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
+            transaction.setData(json_document.object());
+        }
+    }
+    return transaction;
 }
 
 QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) const {
@@ -137,11 +165,15 @@ QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) cons
     if (transaction.date_time < filter.date_time or transaction.date_time > filter.end_date_time_) {
       continue;
     }
-
-    transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
-    transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
-    transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
-    transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
+    if (query.value("detail").isNull()) {
+        transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
+        transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
+        transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
+        transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
+    } else {
+        auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
+        transaction.setData(json_document.object());
+    }
     result.push_back(transaction);
   }
 
@@ -163,10 +195,15 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
   while (query.next()) {
     Transaction transaction;
     transaction.date_time = query.value("Date").toDateTime();
-    transaction.stringToData(Account::Expense,   query.value("Expense")  .toString());
-    transaction.stringToData(Account::Revenue,   query.value("Revenue")  .toString());
-    transaction.stringToData(Account::Asset,     query.value("Asset")    .toString());
-    transaction.stringToData(Account::Liability, query.value("Liability").toString());
+    if (query.value("detail").isNull()) {
+        transaction.stringToData(Account::Expense,   query.value(Account::kTableName.value(Account::Expense)).toString());
+        transaction.stringToData(Account::Revenue,   query.value(Account::kTableName.value(Account::Revenue)).toString());
+        transaction.stringToData(Account::Asset,     query.value(Account::kTableName.value(Account::Asset)).toString());
+        transaction.stringToData(Account::Liability, query.value(Account::kTableName.value(Account::Liability)).toString());
+    } else {
+        auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
+        transaction.setData(json_document.object());
+    }
 
     // Use `while` instead of `if` in case there was no transaction for successive months.
     while (transaction.date_time.date() >= month.addMonths(1)) {

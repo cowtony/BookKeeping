@@ -84,7 +84,7 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
         case 2: // Fall through
         case 3: // Fall through
         case 4: // Fall through
-        case 5: return transaction.dataToString(kTableList.at(index.column() - 2)).replace("; ", "\n");
+        case 5: return transaction.toString(kTableList.at(index.column() - 2)).replace("; ", "\n");
       } break;
     } break;
     default:

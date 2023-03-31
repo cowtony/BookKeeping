@@ -89,7 +89,7 @@ QStringList Transaction::validate() const {
     return errorMessage;
 }
 
-QString Transaction::dataToString(Account::Type tableType) const {
+QString Transaction::toString(Account::Type tableType) const {
     QStringList retString;
     for (const Account& account : getAccounts(tableType)) {
         MoneyArray moneyArray = getMoneyArray(account);
@@ -100,12 +100,19 @@ QString Transaction::dataToString(Account::Type tableType) const {
     return retString.join("; ");
 }
 
-QJsonObject Transaction::toJson(Account::Type table_type) const {
+QJsonObject Transaction::toJson() const {
     QJsonObject json;
-    for (const Account& account : getAccounts(table_type)) {
-        MoneyArray moneyArray = getMoneyArray(account);
-        if (!moneyArray.isZero()) {
-            json[account.category + "|" + account.name] = moneyArray.toString();
+    for (const auto& [account_type, categories] : data_.asKeyValueRange()) {
+        QJsonObject json_accounts;
+        for (const auto& [category_name, accounts] : categories.asKeyValueRange()) {
+            for (const auto& [account_name, money_array] : accounts.asKeyValueRange()) {
+                if (!money_array.isZero()) {
+                    json_accounts[category_name + "|" + account_name] = money_array.toString();
+                }
+            }
+        }
+        if (!json_accounts.isEmpty()) {
+            json[Account::kTableName.value(account_type)] = json_accounts;
         }
     }
     return json;
@@ -133,6 +140,18 @@ void Transaction::stringToData(Account::Type tableType, const QString& data) {
   }
 }
 
+void Transaction::setData(const QJsonObject& json) {
+    for (auto account_type : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
+        QJsonObject categories = json[Account::kTableName.value(account_type)].toObject();
+        for (const QString& account : categories.keys()) {
+            QString category_name  = account.split("|").at(0);
+            QString account_name   = account.split("|").at(1);
+            QString amounts = categories.value(account).toString();
+            addMoneyArray(Account(account_type, category_name, account_name), MoneyArray(date_time.date(), amounts));
+        }
+    }
+}
+
 QList<Account> Transaction::getAccounts() const {
   QList<Account> all_ccounts;
   for (const Account::Type& tableType : {Account::Asset, Account::Expense, Account::Revenue, Account::Liability}) {
@@ -145,39 +164,38 @@ QList<Account> Transaction::getAccounts() const {
   return all_ccounts;
 }
 
-QList<Account> Transaction::getAccounts(Account::Type tableType) const
-{
+QList<Account> Transaction::getAccounts(Account::Type account_type) const {
     QList<Account> retAccounts;
-    for (const QString &category : data_.value(tableType).keys()) {
-        for (const QString &name : data_.value(tableType).value(category).keys()) {
-            retAccounts.push_back(Account(tableType, category, name));
+    for (const QString& category : data_.value(account_type).keys()) {
+        for (const QString& name : data_.value(account_type).value(category).keys()) {
+            retAccounts.push_back(Account(account_type, category, name));
         }
     }
     return retAccounts;
 }
 
 MoneyArray Transaction::getMoneyArray(const Account &account) const {
-  if (account.type == Account::Equity) {
-    qDebug() << Q_FUNC_INFO << "Equity should be here.";
-  }
+    if (account.type == Account::Equity) {
+        qDebug() << Q_FUNC_INFO << "Equity should be here.";
+    }
 
-  if (accountExist(account)) {
-    return data_.value(account.type).value(account.category).value(account.name);
-  } else {
-    return MoneyArray(date_time.date(), Currency::USD);
-  }
+    if (accountExist(account)) {
+        return data_.value(account.type).value(account.category).value(account.name);
+    } else {
+        return MoneyArray(date_time.date(), Currency::USD);
+    }
 }
 
 void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyArray) {
-  if (account.type == Account::Equity) {
-    qDebug() << Q_FUNC_INFO << "Transaction don't store equity, it's calculated by others.";
-    return;
-  }
+    if (account.type == Account::Equity) {
+        qDebug() << Q_FUNC_INFO << "Transaction don't store equity, it's calculated by others.";
+        return;
+    }
 
-  if (!accountExist(account)) {
-    data_[account.type][account.category][account.name] = MoneyArray(moneyArray.date_, moneyArray.currency());
-  }
-  data_[account.type][account.category][account.name] += moneyArray;
+    if (!accountExist(account)) {
+        data_[account.type][account.category][account.name] = MoneyArray(moneyArray.date_, moneyArray.currency());
+    }
+    data_[account.type][account.category][account.name] += moneyArray;
 }
 
 MoneyArray Transaction::getRetainedEarnings() const {

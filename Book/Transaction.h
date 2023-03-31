@@ -27,13 +27,15 @@ class BOOKSHARED_EXPORT Transaction {
 
     MoneyArray getMoneyArray(const Account& account) const;
     void       addMoneyArray(const Account& account, const MoneyArray& moneyArray);
+
     void stringToData(Account::Type tableType, const QString& data);
+    void setData(const QJsonObject& json);
 
     bool accountExist(const Account& account) const;
     Money getCheckSum() const;
     QStringList validate() const;  // Return error message
-    QString dataToString(Account::Type p_tableType) const;
-    QJsonObject toJson(Account::Type table_type) const;
+    QString toString(Account::Type p_tableType) const;
+    QJsonObject toJson() const;
 
     QList<Account> getAccounts() const;
     QList<Account> getAccounts(Account::Type tableType) const;
@@ -49,6 +51,7 @@ class BOOKSHARED_EXPORT Transaction {
   private:
     // Key 0: table type, Key 1: Category, Key 2: Account Name
     // TODO: Key 3: User Name
+    // TODO: Use QHash than QMap
     QMap<Account::Type, QMap<QString, QMap<QString, MoneyArray>>> data_;
 };
 
