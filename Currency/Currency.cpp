@@ -18,18 +18,51 @@ Currency::~Currency() {
 }
 
 bool Currency::openDatabase() {
-    // Note: To use PostgreSQL, need to add "C:\Program Files\PostgreSQL\15\lib" to system path.
-    database_ = QSqlDatabase::addDatabase("QPSQL");  // PostgreSQL
+    // First try to connect to PostgreSQL:
+    database_ = QSqlDatabase::addDatabase("QPSQL", "Postgre_Currency");  // Note: To use PostgreSQL, need to add "C:\Program Files\PostgreSQL\15\lib" to system path.
     database_.setHostName("localhost");
     database_.setDatabaseName("book_keeping");
     database_.setUserName("postgres");
     database_.setPassword("19900525");
-
-    if (!database_.open()) {
+    if (database_.open()) {
+        qDebug() << "Connect to PostgreSQL: currency_currency";
+        removeInvalidCurrency();
+        return true;
+    } else {
         qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << database_.lastError();
-        return false;
+        database_.removeDatabase("Postgre_Currency");
     }
 
+    // Second try to connect to SQLite:
+    database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
+    QFileInfo fileInfo("Currency.db");
+    if (fileInfo.exists()) {
+        database_.setDatabaseName(fileInfo.absoluteFilePath());
+        if (!database_.open()) {
+            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << database_.lastError();
+            return false;
+        }
+    } else {  // Create new DB from script.
+        database_.setDatabaseName("Currency.db");
+        Q_INIT_RESOURCE(Currency);
+        QFile DDL(":/CreateDbCurrency.sql");
+        if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QString statement;
+            while (!DDL.atEnd()) {
+                QString line = DDL.readLine();
+                statement += line;
+                if (statement.contains(';')) {
+                    QSqlQuery(statement, database_);
+                    statement.clear();
+                }
+            }
+            DDL.close();
+        } else {
+            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Database not opened or CreateDatabase.txt not opened.";
+            return false;
+        }
+    }
+    qDebug() << "Connect to SQLite: currency";
     removeInvalidCurrency();
     return true;
 }
@@ -62,13 +95,12 @@ double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_sy
   qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date;
   if (!requested_date_.contains(date) and date < QDate::currentDate()) {
     requested_date_.insert(date);
-    QUrl url("http://data.fixer.io/api/"
-             + date.toString("yyyy-MM-dd") + "?"
-//             "access_key=077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
-//             "access_key=b6ec9d9dd5efa56c094fc370fd68fbc8"    // cowtony@163.com        19900525
-             "access_key=af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
-//             "&base=EUR"    // This is for paid user only.
-             "&symbols=" + kCurrencyToCode.values().join(','));
+    // access_key:
+    // "077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
+    // "b6ec9d9dd5efa56c094fc370fd68fbc8"  // cowtony@163.com        19900525
+    // "af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
+    QUrl url(QString("http://data.fixer.io/api/%1?access_key=%2&symbols=%3").arg(date.toString("yyyy-MM-dd"), "af07896d862782074e282611f63bc64b", kCurrencyToCode.values().join(',')));
+    //             "&base=EUR"    // This is for paid user only.
     qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
     web_ctrl_.get(QNetworkRequest(url));
   }
@@ -76,10 +108,7 @@ double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_sy
 }
 
 void Currency::removeInvalidCurrency() {
-    QSqlQuery(R"sql(DELETE FROM currency_currency WHERE EUR IS NULL"
-                                                   " OR USD IS NULL"
-                                                   " OR CNY IS NULL"
-                                                   " OR GBP IS NULL)sql", database_);
+    QSqlQuery(R"sql(DELETE FROM currency_currency WHERE EUR IS NULL OR USD IS NULL OR CNY IS NULL OR GBP IS NULL)sql", database_);
 }
 
 void Currency::onNetworkReply(QNetworkReply* reply) {
@@ -99,8 +128,7 @@ void Currency::onNetworkReply(QNetworkReply* reply) {
     QJsonObject jsonRates = jsonObject.value("rates").toObject();
 
     QSqlQuery query(database_);
-    query.prepare(R"sql(INSERT OR REPLACE INTO currency_currency ("Date", )sql" + kCurrencyToCode.values().join(", ") + ") "
-                  "VALUES (:d, :" + kCurrencyToCode.values().join(", :").toLower() + ")");
+    query.prepare(QString(R"sql(INSERT OR REPLACE INTO currency_currency ("Date", %1) VALUES (:d, :%2))sql").arg(kCurrencyToCode.values().join(", "), kCurrencyToCode.values().join(", :").toLower()));
     query.bindValue(":d", dateTime.date().toString("yyyy-MM-dd"));
     qDebug() << query.lastQuery();
     for (const QString& symbol: kCurrencyToCode) {

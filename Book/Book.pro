@@ -27,7 +27,7 @@ SOURCES += \
     account.cpp \
     book.cpp \
     money.cpp \
-    transaction.cc
+    transaction.cpp
 
 HEADERS += \
     account.h \

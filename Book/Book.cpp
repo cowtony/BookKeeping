@@ -135,7 +135,7 @@ QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) cons
     for (const Account& account : filter.getAccounts()) {
         if (!account.category.isEmpty()) {
 //            statements << "(" + account.typeName() + " LIKE \"%[" + account.category + "|" + account.name + ":%\")";  // TODO: depreacted, this is for the OLD 4 columns (Expense, Asset, etc.) schema.
-            statements << QString(R"sql((json_extract(detail, '$.%1.%2|%3') NOT NULL))sql").arg(account.typeName(), account.category, account.name);
+            statements << QString(R"sql((detail->'%1'->>'%2|%3' NOT NULL))sql").arg(account.typeName(), account.category, account.name);
         }
     }
 
