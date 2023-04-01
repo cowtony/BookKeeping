@@ -28,7 +28,6 @@ class BOOKSHARED_EXPORT Transaction {
     MoneyArray getMoneyArray(const Account& account) const;
     void       addMoneyArray(const Account& account, const MoneyArray& moneyArray);
 
-    void stringToData(Account::Type tableType, const QString& data);
     void setData(const QJsonObject& json);
 
     bool accountExist(const Account& account) const;

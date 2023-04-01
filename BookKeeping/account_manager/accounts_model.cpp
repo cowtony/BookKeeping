@@ -153,109 +153,110 @@ QVariant AccountsModel::data(const QModelIndex& index, int role) const {
 
 // TODO: Add default text when double clicked.
 bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int role) {
-  if (data(index, role) == value) {
-    return false;
-  }
-  AccountTreeNode* node = getItem(index);
-  switch (role) {
-    case Qt::EditRole:
-      switch (node->depth()) {
-        case 1:  // Account Type
-          return false;
-        case 2: { // Account Group
-          if (value.toString().isEmpty()) {
-            return false;
-          }
-          if (book_.categoryExist(node->accountType(), value.toString())) {
-            emit errorMessage("Group name " + value.toString() + " already exist.");
-            return false;
-          }
-          QApplication::setOverrideCursor(Qt::WaitCursor);
-          bool success = book_.renameCategory(node->accountType(), node->accountGroup(), value.toString());
-          QApplication::restoreOverrideCursor();
-          if (success) {
-            node->setName(value.toString());
-            // TODO: emit Category name Changed
-          } else {
-            return false;
-          }
-          break;
-        }
-        case 3:  // Account
-          switch (index.column()) {
-            case 0: {  // Account Name
-              if (value.toString().isEmpty()) {
-                return false;
-              }
-              Account old_account = *node->account();
-              Account new_account = old_account;
-              new_account.name = value.toString();
-              bool account_exist = book_.accountExist(new_account);
-
-              if (account_exist) {  // new_account_name exist, perform merge.
-                if (!node->comment().isEmpty()) {
-                  emit errorMessage("The account to be merged still have unempty comment.");
-                  return false;
+    if (data(index, role) == value) {
+        return false;
+    }
+    AccountTreeNode* node = getItem(index);
+    switch (role) {
+        case Qt::EditRole:
+            switch (node->depth()) {
+                case 1:  // Account Type
+                    return false;
+                case 2: { // Account Category
+                    if (value.toString().isEmpty()) {
+                        return false;
+                    }
+                    if (book_.categoryExist(node->accountType(), value.toString())) {
+                        emit errorMessage("Group name " + value.toString() + " already exist.");
+                        return false;
+                    }
+                    QApplication::setOverrideCursor(Qt::WaitCursor);
+                    bool success = book_.renameCategory(node->accountType(), node->accountGroup(), value.toString());
+                    QApplication::restoreOverrideCursor();
+                    if (success) {
+                        node->setName(value.toString());
+                        // TODO: emit Category name Changed
+                        // TODO: Currently the display will not refresh.
+                    } else {
+                        return false;
+                    }
+                    break;
                 }
-                QMessageBox message_box;
-                message_box.setText("Do you want to merge with existing account?");
-                message_box.setInformativeText("OldName: " + old_account.name + ", NewName: " + value.toString());
-                message_box.setStandardButtons(QMessageBox::Ok | QMessageBox::Discard);
-                message_box.setDefaultButton(QMessageBox::Ok);
-                switch (message_box.exec()) {
-                  case QMessageBox::Discard:
+                case 3:  // Account
+                    switch (index.column()) {
+                        case 0: {  // Account Name
+                            if (value.toString().isEmpty()) {
+                                return false;
+                            }
+                            Account old_account = *node->account();
+                            Account new_account = old_account;
+                            new_account.name = value.toString();
+                            bool account_exist = book_.accountExist(new_account);
+
+                            if (account_exist) {  // new_account_name exist, perform merge.
+                                if (!node->comment().isEmpty()) {
+                                    emit errorMessage("The account to be merged still have unempty comment.");
+                                    return false;
+                                }
+                                QMessageBox message_box;
+                                message_box.setText("Do you want to merge with existing account?");
+                                message_box.setInformativeText("OldName: " + old_account.name + ", NewName: " + value.toString());
+                                message_box.setStandardButtons(QMessageBox::Ok | QMessageBox::Discard);
+                                message_box.setDefaultButton(QMessageBox::Ok);
+                                switch (message_box.exec()) {
+                                    case QMessageBox::Discard:
+                                        return false;
+                                }
+                            }
+
+                            QApplication::setOverrideCursor(Qt::WaitCursor);
+                            QString error_msg = book_.moveAccount(old_account, new_account);
+                            QApplication::restoreOverrideCursor();
+                            if (!error_msg.isEmpty()) {
+                                emit errorMessage(error_msg);
+                                return false;
+                            }
+                            if (account_exist) {
+                                removeItem(index);
+                            } else { // Simply rename.
+                                if (!node->setName(value.toString())) {
+                                    return false;
+                                }
+                            }
+                            // TODO: emit account name Changed
+                            break;
+                        }
+                        case 1: { // Comment
+                            if(!book_.updateAccountComment(*node->account(), value.toString())) {
+                                return false;
+                            }
+                            node->setComment(value.toString());
+                            break;
+                        }
+                        default: return false;
+                    }
+                    break;
+                default:
+                    return false;
+            }
+            break;
+        case Qt::CheckStateRole:
+            if (index.column() == 2 and node->depth() == 3 and node->accountType() == "Asset") {
+                // TODO: Connect to database.
+                QString error = book_.setInvestment(*static_cast<AssetAccount*>(node->account().get()), value.toBool());
+                if (!error.isEmpty()) {
+                    emit errorMessage(error);
                     return false;
                 }
-              }
-
-              QApplication::setOverrideCursor(Qt::WaitCursor);
-              QString error_msg = book_.moveAccount(old_account, new_account);
-              QApplication::restoreOverrideCursor();
-              if (!error_msg.isEmpty()) {
-                emit errorMessage(error_msg);
-                return false;
-              }
-              if (account_exist) {
-                removeItem(index);
-              } else { // Simply rename.
-                if (!node->setName(value.toString())) {
-                  return false;
-                }
-              }
-              // TODO: emit account name Changed
-              break;
+                node->setIsInvestment(value.toBool());
             }
-            case 1: { // Comment
-              if(!book_.updateAccountComment(*node->account(), value.toString())) {
-                return false;
-              }
-              node->setComment(value.toString());
-              break;
-            }
-            default: return false;
-          }
-          break;
+            break;
         default:
-          return false;
-      }
-      break;
-    case Qt::CheckStateRole:
-      if (index.column() == 2 and node->depth() == 3 and node->accountType() == "Asset") {
-        // TODO: Connect to database.
-        QString error = book_.setInvestment(*static_cast<AssetAccount*>(node->account().get()), value.toBool());
-        if (!error.isEmpty()) {
-          emit errorMessage(error);
-          return false;
-        }
-        node->setIsInvestment(value.toBool());
-      }
-      break;
-    default:
-      return false;
-  }
+            return false;
+    }
 
-  emit dataChanged(index, index, {role});
-  return true;
+    emit dataChanged(index, index, {role});
+    return true;
 }
 
 Qt::ItemFlags AccountsModel::flags(const QModelIndex& index) const {

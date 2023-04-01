@@ -118,28 +118,6 @@ QJsonObject Transaction::toJson() const {
     return json;
 }
 
-void Transaction::stringToData(Account::Type tableType, const QString& data) {
-  if (data == "Empty" or data.isEmpty()) {
-    return;
-  }
-
-  // [Category|AccountName1: $1.23, $2.34]; [Category2|AccountName2: ¥3.21, ¥2.31]
-  for (QString accountInfo: data.split("; ")) {
-    accountInfo = accountInfo.mid(1, accountInfo.length() - 2); // Remove '[' and ']'
-
-    QString cateNname = accountInfo.split(": ").at(0);
-    QString amounts   = accountInfo.split(": ").at(1);
-    QString category  = cateNname.split("|").at(0);
-    QString name      = cateNname.split("|").at(1);
-
-    Account account(tableType, category, name);
-    if (accountExist(account)) {
-      qDebug() << Q_FUNC_INFO << "Transaction has duplicated account" << date_time;
-    }
-    addMoneyArray(account, MoneyArray(date_time.date(), amounts));
-  }
-}
-
 void Transaction::setData(const QJsonObject& json) {
     for (auto account_type : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
         QJsonObject categories = json[Account::kTableName.value(account_type)].toObject();

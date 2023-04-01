@@ -59,6 +59,7 @@ class BOOKSHARED_EXPORT Book {
     QSqlDatabase database_;
 
     QDateTime start_time_;
+    const int kUserId = 1;  // TODO: add a login system for a real user_id.
     void logUsageTime();
 
     bool Logging(const QSqlQuery& query) const; // Log all the modifier actions
