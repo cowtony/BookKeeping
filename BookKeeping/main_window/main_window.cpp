@@ -5,68 +5,61 @@
 #include <QLineEdit>
 
 #include "transaction.h"
-#include "AddTransaction.h"
+#include "add_transaction.h"
 #include "currency.h"
 #include "investment_analysis.h"
 
-MainWindow::MainWindow(QWidget *parent)
-  : QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    book_("Book.db") {
-  ui->setupUi(this);
-  g_currency.openDatabase();
-  account_manager_     = new AccountManager(book_, this);
-  financial_statement_ = new FinancialStatement(book_, this);
-  ui->tableView_transactions->setModel(&book_model_);
+MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow), book_("Book.db") {
+    ui->setupUi(this);
+    g_currency.openDatabase();
+    account_manager_     = new AccountManager(book_, this);
+    financial_statement_ = new FinancialStatement(book_, this);
+    ui->tableView_transactions->setModel(&book_model_);
 
-  // Init the filter elements.
-  // Init start date.
-  start_date_ = new QDateEdit();
-  start_date_->setDate(QDate::currentDate().addMonths(-1));
-  start_date_->setDisplayFormat("yyyy-MM-dd");
-  ui->tableView_transactions->setIndexWidget(book_model_.index(0, 0), start_date_);
-  connect(start_date_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(refreshTable()));
-  // Init end date.
-  end_date_ = new QDateEdit();
-  end_date_->setDate(QDate(QDate::currentDate()));
-  end_date_->setDisplayFormat("yyyy-MM-dd");
-  ui->tableView_transactions->setIndexWidget(book_model_.index(1, 0), end_date_);
-  connect(end_date_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(refreshTable()));
-  // Init combo box filters.
-  for (int i = 0; i < kTableList.size(); i++) {
-    QComboBox *name_combo_box = new QComboBox();
-    name_combo_boxes_.push_back(name_combo_box);
-    ui->tableView_transactions->setIndexWidget(book_model_.index(1, i + 2), name_combo_box);
-    // Refresh display when <name_combo_box> changed.
-    connect(name_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::refreshTable);
+    // Init the filter elements.
+    // Init start date.
+    start_date_ = new QDateEdit();
+    start_date_->setDate(QDate::currentDate().addMonths(-1));
+    start_date_->setDisplayFormat("yyyy-MM-dd");
+    ui->tableView_transactions->setIndexWidget(book_model_.index(0, 0), start_date_);
+    connect(start_date_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(refreshTable()));
+    // Init end date.
+    end_date_ = new QDateEdit();
+    end_date_->setDate(QDate(QDate::currentDate()));
+    end_date_->setDisplayFormat("yyyy-MM-dd");
+    ui->tableView_transactions->setIndexWidget(book_model_.index(1, 0), end_date_);
+    connect(end_date_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(refreshTable()));
+    // Init combo box filters.
+    for (int i = 0; i < kAccountTypes.size(); i++) {
+        QComboBox *name_combo_box = new QComboBox();
+        name_combo_boxes_.push_back(name_combo_box);
+        ui->tableView_transactions->setIndexWidget(book_model_.index(1, i + 2), name_combo_box);
+        // Refresh display when <name_combo_box> changed.
+        connect(name_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::refreshTable);
 
-    QComboBox *cate_combo_box = new QComboBox();
-    category_combo_boxes_.push_back(cate_combo_box);
-    ui->tableView_transactions->setIndexWidget(book_model_.index(0, i + 2), cate_combo_box);
-    auto table_type = kTableList.at(i);
-    // Update <name_combo_box> when <category_combo_box> changed.
-    connect(cate_combo_box, &QComboBox::currentTextChanged, [=](const QString& new_category_name){ accountCategoryChanged(table_type, new_category_name, name_combo_box); });
-  }
-  setCategoryComboBox();
-  // Put this to the last of init because this will triger on_tableView_transactions_cellChanged().
-  // QLineEdit: Description Filter.
-  description_ = new QLineEdit;
-  description_->setPlaceholderText("Description Filter");
-  ui->tableView_transactions->setIndexWidget(book_model_.index(1, 1), description_);
-  connect(description_, &QLineEdit::textEdited, this, &MainWindow::refreshTable);
+        QComboBox *cate_combo_box = new QComboBox();
+        category_combo_boxes_.push_back(cate_combo_box);
+        ui->tableView_transactions->setIndexWidget(book_model_.index(0, i + 2), cate_combo_box);
+        auto table_type = kAccountTypes.at(i);
+        // Update <name_combo_box> when <category_combo_box> changed.
+        connect(cate_combo_box, &QComboBox::currentTextChanged, [=](const QString& new_category_name){ accountCategoryChanged(table_type, new_category_name, name_combo_box); });
+    }
+    setCategoryComboBox();
+    // Put this to the last of init because this will triger on_tableView_transactions_cellChanged().
+    // QLineEdit: Description Filter.
+    description_ = new QLineEdit;
+    description_->setPlaceholderText("Description Filter");
+    ui->tableView_transactions->setIndexWidget(book_model_.index(1, 1), description_);
+    connect(description_, &QLineEdit::textEdited, this, &MainWindow::refreshTable);
 
-  connect(account_manager_, &AccountManager::accountNameChanged, this, &MainWindow::refreshTable);
-  connect(account_manager_, &AccountManager::categoryChanged, this, &MainWindow::setCategoryComboBox);
-  connect(account_manager_, &AccountManager::categoryChanged, this, &MainWindow::refreshTable);
-
-  refreshTable();
+    refreshTable();
 }
 
 MainWindow::~MainWindow() {
-  delete account_manager_;
-  delete financial_statement_;
+    delete account_manager_;
+    delete financial_statement_;
 
-  delete ui;
+    delete ui;
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event) {
@@ -80,43 +73,42 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 }
 
 void MainWindow::refreshTable() {
-  // Build transaction filter.
-  TransactionFilter filter = TransactionFilter()
-                             .fromTime(QDateTime(start_date_->date(), QTime(00, 00, 00)))
-                             .toTime(QDateTime(end_date_->date(), QTime(23, 59, 59)))
-                             .setDescription(description_->text())
-                             .useAnd()
-                             .orderByDescending()
-                             .setLimit(BookModel::kMaximumTransactions);
-  for (int i = 0; i < kTableList.size(); i++) {
-    if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
-      filter.addAccount(Account(kTableList.at(i), category_combo_boxes_.at(i)->currentText(), name_combo_boxes_.at(i)->currentText()));
+    // Build transaction filter.
+    TransactionFilter filter = TransactionFilter()
+                               .fromTime(QDateTime(start_date_->date(), QTime(00, 00, 00)))
+                               .toTime(QDateTime(end_date_->date(), QTime(23, 59, 59)))
+                               .setDescription(description_->text())
+                               .useAnd()
+                               .orderByDescending()
+                               .setLimit(BookModel::kMaximumTransactions);
+    for (int i = 0; i < kAccountTypes.size(); i++) {
+        if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
+            filter.addAccount(Account(kAccountTypes.at(i), category_combo_boxes_.at(i)->currentText(), name_combo_boxes_.at(i)->currentText()));
+        }
     }
-  }
 
-  book_model_.SetTransactions(book_.queryTransactions(filter));
-  resizeColumns();
+    book_model_.SetTransactions(book_.queryTransactions(filter));
+    resizeColumns();
 }
 
 void MainWindow::on_tableView_transactions_doubleClicked(const QModelIndex &index) {
-  Transaction transaction = book_model_.getTransaction(index);
-  if (transaction.description == "") {
-    QMessageBox::warning(this, "Warning", "Please do not double click on non-transaction rows.", QMessageBox::Ok);
-    return;
-  }
-  AddTransaction *add_transaction = new AddTransaction(book_, this);
-  add_transaction->setAttribute(Qt::WA_DeleteOnClose);
-  add_transaction->setTransaction(transaction);
-  connect(add_transaction, &AddTransaction::insertTransactionFinished, this, &MainWindow::refreshTable);
+    Transaction transaction = book_model_.getTransaction(index);
+    if (transaction.description == "") {
+        QMessageBox::warning(this, "Warning", "Please do not double click on non-transaction rows.", QMessageBox::Ok);
+        return;
+    }
+    AddTransaction *add_transaction = new AddTransaction(this);
+    add_transaction->setAttribute(Qt::WA_DeleteOnClose);
+    add_transaction->setTransaction(transaction);
 }
 
 void MainWindow::setCategoryComboBox() {
-  for (int i = 0; i < kTableList.size(); i++) {
-    QComboBox *cateComboBox = category_combo_boxes_.at(i);
-    cateComboBox->clear();
-    cateComboBox->addItem("");
-    cateComboBox->addItems(book_.queryCategories(kTableList.at(i)));
-  }
+    for (int i = 0; i < kAccountTypes.size(); i++) {
+        QComboBox *cateComboBox = category_combo_boxes_.at(i);
+        cateComboBox->clear();
+        cateComboBox->addItem("");
+        cateComboBox->addItems(book_.queryCategories(kAccountTypes.at(i)));
+    }
 }
 
 void MainWindow::on_pushButton_MergeTransaction_clicked() {
@@ -215,9 +207,8 @@ void MainWindow::on_pushButtonDeleteTransactions_clicked() {
 }
 
 void MainWindow::on_actionAddTransaction_triggered() {
-  AddTransaction* addTransaction = new AddTransaction(book_, this);
+  AddTransaction* addTransaction = new AddTransaction(this);
   addTransaction->setAttribute(Qt::WA_DeleteOnClose);
-  connect(addTransaction, &AddTransaction::insertTransactionFinished, this, &MainWindow::refreshTable);
   addTransaction->show();
 }
 

@@ -2,7 +2,6 @@
 #define ACCOUNTTREENODE_H
 
 // Note: Used for accounts_model.
-
 #include "account.h"
 #include <QList>
 

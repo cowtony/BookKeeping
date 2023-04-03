@@ -4,7 +4,7 @@
 #include <QtMath>
 #include <QClipboard>
 
-#include "BarChart.h"
+#include "bar_chart.h"
 
 QFont FinancialStatement::m_financialStatementFont = QFont("Times New Roman", 14, 1, false);
 QFont FinancialStatement::m_tableSumFont = QFont("Times New Roman", 12, 1, false);

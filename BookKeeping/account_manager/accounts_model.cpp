@@ -4,38 +4,38 @@
 #include <QMessageBox>
 
 AccountsModel::AccountsModel(Book& book, QObject *parent)
-  : QAbstractItemModel(parent), book_(book) {
-  root_ = new AccountTreeNode();
+    : QAbstractItemModel(parent), book_(book) {
+    root_ = new AccountTreeNode();
 }
 
 AccountsModel::~AccountsModel() {
-  delete root_;
+    delete root_;
 }
 
 void AccountsModel::setupAccounts(const QList<std::shared_ptr<Account>>& accounts) {
-  root_->clear();
+    root_->clear();
 
-  // Preset 4 basic account type in case there is no account for one of them.
-  for (const char* const& type_name : {"Asset", "Liability", "Revenue", "Expense"}) {
-    root_->insertChild(new AccountTreeNode(type_name));
-  }
-
-  for (const std::shared_ptr<Account>& account : accounts) {
-    AccountTreeNode* current_node = root_;
-    for (const QString& name : {account->typeName(), account->category, account->name}) {
-      if (current_node->childAt(name) == nullptr) {
-        current_node->insertChild(new AccountTreeNode(name));
-      }
-      current_node = current_node->childAt(name);
-      if (current_node->depth() == 3) {
-        current_node->setComment(account->comment);
-        if (account->type == Account::Asset) {
-          current_node->setIsInvestment(static_cast<AssetAccount*>(account.get())->is_investment);
-        }
-      }
+    // Preset 4 basic account type in case there is no account for one of them.
+    for (const char* const& type_name : {"Asset", "Liability", "Revenue", "Expense"}) {
+        root_->insertChild(new AccountTreeNode(type_name));
     }
-  }
-  emit dataChanged(QModelIndex(), QModelIndex());
+
+    for (const std::shared_ptr<Account>& account : accounts) {
+        AccountTreeNode* current_node = root_;
+        for (const QString& name : {account->typeName(), account->category, account->name}) {
+            if (current_node->childAt(name) == nullptr) {
+                current_node->insertChild(new AccountTreeNode(name));
+            }
+                current_node = current_node->childAt(name);
+            if (current_node->depth() == 3) {
+                current_node->setComment(account->comment);
+                if (account->type == Account::Asset) {
+                    current_node->setIsInvestment(static_cast<AssetAccount*>(account.get())->is_investment);
+                }
+            }
+        }
+    }
+    emit dataChanged(QModelIndex(), QModelIndex());
 }
 
 QVariant AccountsModel::headerData(int section, Qt::Orientation orientation, int role) const {

@@ -1,32 +1,34 @@
-#include "AddTransaction.h"
-#include "ui_AddTransaction.h"
+#include "add_transaction.h"
+#include "ui_add_transaction.h"
 
 #include <QDebug>
 #include <QMessageBox>
 
 #include "Book.h"
+#include "main_window.h"
 
-AddTransaction::AddTransaction(Book& book, QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::AddTransaction), book_(book) {
-  ui->setupUi(this);
+AddTransaction::AddTransaction(QWidget *parent): QMainWindow(parent), ui(new Ui::AddTransaction), book_(static_cast<MainWindow*>(parent)->book_) {
+    ui->setupUi(this);
 
-  tableMap.insert(Account::Asset,     ui->tableWidget_Assets);
-  tableMap.insert(Account::Expense,   ui->tableWidget_Expenses);
-  tableMap.insert(Account::Revenue,   ui->tableWidget_Revenues);
-  tableMap.insert(Account::Liability, ui->tableWidget_Liabilities);
+    tableMap.insert(Account::Asset,     ui->tableWidget_Assets);
+    tableMap.insert(Account::Expense,   ui->tableWidget_Expenses);
+    tableMap.insert(Account::Revenue,   ui->tableWidget_Revenues);
+    tableMap.insert(Account::Liability, ui->tableWidget_Liabilities);
 
-  QPalette palette = ui->tableWidget_Revenues->palette();
-  palette.setColor(QPalette::Base, Qt::gray);
-  ui->tableWidget_Revenues->setPalette(palette);
-  ui->tableWidget_Liabilities->setPalette(palette);
+    QPalette palette = ui->tableWidget_Revenues->palette();
+    palette.setColor(QPalette::Base, Qt::gray);
+    ui->tableWidget_Revenues->setPalette(palette);
+    ui->tableWidget_Liabilities->setPalette(palette);
 
-  ui->comboBox_Currency->addItems(Currency::kCurrencyToCode.values());
+    ui->comboBox_Currency->addItems(Currency::kCurrencyToCode.values());
 
-  initialization();
+    initialization();
+
+    connect(this, &AddTransaction::insertTransactionFinished, static_cast<MainWindow*>(parent), &MainWindow::refreshTable);
 }
 
 AddTransaction::~AddTransaction() {
-  delete ui;
+    delete ui;
 }
 
 void AddTransaction::initialization() {

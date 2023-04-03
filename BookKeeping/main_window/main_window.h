@@ -13,50 +13,51 @@ class MainWindow;
 }
 
 class MainWindow : public QMainWindow {
-  Q_OBJECT
+    Q_OBJECT
 
-public:
-  explicit MainWindow(QWidget *parent = nullptr);
-  ~MainWindow();
+  public:
+    explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
-protected:
-  virtual void resizeEvent(QResizeEvent* event) override;
-  virtual void closeEvent(QCloseEvent *event) override;
+    Book book_;  // TODO: consider using friend class then put `book_` to private?
 
-private slots:
-  void on_actionAddTransaction_triggered();
-  void on_actionAccountManager_triggered();
-  void on_actionFinancialStatement_triggered();
-  void on_actionInvestmentAnalysis_triggered();
-  void on_actionTransactionValidation_triggered();
+  public slots:
+    void refreshTable();  // Show all filtered transactions.
+    void setCategoryComboBox();
 
-  // Show all filtered transactions.
-  void refreshTable();
+  protected:
+    virtual void resizeEvent(QResizeEvent* event) override;
+    virtual void closeEvent(QCloseEvent *event) override;
 
-  void on_pushButtonDeleteTransactions_clicked();
-  void accountCategoryChanged(const Account::Type& table_type, const QString& category, QComboBox* name_combo_box);
-  void on_tableView_transactions_doubleClicked(const QModelIndex &index);
-  void setCategoryComboBox();
+  private slots:
+    void on_actionAddTransaction_triggered();
+    void on_actionAccountManager_triggered();
+    void on_actionFinancialStatement_triggered();
+    void on_actionInvestmentAnalysis_triggered();
+    void on_actionTransactionValidation_triggered();
 
-  void on_pushButton_MergeTransaction_clicked();
+    void on_pushButtonDeleteTransactions_clicked();
+    void accountCategoryChanged(const Account::Type& table_type, const QString& category, QComboBox* name_combo_box);
+    void on_tableView_transactions_doubleClicked(const QModelIndex &index);
 
-private:
-  void resizeColumns();
+    void on_pushButton_MergeTransaction_clicked();
 
-  Ui::MainWindow *ui;
+  private:
+    void resizeColumns();
 
-  AccountManager     *account_manager_;
-  FinancialStatement *financial_statement_;
+    Ui::MainWindow *ui;
 
-  Book book_;
-  BookModel book_model_;
+    AccountManager     *account_manager_;
+    FinancialStatement *financial_statement_;
 
-  // Filter components:
-  QDateEdit* start_date_;
-  QDateEdit* end_date_;
-  QLineEdit* description_;
-  QVector<QComboBox*> category_combo_boxes_;
-  QVector<QComboBox*> name_combo_boxes_;
+    BookModel book_model_;
+
+    // Filter components:
+    QDateEdit* start_date_;
+    QDateEdit* end_date_;
+    QLineEdit* description_;
+    QVector<QComboBox*> category_combo_boxes_;
+    QVector<QComboBox*> name_combo_boxes_;
 };
 
 #endif // MAIN_WINDOW_H

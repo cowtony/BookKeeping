@@ -36,32 +36,32 @@ INCLUDEPATH += GUI \
     Book
 
 SOURCES += \
+    GUI/add_transaction.cpp \
+    GUI/bar_chart.cpp \
     investment_analysis/investment_analyzer.cpp \
     main.cpp \
     account_manager/account_manager.cpp \
     account_manager/account_tree_node.cpp \
     account_manager/accounts_model.cpp \
     financial_statement/financial_statement.cpp \
-    GUI/BarChart.cpp \
-    GUI/AddTransaction.cpp \
     investment_analysis/investment_analysis.cpp \
     main_window/book_model.cpp \
     main_window/main_window.cpp
 
 FORMS += \
+    GUI/add_transaction.ui \
     account_manager/account_manager.ui \
     financial_statement/financial_statement.ui \
-    GUI/AddTransaction.ui \
     investment_analysis/investment_analysis.ui \
     main_window/main_window.ui
 
 HEADERS += \
+    GUI/add_transaction.h \
+    GUI/bar_chart.h \
     account_manager/account_manager.h \
     account_manager/account_tree_node.h \
     account_manager/accounts_model.h \
     financial_statement/financial_statement.h \
-    GUI/AddTransaction.h \
-    GUI/BarChart.h \
     investment_analysis/investment_analysis.h \
     investment_analysis/investment_analyzer.h \
     main_window/book_model.h \

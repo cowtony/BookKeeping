@@ -5,7 +5,7 @@
 ## TODO
 
 - Move account is buggy.
-- Rename account or category will not refresh the main page.
+- Return string as error message instead of bool
 - Person 1, Person 2, etc. capably of rename people.
 - keep copy-to-clipboard as all months.
 - Logging feature: only keep the recent 100 logs.

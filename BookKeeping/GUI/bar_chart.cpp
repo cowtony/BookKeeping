@@ -1,4 +1,4 @@
-#include "BarChart.h"
+#include "bar_chart.h"
 
 BarChart::BarChart(QWidget *parent) : QMainWindow(parent)
 {

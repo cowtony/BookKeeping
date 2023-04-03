@@ -5,34 +5,41 @@
 #include <QMessageBox>
 #include <QDropEvent>
 
+#include "main_window.h"
 #include "book.h"
 
-AccountManager::AccountManager(Book& book, QWidget *parent)
+AccountManager::AccountManager(Book& book, QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::AccountManager), book_(book), account_model_(book) {
-  ui_->setupUi(this);
-//  tree_widget_ = new TreeWidget(book_);
-//  ui_->gridLayout->addWidget(tree_widget_, 0, 0);
-  tree_view_ = std::make_unique<QTreeView>();
-  tree_view_->setModel(&account_model_);
-  ui_->gridLayout->addWidget(tree_view_.get(), 0, 0, 1, 2);
+    ui_->setupUi(this);
 
-  account_model_.setupAccounts(book_.queryAllAccountsFrom({Account::Asset, Account::Liability, Account::Revenue, Account::Expense}));
-  tree_view_->setDragDropMode(QAbstractItemView::InternalMove);
-  tree_view_->setSelectionMode(QAbstractItemView::SingleSelection);
-  tree_view_->setDropIndicatorShown(true);
-  tree_view_->setColumnWidth(0, 200);
+//    tree_widget_ = new TreeWidget(book_);
+//    ui_->gridLayout->addWidget(tree_widget_, 0, 0);
+    tree_view_ = std::make_unique<QTreeView>();
+    tree_view_->setModel(&account_model_);
+    ui_->gridLayout->addWidget(tree_view_.get(), 0, 0, 1, 2);
 
-  connect(&account_model_, &AccountsModel::errorMessage, this, &AccountManager::onReceiveErrorMessage);
-  connect(tree_view_->selectionModel(), &QItemSelectionModel::currentChanged, this, &AccountManager::onCurrentItemChanged);
+    account_model_.setupAccounts(book_.queryAllAccountsFrom({Account::Asset, Account::Liability, Account::Revenue, Account::Expense}));
+    tree_view_->setDragDropMode(QAbstractItemView::InternalMove);
+    tree_view_->setSelectionMode(QAbstractItemView::SingleSelection);
+    tree_view_->setDropIndicatorShown(true);
+    tree_view_->setColumnWidth(0, 200);
+
+    connect(&account_model_, &AccountsModel::errorMessage, this, &AccountManager::onReceiveErrorMessage);
+    connect(&account_model_, &AccountsModel::dataChanged,  static_cast<MainWindow*>(parent), &MainWindow::refreshTable);
+    connect(&account_model_, &AccountsModel::dataChanged,  static_cast<MainWindow*>(parent), &MainWindow::setCategoryComboBox);
+    connect(&account_model_, &AccountsModel::rowsInserted, static_cast<MainWindow*>(parent), &MainWindow::setCategoryComboBox);
+    connect(&account_model_, &AccountsModel::rowsMoved,    static_cast<MainWindow*>(parent), &MainWindow::setCategoryComboBox);
+    connect(&account_model_, &AccountsModel::rowsRemoved,  static_cast<MainWindow*>(parent), &MainWindow::setCategoryComboBox);
+    connect(tree_view_->selectionModel(), &QItemSelectionModel::currentChanged, this, &AccountManager::onCurrentItemChanged);
 }
 
 void AccountManager::onCurrentItemChanged(const QModelIndex& current, const QModelIndex& /* previous */) {
-  ui_->pushButton_Add   ->setEnabled(AccountsModel::getItem(current)->depth() != 3);  // Can add under type or category.
-  ui_->pushButton_Delete->setEnabled(AccountsModel::getItem(current)->depth() == 3);  // Can delete meta account.
+    ui_->pushButton_Add   ->setEnabled(AccountsModel::getItem(current)->depth() != 3);  // Can add under type or category.
+    ui_->pushButton_Delete->setEnabled(AccountsModel::getItem(current)->depth() == 3);  // Can delete meta account.
 }
 
 void AccountManager::onReceiveErrorMessage(const QString& message) {
-  QMessageBox::warning(this, "WARNING", message, QMessageBox::Ok);
+    QMessageBox::warning(this, "WARNING", message, QMessageBox::Ok);
 }
 
 void AccountManager::on_pushButton_Add_clicked() {
@@ -86,6 +93,8 @@ void AccountManager::on_pushButton_Delete_clicked() {
   account_model_.removeItem(tree_view_->currentIndex());
 }
 
+/* This was deprecated code, replaced with ModelView.
+ *
 TreeWidget::TreeWidget(Book& book, QWidget *parent)
     : QTreeWidget(parent), book_(book) {
   setSelectionMode(QAbstractItemView::SingleSelection);
@@ -176,3 +185,4 @@ void TreeWidget::dropEvent(QDropEvent *event) {
   }
   QTreeWidget::dropEvent(event);
 }
+*/

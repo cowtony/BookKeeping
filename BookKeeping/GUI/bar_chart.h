@@ -1,5 +1,5 @@
-#ifndef BARCHART_H
-#define BARCHART_H
+#ifndef BAR_CHART_H
+#define BAR_CHART_H
 
 #include <QMainWindow>
 #include <QtCharts>
@@ -34,4 +34,4 @@ private:
     QChartView *m_chartView;
 };
 
-#endif // BARCHART_H
+#endif // BAR_CHART_H
