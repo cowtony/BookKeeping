@@ -76,13 +76,15 @@ Money Transaction::getCheckSum() const {
 
 QStringList Transaction::validate() const {
     QStringList errorMessage;
-    if (description.isEmpty())
+    if (description.isEmpty()) {
         errorMessage << "Description is empty.";
-    if (data_.value(Account::Asset).isEmpty() and
-        data_.value(Account::Expense).isEmpty() and
-        data_.value(Account::Revenue).isEmpty() and
-        data_.value(Account::Liability).isEmpty())
+    }
+    if (data_.value(Account::Asset).isEmpty() &&
+        data_.value(Account::Expense).isEmpty() &&
+        data_.value(Account::Revenue).isEmpty() &&
+        data_.value(Account::Liability).isEmpty()) {
         errorMessage << "No account entries.";
+    }
     if (qFabs(getCheckSum().amount_) > 0.005)
         errorMessage << "The sum of the transaction is not zero: " + QString::number(getCheckSum().amount_);
 
@@ -94,7 +96,7 @@ QString Transaction::toString(Account::Type table_type) const {
     for (const Account& account : getAccounts(table_type)) {
         MoneyArray moneyArray = getMoneyArray(account);
         if (!moneyArray.isZero()) {
-            result << QString("[%1|%2: %3]").arg(account.category, account.name, moneyArray.toString());
+            result << QString("[%1|%2: %3]").arg(account.category, account.name, moneyArray);
         }
     }
     return result.join("\n");
@@ -107,7 +109,7 @@ QJsonObject Transaction::toJson() const {
         for (const auto& [category_name, accounts] : categories.asKeyValueRange()) {
             for (const auto& [account_name, money_array] : accounts.asKeyValueRange()) {
                 if (!money_array.isZero()) {
-                    json_accounts[category_name + "|" + account_name] = money_array.toString();
+                    json_accounts[category_name + "|" + account_name] = QString(money_array);
                 }
             }
         }
@@ -131,22 +133,22 @@ void Transaction::setData(const QJsonObject& json) {
 }
 
 QList<Account> Transaction::getAccounts() const {
-  QList<Account> all_ccounts;
-  for (const Account::Type& tableType : {Account::Asset, Account::Expense, Account::Revenue, Account::Liability}) {
-    for (const QString& category : data_.value(tableType).keys()) {
-      for (const QString& name : data_.value(tableType).value(category).keys()) {
-        all_ccounts.push_back(Account(tableType, category, name));
-      }
+    QList<Account> all_ccounts;
+    for (const Account::Type& tableType : {Account::Asset, Account::Expense, Account::Revenue, Account::Liability}) {
+        for (const auto& [category, account] : data_.value(tableType).asKeyValueRange()) {
+            for (const auto& [account_name, _] : account.asKeyValueRange()) {
+                all_ccounts.push_back(Account(tableType, category, account_name));
+            }
+        }
     }
-  }
-  return all_ccounts;
+    return all_ccounts;
 }
 
 QList<Account> Transaction::getAccounts(Account::Type account_type) const {
     QList<Account> retAccounts;
-    for (const QString& category : data_.value(account_type).keys()) {
-        for (const QString& name : data_.value(account_type).value(category).keys()) {
-            retAccounts.push_back(Account(account_type, category, name));
+    for (const auto& [category, account] : data_.value(account_type).asKeyValueRange()) {
+        for (const auto& [account_name, _] : account.asKeyValueRange()) {
+            retAccounts.push_back(Account(account_type, category, account_name));
         }
     }
     return retAccounts;

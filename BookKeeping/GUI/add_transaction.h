@@ -23,9 +23,9 @@ class AddTransaction : public QMainWindow {
 
   private slots:
     void on_calendarWidget_selectionChanged();
-    void on_dateTimeEdit_dateTimeChanged(const QDateTime &dateTime_);
+    void on_dateTimeEdit_dateTimeChanged(const QDateTime& date_time);
     void on_lineEdit_Description_editingFinished();
-    void onAccountCateChanged(QTableWidget* tableWidget, int row);
+    void onAccountCateChanged(QTableWidget* table_widget, int row);
     void on_pushButton_Split_clicked();
     void on_pushButton_Insert_clicked();
 

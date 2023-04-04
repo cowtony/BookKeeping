@@ -89,15 +89,15 @@ void Money::operator -=(const Money &money) {
     *this = *this - money;
 }
 
+Money::operator QString() const {
+    // TODO: This returns ($100.00) instead of -$100.00 now.
+    return QLocale(QLocale::English).toCurrencyString(getRoundedAmount(), Currency::kCurrencyToSymbol.value(currency_type_), 2);
+}
+
 Money& Money::changeCurrency(Currency::Type new_currency_type) {
     amount_ *= g_currency.getExchangeRate(date_, currency_type_, new_currency_type);
     currency_type_ = new_currency_type;
     return *this;
-}
-
-QString Money::toString() const {
-    // TODO: This returns ($100.00) instead of -$100.00 now.
-    return QLocale(QLocale::English).toCurrencyString(getRoundedAmount(), Currency::kCurrencyToSymbol.value(currency_type_), 2);
 }
 
 Money Money::round() const {
@@ -165,12 +165,12 @@ void MoneyArray::push_back(Money money) {
   amounts_.push_back(money.amount_);
 }
 
-QString MoneyArray::toString() const {
-  QStringList result;
-  for (const double& amount : amounts_) {
-    result << Money(date_, currency_type_, amount).toString();
-  }
-  return result.join(", ");
+MoneyArray::operator QString() const {
+    QStringList result;
+    for (const double& amount : amounts_) {
+        result << Money(date_, currency_type_, amount);
+    }
+    return result.join(", ");
 }
 
 void MoneyArray::changeCurrency(Currency::Type new_currency_type) {

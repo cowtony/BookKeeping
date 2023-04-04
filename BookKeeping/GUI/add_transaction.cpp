@@ -96,92 +96,93 @@ void AddTransaction::setTransaction(const Transaction &transaction) {
 }
 
 Transaction AddTransaction::getTransaction() {
-  Transaction retTransaction;
-  retTransaction.date_time = ui_->dateTimeEdit->dateTime();
-  retTransaction.description = ui_->lineEdit_Description->text();
+    Transaction retTransaction;
+    retTransaction.date_time = ui_->dateTimeEdit->dateTime();
+    retTransaction.description = ui_->lineEdit_Description->text();
 
-  for (QTableWidget* tableWidget : {ui_->tableWidget_Assets,
-                                    ui_->tableWidget_Expenses,
-                                    ui_->tableWidget_Revenues,
-                                    ui_->tableWidget_Liabilities}) {
-    const Account::Type tableType = tableMap.key(tableWidget);
+    for (QTableWidget* tableWidget : {ui_->tableWidget_Assets,
+                                      ui_->tableWidget_Expenses,
+                                      ui_->tableWidget_Revenues,
+                                      ui_->tableWidget_Liabilities}) {
+        const Account::Type tableType = tableMap.key(tableWidget);
 
-    for (int row = 0; row < tableWidget->rowCount() - 1; row++) {
-      QComboBox *cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
-      QComboBox *nameComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1));
+        for (int row = 0; row < tableWidget->rowCount() - 1; row++) {
+            QComboBox *cateComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 0));
+            QComboBox *nameComboBox = static_cast<QComboBox*>(tableWidget->cellWidget(row, 1));
 
-      if (nameComboBox->currentText().isEmpty()) {
-        continue;
-      }
+            if (nameComboBox->currentText().isEmpty()) {
+                continue;
+            }
 
-      Account account(tableType, cateComboBox->currentText(), nameComboBox->currentText());
-
-      MoneyArray moneyArray(ui_->dateTimeEdit->date(), book_.queryCurrencyType(account));
-      for (int col = 2; col < tableWidget->columnCount(); col++) {
-        QLineEdit *lineEdit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
-        Money money(ui_->dateTimeEdit->date(), lineEdit->text(), book_.queryCurrencyType(account));
-        if (!lineEdit->text().isEmpty()) {
-          lineEdit->setText(money.toString());
-          if (money.amount_ < 0) {
-            lineEdit->setStyleSheet("color: red");
-          } else {
-            lineEdit->setStyleSheet("color: black");
-          }
+            Account account(tableType, cateComboBox->currentText(), nameComboBox->currentText());
+            MoneyArray money_array(ui_->dateTimeEdit->date(), book_.queryCurrencyType(account));
+            for (int col = 2; col < tableWidget->columnCount(); col++) {
+                QLineEdit *line_edit = static_cast<QLineEdit*>(tableWidget->cellWidget(row, col));
+                Money money(ui_->dateTimeEdit->date(), line_edit->text(), book_.queryCurrencyType(account));
+                if (!line_edit->text().isEmpty()) {
+                    line_edit->setText(money);
+                    if (money.amount_ < 0) {
+                        line_edit->setStyleSheet("color: red");
+                    } else {
+                        line_edit->setStyleSheet("color: black");
+                    }
+                }
+                money_array.push_back(money);
+            }
+            if (money_array.sum().amount_ != 0.00) {
+                retTransaction.addMoneyArray(account, money_array);
+            }
         }
-        moneyArray.push_back(money);
-      }
-      retTransaction.addMoneyArray(account, moneyArray);
     }
-  }
-  return retTransaction;
+    return retTransaction;
 }
 
 void AddTransaction::on_pushButton_Insert_clicked() {
-  QStringList errorMsg;
+    QStringList errorMsg;
 
-  Transaction t = getTransaction();
-  errorMsg << t.validate();
+    Transaction t = getTransaction();
+    errorMsg << t.validate();
 
-  if (book_.dateTimeExist(ui_->dateTimeEdit->dateTime())) {
-    if (ui_->pushButton_Insert->text() != "Replace" or ui_->dateTimeEdit->dateTime() != replacedDateTime) {
-      errorMsg << "Date Time already exist.";
+    if (book_.dateTimeExist(ui_->dateTimeEdit->dateTime())) {
+        if (ui_->pushButton_Insert->text() != "Replace" or ui_->dateTimeEdit->dateTime() != replacedDateTime) {
+            errorMsg << "Date Time already exist.";
+        }
     }
-  }
 
-  if (!errorMsg.empty()) {
-    QMessageBox::warning(this, "Warning!", errorMsg.join('\n'), QMessageBox::Ok);
-    return;
-  }
-
-  if (ui_->pushButton_Insert->text() == "Replace") {
-    QMessageBox warningMsgBox;
-    warningMsgBox.setText("You are trying to replace a transaction");
-    warningMsgBox.setInformativeText("The action cannot be undone, are you sure?");
-    warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-    warningMsgBox.setDefaultButton(QMessageBox::Cancel);
-    switch ( warningMsgBox.exec()) {
-      case QMessageBox::Ok:
-        book_.removeTransaction(replacedDateTime);
-        break;
-      case QMessageBox::Cancel:
+    if (!errorMsg.empty()) {
+        QMessageBox::warning(this, "Warning!", errorMsg.join('\n'), QMessageBox::Ok);
         return;
     }
-  }
 
-  book_.insertTransaction(t);
-  if (ui_->checkBox_RecursiveTransaction->isChecked()) {
-    t.date_time = ui_->dateEdit_nextTransaction->dateTime();
-    t.description = "[R]" + ui_->lineEdit_Description->text();
-    while (book_.dateTimeExist(t.date_time)) {
-      t.date_time = t.date_time.addSecs(1);
+    if (ui_->pushButton_Insert->text() == "Replace") {
+        QMessageBox warningMsgBox;
+        warningMsgBox.setText("You are trying to replace a transaction");
+        warningMsgBox.setInformativeText("The action cannot be undone, are you sure?");
+        warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+        warningMsgBox.setDefaultButton(QMessageBox::Cancel);
+        switch ( warningMsgBox.exec()) {
+            case QMessageBox::Ok:
+                book_.removeTransaction(replacedDateTime);
+                break;
+            case QMessageBox::Cancel:
+                return;
+        }
     }
-    book_.insertTransaction(t, /*ignore_error=*/true);
-  }
 
-  emit insertTransactionFinished(this);
-  close();
-  destroy();
-  deleteLater();
+    book_.insertTransaction(t);
+    if (ui_->checkBox_RecursiveTransaction->isChecked()) {
+        t.date_time = ui_->dateEdit_nextTransaction->dateTime();
+        t.description = "[R]" + ui_->lineEdit_Description->text();
+        while (book_.dateTimeExist(t.date_time)) {
+            t.date_time = t.date_time.addSecs(1);
+        }
+        book_.insertTransaction(t, /*ignore_error=*/true);
+    }
+
+    emit insertTransactionFinished(this);
+    close();
+    destroy();
+    deleteLater();
 }
 
 /************************** Slots *********************************/
@@ -191,8 +192,8 @@ void AddTransaction::on_calendarWidget_selectionChanged() {
   ui_->label_Currency->setText("Currency: " + QString::number(g_currency.getExchangeRate(ui_->dateTimeEdit->date(), Currency::USD, Currency::CNY)));
 }
 
-void AddTransaction::on_dateTimeEdit_dateTimeChanged(const QDateTime &dateTime_) {  // This may not necessary
-  ui_->calendarWidget->setSelectedDate(dateTime_.date());
+void AddTransaction::on_dateTimeEdit_dateTimeChanged(const QDateTime& date_time) {  // This may not necessary
+  ui_->calendarWidget->setSelectedDate(date_time.date());
 }
 
 void AddTransaction::on_lineEdit_Description_editingFinished() {
@@ -268,7 +269,7 @@ void AddTransaction::on_pushButton_Split_clicked() {
     Money remain = - t.getCheckSum();
     Money split = (remain / (lastNode.m_sign * count));
     split.changeCurrency(book_.queryCurrencyType(lastNode));
-    lastNode.m_lineEdit->setText(split.toString());
+    lastNode.m_lineEdit->setText(split);
     if (split.amount_ < 0) {
       lastNode.m_lineEdit->setStyleSheet("color: red");
     } else {
@@ -311,7 +312,7 @@ void AddTransaction::setTableRow(QTableWidget *table_widget, Account account, co
 
   for (int col = 2; col < table_widget->columnCount(); col++) {
       QLineEdit *lineEdit = static_cast<QLineEdit*>(table_widget->cellWidget(row, col));
-      lineEdit->setText(money_array.getMoney(col - 2).toString());
+      lineEdit->setText(money_array.getMoney(col - 2));
       if (money_array.getMoney(col - 2).amount_ < 0) {
         lineEdit->setStyleSheet("color: red");
       } else {

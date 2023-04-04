@@ -45,7 +45,7 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money
   date = date.addDays(-1);
   const Money difference = money - Money(date, item->text(column));
 
-  item->setText(column, money.toString());
+  item->setText(column, money);
   if (money.amount_ < 0) {
     item->setForeground(column, Qt::red);
   } else {

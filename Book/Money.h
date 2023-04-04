@@ -19,16 +19,16 @@ class BOOKSHARED_EXPORT Money {
     QDate  date_;
     double amount_;
 
-    Money operator -() const;
-    Money operator /(int val) const;
-    Money operator +(Money money) const;
-    Money operator -(Money money) const;
-    Money operator *(double rateOfReturn) const;
-    bool operator <(Money money) const;
-    void operator +=(const Money& money);
-    void operator -=(const Money& money);
+    Money  operator -() const;
+    Money  operator /(int val) const;
+    Money  operator +(Money money) const;
+    Money  operator -(Money money) const;
+    Money  operator *(double rateOfReturn) const;
+    bool   operator <(Money money) const;
+    void   operator+=(const Money& money);
+    void   operator-=(const Money& money);
+    operator QString() const;
 
-    QString toString() const;
     Money round() const;
 
     Currency::Type currency() const;
@@ -53,7 +53,7 @@ class BOOKSHARED_EXPORT MoneyArray : public Money {
     Money sum() const;
     Money getMoney(int index) const;
     void push_back(Money money);
-    QString toString() const;
+    operator QString() const;
 
     void changeCurrency(Currency::Type currency_type);
 
