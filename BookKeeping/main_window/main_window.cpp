@@ -9,37 +9,37 @@
 #include "currency.h"
 #include "investment_analysis.h"
 
-MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow), book_("Book.db") {
-    ui->setupUi(this);
+MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui_(new Ui::MainWindow), book_("Book.db") {
+    ui_->setupUi(this);
     g_currency.openDatabase();
-    account_manager_     = new AccountManager(book_, this);
-    financial_statement_ = new FinancialStatement(book_, this);
-    ui->tableView_transactions->setModel(&book_model_);
+    account_manager_     = QSharedPointer<AccountManager>    (new AccountManager(this));
+    financial_statement_ = QSharedPointer<FinancialStatement>(new FinancialStatement(this));
+    ui_->tableView_transactions->setModel(&book_model_);
 
     // Init the filter elements.
     // Init start date.
     start_date_ = new QDateEdit();
     start_date_->setDate(QDate::currentDate().addMonths(-1));
     start_date_->setDisplayFormat("yyyy-MM-dd");
-    ui->tableView_transactions->setIndexWidget(book_model_.index(0, 0), start_date_);
+    ui_->tableView_transactions->setIndexWidget(book_model_.index(0, 0), start_date_);
     connect(start_date_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(refreshTable()));
     // Init end date.
     end_date_ = new QDateEdit();
     end_date_->setDate(QDate(QDate::currentDate()));
     end_date_->setDisplayFormat("yyyy-MM-dd");
-    ui->tableView_transactions->setIndexWidget(book_model_.index(1, 0), end_date_);
+    ui_->tableView_transactions->setIndexWidget(book_model_.index(1, 0), end_date_);
     connect(end_date_, SIGNAL(userDateChanged(const QDate&)), this, SLOT(refreshTable()));
     // Init combo box filters.
     for (int i = 0; i < kAccountTypes.size(); i++) {
         QComboBox *name_combo_box = new QComboBox();
         name_combo_boxes_.push_back(name_combo_box);
-        ui->tableView_transactions->setIndexWidget(book_model_.index(1, i + 2), name_combo_box);
+        ui_->tableView_transactions->setIndexWidget(book_model_.index(1, i + 2), name_combo_box);
         // Refresh display when <name_combo_box> changed.
         connect(name_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::refreshTable);
 
         QComboBox *cate_combo_box = new QComboBox();
         category_combo_boxes_.push_back(cate_combo_box);
-        ui->tableView_transactions->setIndexWidget(book_model_.index(0, i + 2), cate_combo_box);
+        ui_->tableView_transactions->setIndexWidget(book_model_.index(0, i + 2), cate_combo_box);
         auto table_type = kAccountTypes.at(i);
         // Update <name_combo_box> when <category_combo_box> changed.
         connect(cate_combo_box, &QComboBox::currentTextChanged, [=](const QString& new_category_name){ accountCategoryChanged(table_type, new_category_name, name_combo_box); });
@@ -49,27 +49,20 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     // QLineEdit: Description Filter.
     description_ = new QLineEdit;
     description_->setPlaceholderText("Description Filter");
-    ui->tableView_transactions->setIndexWidget(book_model_.index(1, 1), description_);
+    ui_->tableView_transactions->setIndexWidget(book_model_.index(1, 1), description_);
     connect(description_, &QLineEdit::textEdited, this, &MainWindow::refreshTable);
 
     refreshTable();
 }
 
-MainWindow::~MainWindow() {
-    delete account_manager_;
-    delete financial_statement_;
-
-    delete ui;
-}
-
 void MainWindow::resizeEvent(QResizeEvent* event) {
-  resizeColumns();
-  QMainWindow::resizeEvent(event);
+    resizeColumns();
+    QMainWindow::resizeEvent(event);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-  QMainWindow::closeEvent(event);
-  // Do something on close here
+    QMainWindow::closeEvent(event);
+    // Do something on close here
 }
 
 void MainWindow::refreshTable() {
@@ -112,7 +105,7 @@ void MainWindow::setCategoryComboBox() {
 }
 
 void MainWindow::on_pushButton_MergeTransaction_clicked() {
-  QList<Transaction> selected_transactions = book_model_.getTransactions(ui->tableView_transactions->selectionModel()->selectedIndexes());
+    QList<Transaction> selected_transactions = book_model_.getTransactions(ui_->tableView_transactions->selectionModel()->selectedIndexes());
   if (selected_transactions.size() <= 1) {
     QMessageBox::warning(this, "Warning", "No transaction or only one transaction were selected.", QMessageBox::Ok);
     return;
@@ -143,20 +136,20 @@ void MainWindow::on_pushButton_MergeTransaction_clicked() {
 }
 
 void MainWindow::resizeColumns() {
-  int width = ui->tableView_transactions->width() - /*Tried it out, otherwise scroll bar still show up*/60;
-  ui->tableView_transactions->resizeColumnsToContents();
-  width -= ui->tableView_transactions->columnWidth(0); // Date & Time
+  int width = ui_->tableView_transactions->width() - /*Tried it out, otherwise scroll bar still show up*/60;
+  ui_->tableView_transactions->resizeColumnsToContents();
+  width -= ui_->tableView_transactions->columnWidth(0); // Date & Time
 
   QSet<int> columns = {1, 2, 3, 4, 5};  // Columns to be adjusted.
   // Work on column 1.
   if (!description_->text().isEmpty()) {
-    width -= ui->tableView_transactions->columnWidth(1);
+    width -= ui_->tableView_transactions->columnWidth(1);
     columns.remove(1);
   }
   // Work on column 2 to 5.
   for (int i = 0; i < name_combo_boxes_.size(); ++i) {
     if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
-      width -= ui->tableView_transactions->columnWidth(i + 2);
+      width -= ui_->tableView_transactions->columnWidth(i + 2);
       columns.remove(i + 2);
     }
   }
@@ -164,8 +157,8 @@ void MainWindow::resizeColumns() {
   while (true) {
     int original_size = columns.size();
     for (int col : columns) {
-      if (ui->tableView_transactions->columnWidth(col) < width / columns.size()) {
-        width -= ui->tableView_transactions->columnWidth(col);
+      if (ui_->tableView_transactions->columnWidth(col) < width / columns.size()) {
+          width -= ui_->tableView_transactions->columnWidth(col);
         columns.remove(col);
       }
     }
@@ -175,13 +168,13 @@ void MainWindow::resizeColumns() {
   }
   // Final adjustment.
   for (int col : columns) {
-    ui->tableView_transactions->setColumnWidth(col, width / columns.size());
+    ui_->tableView_transactions->setColumnWidth(col, width / columns.size());
   }
-  ui->tableView_transactions->resizeRowsToContents();
+  ui_->tableView_transactions->resizeRowsToContents();
 }
 
 void MainWindow::on_pushButtonDeleteTransactions_clicked() {
-  QList<Transaction> selected_transactions = book_model_.getTransactions(ui->tableView_transactions->selectionModel()->selectedIndexes());
+  QList<Transaction> selected_transactions = book_model_.getTransactions(ui_->tableView_transactions->selectionModel()->selectedIndexes());
   if (selected_transactions.empty()) {
     QMessageBox::warning(this, "Warning", "No transaction was selected.", QMessageBox::Ok);
     return;

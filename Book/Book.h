@@ -60,8 +60,9 @@ class BOOKSHARED_EXPORT Book {
 
     QDateTime start_time_;
     const int kUserId = 1;  // TODO: add a login system for a real user_id.
-    void logUsageTime();
 
+    void logUsageTime();
+    void reduceLoggingRows();
     bool Logging(const QSqlQuery& query) const; // Log all the modifier actions
 };
 

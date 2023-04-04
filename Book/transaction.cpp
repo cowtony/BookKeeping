@@ -89,15 +89,15 @@ QStringList Transaction::validate() const {
     return errorMessage;
 }
 
-QString Transaction::toString(Account::Type tableType) const {
-    QStringList retString;
-    for (const Account& account : getAccounts(tableType)) {
+QString Transaction::toString(Account::Type table_type) const {
+    QStringList result;
+    for (const Account& account : getAccounts(table_type)) {
         MoneyArray moneyArray = getMoneyArray(account);
         if (!moneyArray.isZero()) {
-            retString << "[" + account.category + "|" + account.name + ": " + moneyArray.toString() + "]";
+            result << QString("[%1|%2: %3]").arg(account.category, account.name, moneyArray.toString());
         }
     }
-    return retString.join("; ");
+    return result.join("\n");
 }
 
 QJsonObject Transaction::toJson() const {

@@ -36,7 +36,7 @@ QVariant BookModel::headerData(int section, Qt::Orientation orientation, int rol
 }
 
 int BookModel::rowCount(const QModelIndex& /* parent */) const {
-    return kReservedFilterRow + transactions_.size() + 1;
+    return kReservedFilterRow + transactions_.size() + /* sum_transaction */ 1;
 }
 
 int BookModel::columnCount(const QModelIndex& /* parent */) const {
@@ -73,17 +73,15 @@ QVariant BookModel::data(const QModelIndex &index, int role) const {
             if (index.row() < kReservedFilterRow) {
                 return QVariant();
             }
-            const Transaction& transaction =
-                index.row() - kReservedFilterRow == transactions_.size()
-                ? sum_transaction_
-                : transactions_.at(index.row() - kReservedFilterRow);
+            const Transaction& transaction = index.row() - kReservedFilterRow == transactions_.size()?
+                                             sum_transaction_ : transactions_.at(index.row() - kReservedFilterRow);
             switch (index.column()) {
                 case 0: return transaction.date_time.toString(kDateTimeFormat);
                 case 1: return transaction.description;
                 case 2: // Fall through
                 case 3: // Fall through
                 case 4: // Fall through
-                case 5: return transaction.toString(kAccountTypes.at(index.column() - 2)).replace("; ", "\n");
+                case 5: return transaction.toString(kAccountTypes.at(index.column() - 2));
             } break;
         } break;
         default:
@@ -129,24 +127,28 @@ QList<Transaction> BookModel::getTransactions(const QModelIndexList& index_list)
 //  return false;
 //}
 
-//bool BookModel::hasChildren(const QModelIndex &parent) const
-//{
+//bool BookModel::hasChildren(const QModelIndex &parent) const {
 //  // FIXME: Implement me!
 //}
 
-//bool BookModel::canFetchMore(const QModelIndex &parent) const
-//{
-//  // FIXME: Implement me!
-//  return false;
+//bool BookModel::canFetchMore(const QModelIndex& /* parent */) const {
+//    return row_count_ < kReservedFilterRow + transactions_.size() + /* sum_transaction */ 1;
 //}
 
-//void BookModel::fetchMore(const QModelIndex &parent)
-//{
-//  // FIXME: Implement me!
+//void BookModel::fetchMore(const QModelIndex& /* parent */) {
+//    const int remainder = int(kReservedFilterRow + transactions_.size() + 1) - row_count_;
+//    const int itemsToFetch = qMin(kBatchSize, remainder);
+//    if (itemsToFetch <= 0) {
+//        return;
+//    }
+//    beginInsertRows(QModelIndex(), row_count_, row_count_ + itemsToFetch - 1);
+//    row_count_ += itemsToFetch;
+//    endInsertRows();
+
+//    emit numberPopulated(path, start, itemsToFetch, int(fileList.size()));
 //}
 
-//bool BookModel::setData(const QModelIndex &index, const QVariant &value, int role)
-//{
+//bool BookModel::setData(const QModelIndex &index, const QVariant &value, int role) {
 //  if (data(index, role) != value) {
 //    // FIXME: Implement me!
 //    emit dataChanged(index, index, QVector<int>() << role);
@@ -155,8 +157,7 @@ QList<Transaction> BookModel::getTransactions(const QModelIndexList& index_list)
 //  return false;
 //}
 
-//Qt::ItemFlags BookModel::flags(const QModelIndex &index) const
-//{
+//Qt::ItemFlags BookModel::flags(const QModelIndex &index) const {
 //  if (!index.isValid())
 //    return Qt::NoItemFlags;
 
@@ -169,8 +170,7 @@ QList<Transaction> BookModel::getTransactions(const QModelIndexList& index_list)
 //  endInsertRows();
 //}
 
-//bool BookModel::insertColumns(int column, int count, const QModelIndex &parent)
-//{
+//bool BookModel::insertColumns(int column, int count, const QModelIndex &parent) {
 //  beginInsertColumns(parent, column, column + count - 1);
 //  // FIXME: Implement me!
 //  endInsertColumns();
@@ -182,8 +182,7 @@ QList<Transaction> BookModel::getTransactions(const QModelIndexList& index_list)
 //  endRemoveRows();
 //}
 
-//bool BookModel::removeColumns(int column, int count, const QModelIndex &parent)
-//{
+//bool BookModel::removeColumns(int column, int count, const QModelIndex &parent) {
 //  beginRemoveColumns(parent, column, column + count - 1);
 //  // FIXME: Implement me!
 //  endRemoveColumns();

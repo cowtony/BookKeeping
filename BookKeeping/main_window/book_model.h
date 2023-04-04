@@ -24,7 +24,6 @@ class BookModel : public QAbstractTableModel {
 
     // Fetch data dynamically:
 //    bool hasChildren(const QModelIndex &parent = QModelIndex()) const override;
-
 //    bool canFetchMore(const QModelIndex &parent) const override;
 //    void fetchMore(const QModelIndex &parent) override;
 
@@ -54,6 +53,7 @@ class BookModel : public QAbstractTableModel {
     const int kReservedFilterRow = 2;
     const std::vector<QString> kColumnNames = {"Date", "Description", "Expense", "Revenue", "Asset", "Liability"};
 
+    // Underlying data:
     QList<Transaction> transactions_;
     Transaction sum_transaction_;
 };

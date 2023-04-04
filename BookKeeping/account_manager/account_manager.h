@@ -15,8 +15,7 @@ class AccountManager;
 class AccountManager : public QMainWindow {
     Q_OBJECT
   public:
-    explicit AccountManager(Book& book, QWidget *parent = nullptr);
-    ~AccountManager() = default;
+    explicit AccountManager(QWidget *parent);
 
   private slots:
     void onCurrentItemChanged(const QModelIndex& current, const QModelIndex& previous);
@@ -28,7 +27,7 @@ class AccountManager : public QMainWindow {
   signals:
 
   private:
-    std::shared_ptr<Ui::AccountManager> ui_;
+    QSharedPointer<Ui::AccountManager> ui_;
     Book& book_;
 //    TreeWidget* tree_widget_;
     std::unique_ptr<QTreeView> tree_view_;

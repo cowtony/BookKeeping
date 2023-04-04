@@ -33,7 +33,7 @@ class BOOKSHARED_EXPORT Transaction {
     bool accountExist(const Account& account) const;
     Money getCheckSum() const;
     QStringList validate() const;  // Return error message
-    QString toString(Account::Type p_tableType) const;
+    QString toString(Account::Type table_type) const;
     QJsonObject toJson() const;
 
     QList<Account> getAccounts() const;

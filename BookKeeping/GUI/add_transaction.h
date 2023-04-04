@@ -6,8 +6,6 @@
 #include <QTableWidgetItem>
 #include <QPushButton>
 
-#include <vector>
-
 #include "Book.h"
 
 namespace Ui {
@@ -19,7 +17,6 @@ class AddTransaction : public QMainWindow {
 
   public:
     explicit AddTransaction(QWidget *parent);
-    ~AddTransaction();
 
     void initialization();
     void setTransaction(const Transaction &t);
@@ -43,8 +40,9 @@ class AddTransaction : public QMainWindow {
 
     Transaction getTransaction();
 
-    Ui::AddTransaction *ui;
+    QSharedPointer<Ui::AddTransaction> ui_;
     Book& book_;
+
     QMap<Account::Type, QTableWidget*> tableMap;
     QDateTime replacedDateTime;
 };

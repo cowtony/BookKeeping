@@ -101,7 +101,7 @@ double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_sy
     // "af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
     QUrl url(QString("http://data.fixer.io/api/%1?access_key=%2&symbols=%3").arg(date.toString("yyyy-MM-dd"), "af07896d862782074e282611f63bc64b", kCurrencyToCode.values().join(',')));
     //             "&base=EUR"    // This is for paid user only.
-    qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
+    qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
     web_ctrl_.get(QNetworkRequest(url));
   }
   return result;
@@ -128,8 +128,15 @@ void Currency::onNetworkReply(QNetworkReply* reply) {
     QJsonObject jsonRates = jsonObject.value("rates").toObject();
 
     QSqlQuery query(database_);
-    query.prepare(QString(R"sql(INSERT OR REPLACE INTO currency_currency ("Date", %1) VALUES (:d, :%2))sql").arg(kCurrencyToCode.values().join(", "), kCurrencyToCode.values().join(", :").toLower()));
-    query.bindValue(":d", dateTime.date().toString("yyyy-MM-dd"));
+//    query.prepare(QString(R"sql(INSERT OR REPLACE INTO currency_currency ("Date", %1) VALUES (:d, :%2))sql").arg(kCurrencyToCode.values().join(", "), kCurrencyToCode.values().join(", :").toLower()));
+    query.prepare(R"sql(INSERT INTO currency_currency ("Date", "EUR", "USD", "CNY", "GBP")
+                        VALUES (:d, :eur, :usd, :cny, :gbp)
+                        ON CONFLICT ("Date") DO UPDATE SET
+                            "EUR" = excluded."EUR",
+                            "USD" = excluded."USD",
+                            "CNY" = excluded."CNY",
+                            "GBP" = excluded."GBP";)sql");
+    query.bindValue(":d", dateTime.date());
     qDebug() << query.lastQuery();
     for (const QString& symbol: kCurrencyToCode) {
         query.bindValue(":" + symbol.toLower(), jsonRates.value(symbol).toDouble());

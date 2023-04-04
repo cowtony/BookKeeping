@@ -32,10 +32,10 @@ class BOOKSHARED_EXPORT Money {
     Money round() const;
 
     Currency::Type currency() const;
-    Money& changeCurrency(Currency::Type currency_e);
+    Money& changeCurrency(Currency::Type currency_type);
 
   protected:
-    Currency::Type currency_; // Making this private because change this value will cause m_amounts change as well.
+    Currency::Type currency_type_; // Making this private because change this value will cause m_amounts change as well.
 
   private:
     double getRoundedAmount() const;
@@ -55,7 +55,7 @@ class BOOKSHARED_EXPORT MoneyArray : public Money {
     void push_back(Money money);
     QString toString() const;
 
-    void changeCurrency(Currency::Type currency_e);
+    void changeCurrency(Currency::Type currency_type);
 
     MoneyArray operator -() const;
     MoneyArray operator  +(const MoneyArray& moneyArray) const;

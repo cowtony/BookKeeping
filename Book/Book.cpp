@@ -33,6 +33,8 @@ Book::Book(const QString& dbPath) {
     QSqlQuery("PRAGMA case_sensitive_like = false", database_);
     start_time_ = QDateTime::currentDateTime();
 
+    reduceLoggingRows();
+
     // Some schema migration work can be done here.
     if (false) {
         QList<Transaction> transactions;
@@ -614,54 +616,56 @@ QDateTime Book::getLastTransactionDateTime() const
 }
 
 void Book::logUsageTime() {
-  QSqlQuery query(database_);
-  query.prepare(R"sql(SELECT * FROM [Log Time] WHERE Date = :d)sql");
-  query.bindValue(":d", start_time_.date().toString("yyyy-MM-dd"));
-  query.exec();
-  int64_t seconds = 0;
-  if (query.next()) {
-    seconds = query.value("Seconds").toInt();
-  }
-  seconds += start_time_.secsTo(QDateTime::currentDateTime());
-  query.prepare(R"sql(INSERT OR REPLACE INTO [Log Time] (Date, Seconds) VALUES (:d, :s))sql");
-  query.bindValue(":d", start_time_.date().toString("yyyy-MM-dd"));
-  query.bindValue(":s", seconds);
-  query.exec();
+    QSqlQuery query(database_);
+    query.prepare(R"sql(SELECT * FROM [Log Time] WHERE Date = :d)sql");
+    query.bindValue(":d", start_time_.date().toString("yyyy-MM-dd"));
+    query.exec();
+    int64_t seconds = 0;
+    if (query.next()) {
+        seconds = query.value("Seconds").toInt();
+    }
+    seconds += start_time_.secsTo(QDateTime::currentDateTime());
+    query.prepare(R"sql(INSERT OR REPLACE INTO [Log Time] (Date, Seconds) VALUES (:d, :s))sql");
+    query.bindValue(":d", start_time_.date().toString("yyyy-MM-dd"));
+    query.bindValue(":s", seconds);
+    query.exec();
+}
+
+void Book::reduceLoggingRows() {
+    QSqlQuery query(database_);
+    query.prepare(R"sql(DELETE FROM [Log] WHERE Time NOT IN (
+                            SELECT Time FROM [Log] ORDER BY Time DESC LIMIT 100
+                        ) )sql");
+    query.exec();
 }
 
 bool Book::Logging(const QSqlQuery& query_log) const {
-  QSqlQuery query(database_);
-  query.prepare(R"sql(INSERT INTO [Log] (Time, Query) VALUES (:t, :q))sql");
-  query.bindValue(":t", QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
-  query.bindValue(":q", getLastExecutedQuery(query_log));
-  if (!query.exec()) {
-    return false;
-  }
+    QSqlQuery query(database_);
+    query.prepare(R"sql(INSERT INTO [Log] (Time, Query) VALUES (:t, :q))sql");
+    query.bindValue(":t", QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
+    query.bindValue(":q", getLastExecutedQuery(query_log));
+    if (!query.exec()) {
+        return false;
+    }
 
-  // TODO: make this remove excessive log featuer working right.
-  query.prepare(R"sql(DELETE FROM [Log] WHERE Time NOT IN (SELECT TOP 2 Time FROM [Log]))sql");
-  if (!query.exec()) {
-    qDebug() << Q_FUNC_INFO << query.lastError();
-    return false;
-  }
-  return true;
+    // TODO: make this remove excessive log featuer working right.
+    query.prepare(R"sql(DELETE FROM [Log] WHERE Time NOT IN (SELECT TOP 2 Time FROM [Log]))sql");
+    if (!query.exec()) {
+        qDebug() << Q_FUNC_INFO << query.lastError();
+        return false;
+    }
+    return true;
 }
 
 QString Book::getLastExecutedQuery(const QSqlQuery& query) {
-  QString str = query.lastQuery();
-
-  QVariantList bound_values(query.boundValues());
-  qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << bound_values.back().toString();
-  // TODO: Fix the following section.
-  /*
-  QMapIterator<QString, QVariant> it(query.boundValues());
-
-  it.toBack();
-
-  while (it.hasPrevious()) {
-    it.previous();
-    str.replace(it.key(), it.value().toString());
-  }
-  */
-  return str;
+    QString result = query.lastQuery();
+    QVariantList values = query.boundValues();
+    int idx = -1;
+    for(auto it = values.rbegin(); it != values.rend(); ++it) {
+        QRegularExpressionMatch match;
+        idx = result.lastIndexOf(QRegularExpression(R"regex(:\w+)regex"), idx, &match);
+        result.replace(idx, match.captured().length(), it->toString());
+//        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << result;
+    }
+    return result;
 }

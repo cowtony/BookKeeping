@@ -13,8 +13,7 @@ class FinancialStatement : public QMainWindow {
   Q_OBJECT
 
 public:
-  explicit FinancialStatement(Book& book, QWidget *parent = nullptr);
-  ~FinancialStatement();
+  explicit FinancialStatement(QWidget *parent);
 
 public slots:
   void on_pushButton_Query_clicked();
@@ -34,7 +33,7 @@ private slots:
   void on_pushButton_clicked();
 
 private:
-  Ui::FinancialStatement *ui;
+  QSharedPointer<Ui::FinancialStatement> ui_;
   Book& book_;
 
   void setMoney(QTreeWidgetItem* item, int column, const Money& money);

@@ -8,8 +8,10 @@
 #include "main_window.h"
 #include "book.h"
 
-AccountManager::AccountManager(Book& book, QWidget* parent)
-    : QMainWindow(parent), ui_(new Ui::AccountManager), book_(book), account_model_(book) {
+AccountManager::AccountManager(QWidget* parent)
+    : QMainWindow(parent), ui_(new Ui::AccountManager),
+    book_(static_cast<MainWindow*>(parent)->book_),
+    account_model_(static_cast<MainWindow*>(parent)->book_) {
     ui_->setupUi(this);
 
 //    tree_widget_ = new TreeWidget(book_);

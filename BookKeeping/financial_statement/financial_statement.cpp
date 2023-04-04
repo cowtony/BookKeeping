@@ -4,47 +4,43 @@
 #include <QtMath>
 #include <QClipboard>
 
+#include "main_window.h"
 #include "bar_chart.h"
 
 QFont FinancialStatement::m_financialStatementFont = QFont("Times New Roman", 14, 1, false);
 QFont FinancialStatement::m_tableSumFont = QFont("Times New Roman", 12, 1, false);
 QFont FinancialStatement::m_categorySumFont;
 
-FinancialStatement::FinancialStatement(Book& book, QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::FinancialStatement), book_(book) {
-  ui->setupUi(this);
+FinancialStatement::FinancialStatement(QWidget *parent): QMainWindow(parent), ui_(new Ui::FinancialStatement), book_(static_cast<MainWindow*>(parent)->book_) {
+    ui_->setupUi(this);
 
-  ui->dateTimeEdit->setDateTime(QDateTime::currentDateTime());
+    ui_->dateTimeEdit->setDateTime(QDateTime::currentDateTime());
 
-  m_viewSelection = -1;
-  ui->radioButton_all->setChecked(true);
+    m_viewSelection = -1;
+    ui_->radioButton_all->setChecked(true);
 
-  m_financialStatementFont.setBold(true);
-  m_financialStatementFont.setUnderline(true);
-  m_tableSumFont.setBold(true);
-  m_tableSumFont.setUnderline(true);
-  m_categorySumFont.setBold(true);
-}
-
-FinancialStatement::~FinancialStatement() {
-  delete ui;
+    m_financialStatementFont.setBold(true);
+    m_financialStatementFont.setUnderline(true);
+    m_tableSumFont.setBold(true);
+    m_tableSumFont.setUnderline(true);
+    m_categorySumFont.setBold(true);
 }
 
 void FinancialStatement::on_pushButton_Query_clicked() {
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-  m_records = book_.getSummaryByMonth(ui->dateTimeEdit->dateTime());
-  QApplication::restoreOverrideCursor();
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    m_records = book_.getSummaryByMonth(ui_->dateTimeEdit->dateTime());
+    QApplication::restoreOverrideCursor();
 
-  display();
+    display();
 }
 
 void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money& money) {
-  if (item == nullptr) {
-    return;
-  }
+    if (item == nullptr) {
+        return;
+    }
 
   // Get the last date of the month.
-  QDate date = QDate::fromString(ui->treeWidget->headerItem()->text(column), "yyyy-MM");
+  QDate date = QDate::fromString(ui_->treeWidget->headerItem()->text(column), "yyyy-MM");
   date = date.addMonths(1);
   date = date.addDays(-1);
   const Money difference = money - Money(date, item->text(column));
@@ -96,27 +92,27 @@ void FinancialStatement::setFont(int column, QTreeWidgetItem* item, int depth) {
 }
 
 void FinancialStatement::display() {
-  ui->treeWidget->clear();
-  ui->treeWidget->header()->setDefaultAlignment(Qt::AlignCenter);
-  ui->treeWidget->setColumnCount(1);
-  ui->treeWidget->setHeaderLabels({"Name"});
+  ui_->treeWidget->clear();
+  ui_->treeWidget->header()->setDefaultAlignment(Qt::AlignCenter);
+  ui_->treeWidget->setColumnCount(1);
+  ui_->treeWidget->setHeaderLabels({"Name"});
 
   on_pushButtonShowMore_clicked();  // Show the most recent month only.
-  ui->treeWidget->expandToDepth(1);
+  ui_->treeWidget->expandToDepth(1);
 }
 
 QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool create) {
   // Find or create same financial statement item:
   QTreeWidgetItem *statementItem = nullptr;
-  for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
-    if (ui->treeWidget->topLevelItem(i)->text(0) == account.getFinancialStatementName()) {
-      statementItem = ui->treeWidget->topLevelItem(i);
+  for (int i = 0; i < ui_->treeWidget->topLevelItemCount(); i++) {
+    if (ui_->treeWidget->topLevelItem(i)->text(0) == account.getFinancialStatementName()) {
+      statementItem = ui_->treeWidget->topLevelItem(i);
       break;
     }
   }
   if (statementItem == nullptr) {
     if (create) {
-      statementItem = new QTreeWidgetItem(ui->treeWidget, {account.getFinancialStatementName()});
+      statementItem = new QTreeWidgetItem(ui_->treeWidget, {account.getFinancialStatementName()});
       statementItem->setFont(0, m_financialStatementFont);
     } else {
       return nullptr;
@@ -177,14 +173,14 @@ QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool
 }
 
 void FinancialStatement::on_treeWidget_itemCollapsed(QTreeWidgetItem* /* item */) {
-  for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
-    ui->treeWidget->resizeColumnToContents(i);
+  for (int i = 0; i < ui_->treeWidget->columnCount(); i++) {
+    ui_->treeWidget->resizeColumnToContents(i);
   }
 }
 
 void FinancialStatement::on_treeWidget_itemExpanded(QTreeWidgetItem* /* item */) {
-  for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
-    ui->treeWidget->resizeColumnToContents(i);
+  for (int i = 0; i < ui_->treeWidget->columnCount(); i++) {
+    ui_->treeWidget->resizeColumnToContents(i);
   }
 }
 
@@ -215,11 +211,11 @@ void FinancialStatement::on_pushButtonExport_clicked()
     QStringList cells;
     for (int i = 0; i <= m_records.size(); i++)
     {
-        cells << ui->treeWidget->headerItem()->text(i);
+    cells << ui_->treeWidget->headerItem()->text(i);
     }
     rows << cells.join('\t');
 
-    for (QTreeWidgetItem *item : ui->treeWidget->findItems("", Qt::MatchContains | Qt::MatchRecursive, 0))
+    for (QTreeWidgetItem *item : ui_->treeWidget->findItems("", Qt::MatchContains | Qt::MatchRecursive, 0))
     {
         QStringList cells;
 
@@ -260,8 +256,8 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem* item, int /*
 
     QStringList xAxis;
     QList<qreal> sum;
-    for (int col = 1; col < ui->treeWidget->columnCount(); col++) {
-      xAxis.push_front(ui->treeWidget->headerItem()->text(col));
+    for (int col = 1; col < ui_->treeWidget->columnCount(); col++) {
+            xAxis.push_front(ui_->treeWidget->headerItem()->text(col));
       sum.push_front(Money(QDate(), item->text(col)).amount_);
     }
     barChart->setAxisX(xAxis);
@@ -317,13 +313,13 @@ void FinancialStatement::on_treeWidget_itemClicked(QTreeWidgetItem* item, int /*
 }
 
 void FinancialStatement::on_pushButtonShowMore_clicked() {
-  int index = ui->treeWidget->columnCount() - 1;
+  int index = ui_->treeWidget->columnCount() - 1;
   if (index >= m_records.size()) {
     return;
   }
 
-  ui->treeWidget->setColumnCount(index + 2);
-  ui->treeWidget->headerItem()->setText(index + 1, m_records.at(index).description);
+  ui_->treeWidget->setColumnCount(index + 2);
+  ui_->treeWidget->headerItem()->setText(index + 1, m_records.at(index).description);
 
   for (const Account& account : m_records.at(index).getAccounts()) {
     MoneyArray moneyArray = m_records.at(index).getMoneyArray(account);
@@ -336,13 +332,13 @@ void FinancialStatement::on_pushButtonShowMore_clicked() {
   }
 
   // Must setFont after getAccountItem() because some item may not be created before that.
-  setFont(index + 1, ui->treeWidget->invisibleRootItem());
+  setFont(index + 1, ui_->treeWidget->invisibleRootItem());
 
-  ui->treeWidget->resizeColumnToContents(index + 1);
+  ui_->treeWidget->resizeColumnToContents(index + 1);
 }
 
 void FinancialStatement::on_pushButton_clicked() {
-  while (ui->treeWidget->columnCount() <= m_records.size()) {
+  while (ui_->treeWidget->columnCount() <= m_records.size()) {
     on_pushButtonShowMore_clicked();
   }
 }

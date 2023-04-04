@@ -7,6 +7,7 @@
 #include "account_manager.h"
 #include "book_model.h"
 #include "financial_statement.h"
+#include "currency.h"
 
 namespace Ui {
 class MainWindow;
@@ -17,9 +18,6 @@ class MainWindow : public QMainWindow {
 
   public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
-
-    Book book_;  // TODO: consider using friend class then put `book_` to private?
 
   public slots:
     void refreshTable();  // Show all filtered transactions.
@@ -45,11 +43,12 @@ class MainWindow : public QMainWindow {
   private:
     void resizeColumns();
 
-    Ui::MainWindow *ui;
+    QSharedPointer<Ui::MainWindow> ui_;
 
-    AccountManager     *account_manager_;
-    FinancialStatement *financial_statement_;
+    QSharedPointer<AccountManager>     account_manager_;
+    QSharedPointer<FinancialStatement> financial_statement_;
 
+    Book book_;
     BookModel book_model_;
 
     // Filter components:
@@ -58,6 +57,11 @@ class MainWindow : public QMainWindow {
     QLineEdit* description_;
     QVector<QComboBox*> category_combo_boxes_;
     QVector<QComboBox*> name_combo_boxes_;
+
+    // To be able to reference `book_`.
+    friend class AccountManager;
+    friend class AddTransaction;
+    friend class FinancialStatement;
 };
 
 #endif // MAIN_WINDOW_H
