@@ -1,17 +1,11 @@
 #ifndef MONEY_H
 #define MONEY_H
 
-#if defined(BOOK_LIBRARY)
-#  define BOOKSHARED_EXPORT __declspec(dllexport)
-#else
-#  define BOOKSHARED_EXPORT __declspec(dllimport)
-#endif
-
-#include "currency.h"
+#include "currency/currency.h"
 
 const int PERSON_COUNT = 2;
 
-class BOOKSHARED_EXPORT Money {
+class Money {
   public:
     explicit Money(const QDate& date, Currency::Type currency = Currency::USD, double amount = 0.00);
     explicit Money(const QDate& date, QString money_str, Currency::Type currency = Currency::USD);  // Valid Input: 123.5 -123.5 (123.5) USD123.50 $123.50 -USD123.50 -$123.50 ($123.50)
@@ -41,7 +35,7 @@ class BOOKSHARED_EXPORT Money {
     double getRoundedAmount() const;
 };
 
-class BOOKSHARED_EXPORT MoneyArray : public Money {
+class MoneyArray : public Money {
   public:
     explicit MoneyArray(const QDate& date = QDate(1990, 05, 25), Currency::Type currency = Currency::USD);
     explicit MoneyArray(const QDate& date, const QString& p_money_s);

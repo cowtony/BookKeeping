@@ -1,16 +1,10 @@
 #ifndef ACCOUNT_H
 #define ACCOUNT_H
 
-#if defined(BOOK_LIBRARY)
-#  define BOOKSHARED_EXPORT __declspec(dllexport)
-#else
-#  define BOOKSHARED_EXPORT __declspec(dllimport)
-#endif
-
 #include <QString>
 #include <QMap>
 
-struct BOOKSHARED_EXPORT Account {
+struct Account {
     typedef enum {Asset, Liability, Revenue, Expense, Equity} Type;
     static const QMap<Type, QString> kTableName;
 
@@ -33,7 +27,7 @@ struct BOOKSHARED_EXPORT Account {
     // int id_;  // Primary key in database, not used.
 };
 
-struct BOOKSHARED_EXPORT AssetAccount : public Account {
+struct AssetAccount : public Account {
     AssetAccount(Account account) : Account(account.type, account.category, account.name, account.comment), is_investment(false) {}
 
     explicit AssetAccount(Type account_type, const QString& category, const QString& name, const QString& comment = "", bool is_investment = false)
@@ -42,6 +36,6 @@ struct BOOKSHARED_EXPORT AssetAccount : public Account {
     bool is_investment;
 };
 
-BOOKSHARED_EXPORT std::shared_ptr<Account> FactoryCreateAccount(Account::Type account_type, const QString& category, const QString& name, const QString& comment = "");
+std::shared_ptr<Account> FactoryCreateAccount(Account::Type account_type, const QString& category, const QString& name, const QString& comment = "");
 
 #endif // ACCOUNT_H

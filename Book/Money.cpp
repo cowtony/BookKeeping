@@ -1,7 +1,7 @@
 #include "money.h"
 #include <QtMath>
 #include <QLocale>
-#include "currency.h"
+#include "currency/currency.h"
 
 /****************** Money ****************************/
 Money::Money(const QDate& date, Currency::Type currency, double amount)

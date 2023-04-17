@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>currency/CreateDbCurrency.sql</file>
+        <file>icons/AddTransaction.png</file>
+        <file>icons/App_Icon.ico</file>
+        <file>icons/Balance_Sheet.png</file>
+        <file>icons/Investment_Analysis.png</file>
+        <file>icons/Transactions.png</file>
+        <file>book/CreateDbBook.sql</file>
+    </qresource>
+</RCC>

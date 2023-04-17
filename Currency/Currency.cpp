@@ -1,4 +1,4 @@
-#include "currency.h"
+#include "currency/currency.h"
 #include <QFile>
 #include <QDebug>
 #include <QUrl>
@@ -44,8 +44,8 @@ bool Currency::openDatabase() {
         }
     } else {  // Create new DB from script.
         database_.setDatabaseName("Currency.db");
-        Q_INIT_RESOURCE(Currency);
-        QFile DDL(":/CreateDbCurrency.sql");
+        //        Q_INIT_RESOURCE(Currency);
+        QFile DDL(":/currency/CreateDbCurrency.sql");
         if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QString statement;
             while (!DDL.atEnd()) {
@@ -74,37 +74,37 @@ void Currency::closeDatabase() {
 }
 
 double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_symbol) {
-  if (from_symbol == to_symbol) {
-    return 1.0;
-  }
-
-  QSqlQuery query(database_);
-  query.prepare(R"sql(SELECT * FROM currency_currency WHERE "Date" <= :d ORDER BY "Date" DESC LIMIT 1)sql");
-  query.bindValue(":d", date);
-  if (!query.exec()) {
-    qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
-  }
-  double result = 0.0 / 0.0;  // NaN.
-  if (query.next()) {
-    // Get the most recent exchange rate.
-    result = query.value(kCurrencyToCode.value(to_symbol)).toDouble() / query.value(kCurrencyToCode.value(from_symbol)).toDouble();
-    if (query.value("Date").toDate() == date) {
-      return result;
+    if (from_symbol == to_symbol) {
+        return 1.0;
     }
-  }
-  qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date;
-  if (!requested_date_.contains(date) and date < QDate::currentDate()) {
-    requested_date_.insert(date);
-    // access_key:
-    // "077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
-    // "b6ec9d9dd5efa56c094fc370fd68fbc8"  // cowtony@163.com        19900525
-    // "af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
-    QUrl url(QString("http://data.fixer.io/api/%1?access_key=%2&symbols=%3").arg(date.toString("yyyy-MM-dd"), "af07896d862782074e282611f63bc64b", kCurrencyToCode.values().join(',')));
-    //             "&base=EUR"    // This is for paid user only.
-    qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
-    web_ctrl_.get(QNetworkRequest(url));
-  }
-  return result;
+
+    QSqlQuery query(database_);
+    query.prepare(R"sql(SELECT * FROM currency_currency WHERE "Date" <= :d ORDER BY "Date" DESC LIMIT 1)sql");
+    query.bindValue(":d", date);
+    if (!query.exec()) {
+        qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+    }
+    double result = 0.0 / 0.0;  // NaN.
+    if (query.next()) {
+        // Get the most recent exchange rate.
+        result = query.value(kCurrencyToCode.value(to_symbol)).toDouble() / query.value(kCurrencyToCode.value(from_symbol)).toDouble();
+        if (query.value("Date").toDate() == date) {
+            return result;
+        }
+    }
+    qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date;
+    if (!requested_date_.contains(date) and date < QDate::currentDate()) {
+        requested_date_.insert(date);
+        // access_key:
+        // "077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
+        // "b6ec9d9dd5efa56c094fc370fd68fbc8"  // cowtony@163.com        19900525
+        // "af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
+        QUrl url(QString("http://data.fixer.io/api/%1?access_key=%2&symbols=%3").arg(date.toString("yyyy-MM-dd"), "b6ec9d9dd5efa56c094fc370fd68fbc8", kCurrencyToCode.values().join(',')));
+        //             "&base=EUR"    // This is for paid user only.
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
+        web_ctrl_.get(QNetworkRequest(url));
+    }
+    return result;
 }
 
 void Currency::removeInvalidCurrency() {

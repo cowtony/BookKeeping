@@ -1,12 +1,6 @@
 #ifndef TRANSACTION_H
 #define TRANSACTION_H
 
-#if defined(BOOK_LIBRARY)
-#  define BOOKSHARED_EXPORT __declspec(dllexport)
-#else
-#  define BOOKSHARED_EXPORT __declspec(dllimport)
-#endif
-
 #include <QDateTime>
 #include <QMap>
 
@@ -15,7 +9,7 @@
 
 constexpr const char* kDateTimeFormat = "yyyy-MM-dd HH:mm";
 
-class BOOKSHARED_EXPORT Transaction {
+class Transaction {
   public:
     explicit Transaction(const QDateTime& date_time = QDateTime(), const QString& description = "");
 
@@ -54,7 +48,7 @@ class BOOKSHARED_EXPORT Transaction {
     QMap<Account::Type, QMap<QString, QMap<QString, MoneyArray>>> data_;
 };
 
-struct BOOKSHARED_EXPORT TransactionFilter : public Transaction {
+struct TransactionFilter : public Transaction {
     TransactionFilter(const QList<Account>& accounts = {});
 
     TransactionFilter& addAccount(const Account& account);
@@ -74,7 +68,7 @@ struct BOOKSHARED_EXPORT TransactionFilter : public Transaction {
 };
 
 // TODO: merge this into Transaction
-class BOOKSHARED_EXPORT FinancialStat : public Transaction {
+class FinancialStat : public Transaction {
   public:
     explicit FinancialStat();
 

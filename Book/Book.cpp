@@ -12,8 +12,8 @@ Book::Book(const QString& dbPath) {
     } else {
         database_ = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
         database_.setDatabaseName(dbPath);
-        Q_INIT_RESOURCE(Book);
-        QFile DDL(":/CreateDbBook.sql");
+//        Q_INIT_RESOURCE(Book);
+        QFile DDL(":/book/CreateDbBook.sql");
         if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QString statement;
             while (!DDL.atEnd()) {

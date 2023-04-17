@@ -1,19 +1,13 @@
 #ifndef CURRENCY_H
 #define CURRENCY_H
 
-#if defined(CURRENCY_LIBRARY)
-#  define CURRENCYSHARED_EXPORT __declspec(dllexport)
-#else
-#  define CURRENCYSHARED_EXPORT __declspec(dllimport)
-#endif
-
 #include <QtSql>
 #include <QObject>
 #include <QNetworkReply>
 
 // TODO: Software will corrupt if Currency.db does not exist.
 
-class CURRENCYSHARED_EXPORT Currency : public QObject {
+class Currency : public QObject {
     Q_OBJECT
   public:
     Currency(QObject *parent = nullptr);
@@ -38,6 +32,6 @@ class CURRENCYSHARED_EXPORT Currency : public QObject {
     void removeInvalidCurrency();
 };
 
-CURRENCYSHARED_EXPORT extern Currency g_currency;
+extern Currency g_currency;
 
 #endif // CURRENCY_H

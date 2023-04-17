@@ -1,17 +1,11 @@
 #ifndef BOOK_H
 #define BOOK_H
 
-#if defined(BOOK_LIBRARY)
-#  define BOOKSHARED_EXPORT __declspec(dllexport)
-#else
-#  define BOOKSHARED_EXPORT __declspec(dllimport)
-#endif
-
 #include <QtSql>
 #include "transaction.h"
 #include "account.h"
 
-class BOOKSHARED_EXPORT Book {
+class Book {
   public:
     // The constructor will create a instance with opened database.
     explicit Book(const QString& dbPath);
@@ -65,7 +59,5 @@ class BOOKSHARED_EXPORT Book {
     void reduceLoggingRows();
     bool Logging(const QSqlQuery& query) const; // Log all the modifier actions
 };
-
-//BOOKSHARED_EXPORT extern Book g_book;
 
 #endif // BOOK_H

@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>692</width>
+    <height>446</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Book Keeping</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0" colspan="2">
+     <widget class="QTableView" name="tableView_transactions">
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>9</pointsize>
+       </font>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QPushButton" name="pushButton_MergeTransaction">
+      <property name="text">
+       <string>Merge Transaction</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QPushButton" name="pushButtonDeleteTransactions">
+      <property name="text">
+       <string>Delete Transactions</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>692</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
+   <widget class="QMenu" name="menuFunctions">
+    <property name="title">
+     <string>Functions</string>
+    </property>
+    <addaction name="actionAddTransaction"/>
+    <addaction name="actionAccountManager"/>
+    <addaction name="actionFinancialStatement"/>
+    <addaction name="actionInvestmentAnalysis"/>
+    <addaction name="actionTransactionValidation"/>
+    <addaction name="actionHouseholdManager"/>
+   </widget>
+   <addaction name="menuFunctions"/>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionAddTransaction"/>
+   <addaction name="actionAccountManager"/>
+   <addaction name="actionFinancialStatement"/>
+   <addaction name="actionInvestmentAnalysis"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionAddTransaction">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/icons/AddTransaction.png</normaloff>:/icons/AddTransaction.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add Transaction</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionAccountManager">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/icons/Transactions.png</normaloff>:/icons/Transactions.png</iconset>
+   </property>
+   <property name="text">
+    <string>Account Editor</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionInvestmentAnalysis">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/icons/Investment_Analysis.png</normaloff>:/icons/Investment_Analysis.png</iconset>
+   </property>
+   <property name="text">
+    <string>Investment Analysis</string>
+   </property>
+   <property name="toolTip">
+    <string>Investment Analysis</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionFinancialStatement">
+   <property name="icon">
+    <iconset resource="../resources.qrc">
+     <normaloff>:/icons/Balance_Sheet.png</normaloff>:/icons/Balance_Sheet.png</iconset>
+   </property>
+   <property name="text">
+    <string>Financial Statement</string>
+   </property>
+   <property name="toolTip">
+    <string>Financial Statement</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionTransactionValidation">
+   <property name="text">
+    <string>Transaction Validation</string>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>8</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionHouseholdManager">
+   <property name="text">
+    <string>Household Manager</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
