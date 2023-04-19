@@ -19,21 +19,20 @@ class FinancialStatement : public QMainWindow {
     void on_pushButton_Query_clicked();
 
   private slots:
-    void on_treeWidget_itemCollapsed(QTreeWidgetItem *item);
-    void on_treeWidget_itemExpanded(QTreeWidgetItem *item);
+    void onTreeWidgetItemCollapsed(QTreeWidgetItem *item);
+    void onTreeWidgetItemExpanded(QTreeWidgetItem *item);
+    void onTreeWidgetItemClicked(QTreeWidgetItem *item, int column);
     void on_radioButton_all_clicked();
     void on_radioButton_1_clicked();
     void on_radioButton_2_clicked();
     void on_radioButton_3_clicked();
-    void on_pushButtonExport_clicked();
-    void on_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
-
-    void on_pushButtonShowMore_clicked();
-
-    void on_pushButton_clicked();
+    void onPushButtonExportClicked();
+    void onPushButtonShowMoreClicked();
+    void onPushButtonShowAllClicked();
 
   private:
-    QSharedPointer<Ui::FinancialStatement> ui_;
+    Ui::FinancialStatement* ui;
+
     Book& book_;
 
     void setMoney(QTreeWidgetItem* item, int column, const Money& money);

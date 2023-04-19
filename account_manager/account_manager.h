@@ -16,6 +16,7 @@ class AccountManager : public QMainWindow {
     Q_OBJECT
   public:
     explicit AccountManager(QWidget *parent);
+    ~AccountManager();
 
   private slots:
     void onCurrentItemChanged(const QModelIndex& current, const QModelIndex& previous);
@@ -27,29 +28,9 @@ class AccountManager : public QMainWindow {
   signals:
 
   private:
-    QSharedPointer<Ui::AccountManager> ui_;
+    Ui::AccountManager* ui;
     Book& book_;
-//    TreeWidget* tree_widget_;
-    std::unique_ptr<QTreeView> tree_view_;
     AccountsModel account_model_;
 };
-
-/* This was deprecated code, replaced with ModelView.
- *
-class TreeWidget : public QTreeWidget {
-  Q_OBJECT
-public:
-  explicit TreeWidget(Book& book, QWidget *parent = nullptr);
-
-protected:
-  virtual void startDrag(Qt::DropActions actions) override;
-  virtual void dragEnterEvent(QDragEnterEvent *event) override;
-  virtual void dropEvent(QDropEvent *event) override;
-
-private:
-  QStringList drag_from_;
-  Book& book_;
-};
-*/
 
 #endif // ACCOUNT_MANAGER_H

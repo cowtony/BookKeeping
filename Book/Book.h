@@ -14,6 +14,7 @@ class Book {
     Book (const Book&) = delete;            // Book object is not copiable.
     Book& operator=(const Book&) = delete;  // Book object is not assignable.
 
+    QSqlDatabase db;
     void closeDatabase();
 
     // Transactions
@@ -50,8 +51,6 @@ class Book {
     static QString getLastExecutedQuery(const QSqlQuery& query);
 
   private:
-    QSqlDatabase database_;
-
     QDateTime start_time_;
     const int kUserId = 1;  // TODO: add a login system for a real user_id.
 

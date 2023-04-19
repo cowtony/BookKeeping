@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../resources.qrc">
-    <normaloff>:/resource/Balance_Sheet.png</normaloff>:/resource/Balance_Sheet.png</iconset>
+    <normaloff>:/icons/Balance_Sheet.png</normaloff>:/icons/Balance_Sheet.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -126,7 +126,7 @@
      </widget>
     </item>
     <item row="2" column="2">
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="pushButtonShowAll">
       <property name="text">
        <string>Show All</string>
       </property>
@@ -140,7 +140,7 @@
      <x>0</x>
      <y>0</y>
      <width>427</width>
-     <height>21</height>
+     <height>17</height>
     </rect>
    </property>
   </widget>

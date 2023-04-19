@@ -27,8 +27,7 @@ RC_ICONS = icons/App_Icon.ico
 
 INCLUDEPATH += \
     financial_statement \
-    investment_analysis \
-    main_window
+    investment_analysis
 
 HEADERS += \
     add_transaction/add_transaction.h \
@@ -45,8 +44,8 @@ HEADERS += \
     household_manager/household_manager.h \
     investment_analysis/investment_analysis.h \
     investment_analysis/investment_analyzer.h \
-    main_window/book_model.h \
-    main_window/main_window.h
+    home_window/book_model.h \
+    home_window/home_window.h
 
 SOURCES += main.cpp \
     add_transaction/add_transaction.cpp \
@@ -63,15 +62,16 @@ SOURCES += main.cpp \
     household_manager/household_manager.cpp \
     investment_analysis/investment_analysis.cpp \
     investment_analysis/investment_analyzer.cpp \
-    main_window/book_model.cpp \
-    main_window/main_window.cpp
+    home_window/book_model.cpp \
+    home_window/home_window.cpp
 
 FORMS += \
     add_transaction/add_transaction.ui \
     account_manager/account_manager.ui \
     financial_statement/financial_statement.ui \
+    household_manager/household_manager.ui \
     investment_analysis/investment_analysis.ui \
-    main_window/main_window.ui
+    home_window/home_window.ui
 
 RESOURCES += \
     resources.qrc

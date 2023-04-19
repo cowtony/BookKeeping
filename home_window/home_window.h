@@ -1,22 +1,24 @@
-#ifndef MAIN_WINDOW_H
-#define MAIN_WINDOW_H
+#ifndef HOME_WINDOW_H
+#define HOME_WINDOW_H
 
 #include <QMainWindow>
 #include <QDateEdit>
 
-#include "account_manager.h"
+#include "account_manager/account_manager.h"
 #include "book_model.h"
 #include "financial_statement.h"
+#include "household_manager/household_manager.h"
 
 namespace Ui {
-class MainWindow;
+class HomeWindow;
 }
 
-class MainWindow : public QMainWindow {
+class HomeWindow : public QMainWindow {
     Q_OBJECT
 
   public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit HomeWindow(QWidget *parent = nullptr);
+      ~HomeWindow();
 
   public slots:
     void refreshTable();  // Show all filtered transactions.
@@ -27,25 +29,26 @@ class MainWindow : public QMainWindow {
     virtual void closeEvent(QCloseEvent *event) override;
 
   private slots:
-    void onAddTransactionTriggered();
-    void onAccountManagerTriggered();
-    void onFinancialStatementTriggered();
-    void onInvestmentAnalysisTriggered();
-    void onTransactionValidationTriggered();
-    void onHouseholdManagerTriggered();
+    void onActionAddTransactionTriggered();
+    void onActionAccountManagerTriggered();
+    void onActionFinancialStatementTriggered();
+    void onActionInvestmentAnalysisTriggered();
+    void onActionTransactionValidationTriggered();
+    void onActionHouseholdManagerTriggered();
 
-    void onDeleteTransactionsClicked();
-    void onMergeTransactionClicked();
+    void onPushButtonDeleteClicked();
+    void onPushButtonMergeClicked();
 
     void accountCategoryChanged(const Account::Type& table_type, const QString& category, QComboBox* name_combo_box);
-    void on_tableView_transactions_doubleClicked(const QModelIndex &index);
+    void onTableViewDoubleClicked(const QModelIndex &index);
 
-  private:
+private:
     void resizeColumns();
 
-    QSharedPointer<Ui::MainWindow> ui_;
+    Ui::HomeWindow* ui;
 
-    QSharedPointer<AccountManager>     account_manager_;
+    QSharedPointer<AccountManager>   account_manager_;
+    QSharedPointer<HouseholdManager> household_manager_;
 
     Book book_;
     BookModel book_model_;
@@ -62,6 +65,7 @@ class MainWindow : public QMainWindow {
     friend class AddTransaction;
     friend class FinancialStatement;
     friend class InvestmentAnalysis;
+    friend class HouseholdManager;
 };
 
-#endif // MAIN_WINDOW_H
+#endif // HOME_WINDOW_H

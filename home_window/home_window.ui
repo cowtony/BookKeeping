@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>HomeWindow</class>
+ <widget class="QMainWindow" name="HomeWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0" colspan="2">
-     <widget class="QTableView" name="tableView_transactions">
+     <widget class="QTableView" name="tableView">
       <property name="maximumSize">
        <size>
         <width>16777215</width>
@@ -31,14 +31,14 @@
      </widget>
     </item>
     <item row="1" column="0">
-     <widget class="QPushButton" name="pushButton_MergeTransaction">
+     <widget class="QPushButton" name="pushButtonMerge">
       <property name="text">
        <string>Merge Transaction</string>
       </property>
      </widget>
     </item>
     <item row="1" column="1">
-     <widget class="QPushButton" name="pushButtonDeleteTransactions">
+     <widget class="QPushButton" name="pushButtonDelete">
       <property name="text">
        <string>Delete Transactions</string>
       </property>
@@ -106,7 +106,7 @@
      <normaloff>:/icons/Transactions.png</normaloff>:/icons/Transactions.png</iconset>
    </property>
    <property name="text">
-    <string>Account Editor</string>
+    <string>Account Manager</string>
    </property>
    <property name="font">
     <font>

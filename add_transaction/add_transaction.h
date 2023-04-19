@@ -17,13 +17,14 @@ class AddTransaction : public QMainWindow {
 
   public:
     explicit AddTransaction(QWidget *parent);
+      ~AddTransaction();
 
     void initialization();
     void setTransaction(const Transaction &t);
 
   private slots:
-    void on_calendarWidget_selectionChanged();
-    void on_dateTimeEdit_dateTimeChanged(const QDateTime& date_time);
+    void onCalendarWidgetSelectionChanged();
+    void onDateTimeEditDateTimeChanged(const QDateTime& date_time);
     void on_lineEdit_Description_editingFinished();
     void onAccountCateChanged(QTableWidget* table_widget, int row);
     void on_pushButton_Split_clicked();
@@ -40,7 +41,7 @@ class AddTransaction : public QMainWindow {
 
     Transaction getTransaction();
 
-    QSharedPointer<Ui::AddTransaction> ui_;
+    Ui::AddTransaction* ui;
     Book& book_;
 
     QMap<Account::Type, QTableWidget*> tableMap;

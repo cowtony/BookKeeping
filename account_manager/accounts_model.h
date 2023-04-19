@@ -1,8 +1,6 @@
 #ifndef ACCOUNTS_MODEL_H
 #define ACCOUNTS_MODEL_H
 
-// Note: Used for QTreeView, but decide to use QTreeWidget instead of QTreeView. Because?
-
 #include <QAbstractItemModel>
 #include "account_tree_node.h"
 #include "book/book.h"

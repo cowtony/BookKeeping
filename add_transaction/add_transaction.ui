@@ -20,7 +20,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../resources.qrc">
-    <normaloff>:/resource/AddTransaction.png</normaloff>:/resource/AddTransaction.png</iconset>
+    <normaloff>:/icons/AddTransaction.png</normaloff>:/icons/AddTransaction.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
