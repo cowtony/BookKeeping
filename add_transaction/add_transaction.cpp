@@ -8,7 +8,7 @@
 #include "home_window/home_window.h"
 
 AddTransaction::AddTransaction(QWidget *parent): QMainWindow(parent), ui(new Ui::AddTransaction),
-    book_(static_cast<HomeWindow*>(parent)->book_) {
+    book_(static_cast<HomeWindow*>(parent)->book) {
     ui->setupUi(this);
 
     tableMap.insert(Account::Asset,     ui->tableWidget_Assets);
@@ -38,10 +38,6 @@ void AddTransaction::initialization() {
   // Date Time
     ui->dateTimeEdit->setDateTime(QDateTime::currentDateTime());
     ui->calendarWidget->setSelectedDate(ui->dateTimeEdit->date());   // maybe not necessary?
-
-  // Repleace Date Time (For replace use only)
-  replacedDateTime.setDate(QDate(1990, 05, 25));
-  replacedDateTime.setTime(QTime(00, 00, 00));
 
   // Description
   ui->lineEdit_Description->clear();
@@ -80,25 +76,25 @@ void AddTransaction::initialization() {
   }
 }
 
-void AddTransaction::setTransaction(const Transaction &transaction) {
-  ui->pushButton_Insert->setText("Replace");
+void AddTransaction::setTransaction(const Transaction& transaction) {
+    ui->pushButton_Insert->setText("Replace");
 
-  // Date time
-  replacedDateTime = transaction.date_time;
-  ui->dateTimeEdit->setDateTime(transaction.date_time);
+    // Date time
+    ui->dateTimeEdit->setDateTime(transaction.date_time);
 
-  // Description
-  if (transaction.description.contains("[R]")) {
-    ui->checkBox_RecursiveTransaction->setChecked(true);
-    ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));
-  }
-  ui->lineEdit_Description->setText(QString(transaction.description).remove("[R]"));
+    // Description
+    if (transaction.description.contains("[R]")) {
+        ui->checkBox_RecursiveTransaction->setChecked(true);
+        ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));
+    }
+    ui->lineEdit_Description->setText(QString(transaction.description).remove("[R]"));
 
-  for (const Account &account : transaction.getAccounts()) {
-    setTableRow(tableMap.value(account.type), account, transaction.getMoneyArray(account));
-  }
+    for (const Account &account : transaction.getAccounts()) {
+        setTableRow(tableMap.value(account.type), account, transaction.getMoneyArray(account));
+    }
+    transaction_id_ = transaction.id;
 
-  show();
+    show();
 }
 
 Transaction AddTransaction::getTransaction() {
@@ -149,12 +145,6 @@ void AddTransaction::on_pushButton_Insert_clicked() {
     Transaction t = getTransaction();
     errorMsg << t.validate();
 
-    if (book_.dateTimeExist(ui->dateTimeEdit->dateTime())) {
-        if (ui->pushButton_Insert->text() != "Replace" or ui->dateTimeEdit->dateTime() != replacedDateTime) {
-            errorMsg << "Date Time already exist.";
-        }
-    }
-
     if (!errorMsg.empty()) {
         QMessageBox::warning(this, "Warning!", errorMsg.join('\n'), QMessageBox::Ok);
         return;
@@ -168,7 +158,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
         warningMsgBox.setDefaultButton(QMessageBox::Cancel);
         switch ( warningMsgBox.exec()) {
             case QMessageBox::Ok:
-                book_.removeTransaction(replacedDateTime);
+                book_.removeTransaction(transaction_id_);
                 break;
             case QMessageBox::Cancel:
                 return;
@@ -179,9 +169,6 @@ void AddTransaction::on_pushButton_Insert_clicked() {
     if (ui->checkBox_RecursiveTransaction->isChecked()) {
         t.date_time = ui->dateEdit_nextTransaction->dateTime();
         t.description = "[R]" + ui->lineEdit_Description->text();
-        while (book_.dateTimeExist(t.date_time)) {
-            t.date_time = t.date_time.addSecs(1);
-        }
         book_.insertTransaction(t, /*ignore_error=*/true);
     }
 

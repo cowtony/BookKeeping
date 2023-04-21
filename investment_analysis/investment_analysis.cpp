@@ -4,7 +4,7 @@
 #include "home_window/home_window.h"
 
 InvestmentAnalysis::InvestmentAnalysis(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::InvestmentAnalysis), book_(static_cast<HomeWindow*>(parent)->book_) {
+    : QMainWindow(parent), ui(new Ui::InvestmentAnalysis), book_(static_cast<HomeWindow*>(parent)->book) {
   ui->setupUi(this);
 
   // Scan, analysis and save all investment product:

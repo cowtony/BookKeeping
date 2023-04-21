@@ -25,9 +25,7 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 
 RC_ICONS = icons/App_Icon.ico
 
-INCLUDEPATH += \
-    financial_statement \
-    investment_analysis
+# INCLUDEPATH +=
 
 HEADERS += \
     add_transaction/add_transaction.h \
@@ -41,11 +39,12 @@ HEADERS += \
     currency/currency.h \
     financial_statement/financial_statement.h \
     financial_statement/bar_chart.h \
+    home_window/json_delegate.h \
+    home_window/transactions_model.h \
+    home_window/home_window.h \
     household_manager/household_manager.h \
     investment_analysis/investment_analysis.h \
-    investment_analysis/investment_analyzer.h \
-    home_window/book_model.h \
-    home_window/home_window.h
+    investment_analysis/investment_analyzer.h
 
 SOURCES += main.cpp \
     add_transaction/add_transaction.cpp \
@@ -59,11 +58,12 @@ SOURCES += main.cpp \
     currency/currency.cpp \
     financial_statement/financial_statement.cpp \
     financial_statement/bar_chart.cpp \
+    home_window/json_delegate.cpp \
+    home_window/transactions_model.cpp \
+    home_window/home_window.cpp \
     household_manager/household_manager.cpp \
     investment_analysis/investment_analysis.cpp \
-    investment_analysis/investment_analyzer.cpp \
-    home_window/book_model.cpp \
-    home_window/home_window.cpp
+    investment_analysis/investment_analyzer.cpp
 
 FORMS += \
     add_transaction/add_transaction.ui \

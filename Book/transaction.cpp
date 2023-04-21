@@ -120,7 +120,7 @@ QJsonObject Transaction::toJson() const {
     return json;
 }
 
-void Transaction::setData(const QJsonObject& json) {
+void Transaction::addData(const QJsonObject& json) {
     for (auto account_type : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
         QJsonObject categories = json[Account::kTableName.value(account_type)].toObject();
         for (const QString& account : categories.keys()) {
@@ -213,7 +213,7 @@ TransactionFilter& TransactionFilter::fromTime(const QDateTime& start_time) {
 }
 
 TransactionFilter& TransactionFilter::toTime(const QDateTime& end_time) {
-  end_date_time_ = end_time;
+  end_date_time = end_time;
   return *this;
 }
 
@@ -223,27 +223,27 @@ TransactionFilter& TransactionFilter::setDescription(const QString& description)
 }
 
 TransactionFilter& TransactionFilter::useOr() {
-  use_or_ = true;
+  use_or = true;
   return *this;
 }
 
 TransactionFilter& TransactionFilter::useAnd() {
-  use_or_ = false;
+  use_or = false;
   return *this;
 }
 
 TransactionFilter& TransactionFilter::orderByAscending() {
-  ascending_order_ = true;
+  ascending_order = true;
   return *this;
 }
 
 TransactionFilter& TransactionFilter::orderByDescending() {
-  ascending_order_ = false;
+  ascending_order = false;
   return *this;
 }
 
 TransactionFilter& TransactionFilter::setLimit(int limit) {
-  limit_ = limit;
+  limit = limit;
   return *this;
 }
 

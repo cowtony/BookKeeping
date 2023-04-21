@@ -11,8 +11,8 @@
 AccountManager::AccountManager(QWidget* parent)
     : QMainWindow(parent),
       ui(new Ui::AccountManager),
-    book_(static_cast<HomeWindow*>(parent)->book_),
-    account_model_(static_cast<HomeWindow*>(parent)->book_) {
+    book_(static_cast<HomeWindow*>(parent)->book),
+    account_model_(static_cast<HomeWindow*>(parent)->book) {
     ui->setupUi(this);
 
     ui->treeView->setModel(&account_model_);

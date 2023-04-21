@@ -14,7 +14,7 @@ QFont FinancialStatement::m_categorySumFont;
 FinancialStatement::FinancialStatement(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::FinancialStatement),
-    book_(static_cast<HomeWindow*>(parent)->book_) {
+    book_(static_cast<HomeWindow*>(parent)->book) {
 
     ui->setupUi(this);
 

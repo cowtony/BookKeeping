@@ -39,22 +39,23 @@ Book::Book(const QString& dbPath) {
     if (false) {
         QList<Transaction> transactions;
         QSqlQuery query(db);
-        query.prepare(R"sql(SELECT * FROM book_transactions)sql");
+        query.prepare(R"sql(SELECT * FROM book_transactions ORDER BY date_time ASC)sql");
         query.exec();
         while (query.next()) {
             Transaction transaction;
             transaction.date_time = query.value("date_time").toDateTime();
             transaction.description = query.value("description").toString();
             auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-            transaction.setData(json_document.object());
+            transaction.addData(json_document.object());
             transactions.push_back(transaction);
         }
         qDebug() << transactions.size();
+        int i = 1;
         for (auto transaction : transactions) {
             QSqlQuery query(db);
-            query.prepare(R"sql(UPDATE book_transactions SET detail = :detail, Expense = 'Empty', Revenue = 'Empty', Liability = 'Empty', Asset = 'Empty' WHERE date_time = :dateTime)sql");
-            query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
-            query.bindValue(":detail",      QJsonDocument(transaction.toJson()).toJson(QJsonDocument::Indented).toStdString().c_str());
+            query.prepare(R"sql(UPDATE book_transactions SET transaction_id = :id WHERE date_time = :dateTime)sql");
+            query.bindValue(":dateTime", transaction.date_time.toString(kDateTimeFormat));
+            query.bindValue(":id", i++);
             if (!query.exec()) {
                 qDebug() << "Error: " << transaction.date_time;
             }
@@ -71,14 +72,6 @@ void Book::closeDatabase() {
     if (db.isOpen()) {
         db.close();
     }
-}
-
-bool Book::dateTimeExist(const QDateTime &dt) const {
-    QSqlQuery query(db);
-    query.prepare(R"sql(SELECT * FROM book_transactions WHERE date_time = :d)sql");
-    query.bindValue(":d", dt.toString(kDateTimeFormat));
-    query.exec();
-    return query.next();
 }
 
 bool Book::insertTransaction(const Transaction& transaction, bool ignore_error) const {
@@ -102,22 +95,6 @@ bool Book::insertTransaction(const Transaction& transaction, bool ignore_error) 
     }
 }
 
-Transaction Book::queryTransaction(const QDateTime &date_time) const {
-    Transaction transaction;
-
-    QSqlQuery query(db);
-    query.prepare(R"sql(SELECT * FROM book_transactions WHERE date_time = :d)sql");
-    query.bindValue(":d", date_time.toString(kDateTimeFormat));
-    query.exec();
-    if (query.next()) {
-        transaction.date_time = date_time;
-        transaction.description = query.value("description").toString();
-        auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-        transaction.setData(json_document.object());
-    }
-    return transaction;
-}
-
 QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) const {
     QStringList statements;
     for (const Account& account : filter.getAccounts()) {
@@ -129,14 +106,14 @@ QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) cons
     QSqlQuery query(db);
     query.prepare(QString(R"sql(SELECT * FROM book_transactions WHERE (date_time BETWEEN :startDate AND :endDate) AND (description LIKE :description))sql") +
                  (statements.empty()? "" : " AND ") +
-                 statements.join(filter.use_or_? " OR " : " AND ") +
-                 " ORDER BY date_time " + (filter.ascending_order_? "ASC" : "DESC") +
+                 statements.join(filter.use_or? " OR " : " AND ") +
+                 " ORDER BY date_time " + (filter.ascending_order? "ASC" : "DESC") +
                  " LIMIT :limit");
 
     query.bindValue(":startDate", filter.date_time.toString(kDateTimeFormat));
-    query.bindValue(":endDate",   filter.end_date_time_.toString(kDateTimeFormat));
+    query.bindValue(":endDate",   filter.end_date_time.toString(kDateTimeFormat));
     query.bindValue(":description", "%" + filter.description + "%");
-    query.bindValue(":limit", filter.limit_);
+    query.bindValue(":limit", filter.limit);
     qDebug() << query.lastQuery();
 
     if (!query.exec()) {
@@ -147,15 +124,16 @@ QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) cons
     QList<Transaction> result;
     while (query.next()) {
         Transaction transaction;
+        transaction.id = query.value("transaction_id").toInt();
         transaction.description = query.value("description").toString();
         transaction.date_time = query.value("date_time").toDateTime();
         // TODO: somehow several outbounded transaction will also be selected.
         // This hard code is to remove them.
-        if (transaction.date_time < filter.date_time or transaction.date_time > filter.end_date_time_) {
+        if (transaction.date_time < filter.date_time or transaction.date_time > filter.end_date_time) {
             continue;
         }
         auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-        transaction.setData(json_document.object());
+        transaction.addData(json_document.object());
         result.push_back(transaction);
     }
 
@@ -164,11 +142,11 @@ QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) cons
 
 QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const {
     QSqlQuery query(db);
-  query.prepare(R"sql(SELECT * FROM book_transactions WHERE date_time <= :d ORDER BY date_time ASC)sql");
-  query.bindValue(":d", endDateTime.toString(kDateTimeFormat));
-  if (!query.exec()) {
-    qDebug() << Q_FUNC_INFO << query.lastError();
-  }
+    query.prepare(R"sql(SELECT * FROM book_transactions WHERE date_time <= :d ORDER BY date_time ASC)sql");
+    query.bindValue(":d", endDateTime.toString(kDateTimeFormat));
+    if (!query.exec()) {
+        qDebug() << Q_FUNC_INFO << query.lastError();
+    }
 
   QList<FinancialStat> retSummarys;
   FinancialStat monthlySummary;
@@ -178,7 +156,7 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
     Transaction transaction;
     transaction.date_time = query.value("date_time").toDateTime();
     auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-    transaction.setData(json_document.object());
+    transaction.addData(json_document.object());
 
     // Use `while` instead of `if` in case there was no transaction for successive months.
     while (transaction.date_time.date() >= month.addMonths(1)) {
@@ -203,10 +181,10 @@ QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const
   return retSummarys;
 }
 
-void Book::removeTransaction(const QDateTime &dateTime) const {
-  QSqlQuery query(db);
-    query.prepare(R"sql(DELETE FROM book_transactions WHERE date_time = :d)sql");
-    query.bindValue(":d", dateTime.toString(kDateTimeFormat));
+void Book::removeTransaction(int transaction_id) const {
+    QSqlQuery query(db);
+    query.prepare(R"sql(DELETE FROM book_transactions WHERE transaction_id = :id)sql");
+    query.bindValue(":id", transaction_id);
     if (query.exec()) {
         Logging(query);
     } else {
@@ -220,7 +198,7 @@ QString Book::moveAccount(const Account& old_account, const Account& new_account
     }
 
     QSqlQuery query(db);
-    query.prepare(QString(R"sql(SELECT date_time, detail->'%1' AS type_detail
+    query.prepare(QString(R"sql(SELECT transaction_id, detail->'%1' AS type_detail
                                 FROM book_transactions
                                 WHERE type_detail LIKE :expression)sql").arg(old_account.typeName()));
     query.bindValue(":expression", QString(R"(%"%1|%2":%)").arg(old_account.category, old_account.name));
@@ -235,8 +213,8 @@ QString Book::moveAccount(const Account& old_account, const Account& new_account
         QSqlQuery query2(db);
         query2.prepare(QString(R"sql(UPDATE book_transactions
                                      SET detail = json_set(detail, '$.%1', json(:new))
-                                     WHERE date_time = :d)sql").arg(old_account.typeName()));
-        query2.bindValue(":d", query.value("date_time"));
+                                     WHERE transaction_id = :id)sql").arg(old_account.typeName()));
+        query2.bindValue(":id", query.value("transaction_id"));
         query2.bindValue(":new", new_string);
         if (query2.exec()) {
             Logging(query2);
@@ -248,7 +226,7 @@ QString Book::moveAccount(const Account& old_account, const Account& new_account
 
     // Update investment section in transactions.
     if (old_account.type == Account::Asset && IsInvestment(old_account)) {
-        query.prepare(R"sql(SELECT date_time, detail->'Revenue' AS revenue_detail
+        query.prepare(R"sql(SELECT transaction_id, detail->'Revenue' AS revenue_detail
                             FROM book_transactions
                             WHERE revenue_detail LIKE :expression)sql");
         query.bindValue(":expression", QString(R"(%"Investment|%1":%)").arg(old_account.name));
@@ -262,8 +240,8 @@ QString Book::moveAccount(const Account& old_account, const Account& new_account
             QSqlQuery query2(db);
             query2.prepare(R"sql(UPDATE book_transactions
                                  SET detail = json_set(detail, '$.Revenue', json(:new))
-                                 WHERE date_time = :d)sql");
-            query2.bindValue(":d", query.value("date_time").toString());
+                                 WHERE transaction_id = :id)sql");
+            query2.bindValue(":id", query.value("transaction_id"));
             query2.bindValue(":new", new_string);
             if (query2.exec()) {
                 Logging(query2);
@@ -515,7 +493,7 @@ bool Book::renameCategory(const QString& table_name, const QString& category, co
     }
 
     QSqlQuery query(db);
-    query.prepare(QString(R"sql(SELECT date_time, detail->'%1' AS type_detail
+    query.prepare(QString(R"sql(SELECT transaction_id, detail->'%1' AS type_detail
                                 FROM book_transactions
                                 WHERE type_detail LIKE :expression)sql").arg(table_name));
     query.bindValue(":expression", QString(R"(%"%1|%)").arg(category));
@@ -529,8 +507,8 @@ bool Book::renameCategory(const QString& table_name, const QString& category, co
         QSqlQuery query2(db);
         query2.prepare(QString(R"sql(UPDATE book_transactions
                                      SET detail = json_set(detail, '$.%1', json(:new))
-                                     WHERE date_time = :d)sql").arg(table_name));
-        query2.bindValue(":d", query.value("date_time"));
+                                     WHERE transaction_id = :id)sql").arg(table_name));
+        query2.bindValue(":id", query.value("transaction_id"));
         query2.bindValue(":new", new_string);
         if (!query2.exec()) {
             qDebug() << Q_FUNC_INFO << query2.lastError();

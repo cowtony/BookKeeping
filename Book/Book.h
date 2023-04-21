@@ -18,12 +18,10 @@ class Book {
     void closeDatabase();
 
     // Transactions
-    bool dateTimeExist(const QDateTime& dt) const;
     bool insertTransaction(const Transaction& transaction, bool ignore_error = false) const;
-    Transaction queryTransaction(const QDateTime& date_time) const;  // Not used.
     QList<Transaction> queryTransactions(const TransactionFilter& filter = TransactionFilter()) const;
     QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
-    void removeTransaction(const QDateTime& p_dateTime) const;
+    void removeTransaction(int transaction_id) const;
 
     // Account
     QList<std::shared_ptr<Account>> queryAllAccountsFrom(QList<Account::Type> account_types = {}) const;

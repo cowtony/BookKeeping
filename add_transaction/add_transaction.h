@@ -20,7 +20,7 @@ class AddTransaction : public QMainWindow {
       ~AddTransaction();
 
     void initialization();
-    void setTransaction(const Transaction &t);
+    void setTransaction(const Transaction& t);
 
   private slots:
     void onCalendarWidgetSelectionChanged();
@@ -45,7 +45,7 @@ class AddTransaction : public QMainWindow {
     Book& book_;
 
     QMap<Account::Type, QTableWidget*> tableMap;
-    QDateTime replacedDateTime;
+    int transaction_id_ = 0;
 };
 
 #endif // ADD_TRANSACTION_H

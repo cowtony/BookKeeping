@@ -22,7 +22,7 @@ class Transaction {
     MoneyArray getMoneyArray(const Account& account) const;
     void       addMoneyArray(const Account& account, const MoneyArray& moneyArray);
 
-    void setData(const QJsonObject& json);
+    void addData(const QJsonObject& json);
 
     bool accountExist(const Account& account) const;
     Money getCheckSum() const;
@@ -38,6 +38,7 @@ class Transaction {
 
     QDateTime date_time;
     QString description;
+    int id = 0;
 
   protected:
 
@@ -61,10 +62,10 @@ struct TransactionFilter : public Transaction {
     TransactionFilter& orderByDescending();
     TransactionFilter& setLimit(int limit);
 
-    QDateTime end_date_time_ = QDateTime(QDate(2200, 01, 01), QTime(23, 59, 59));
-    bool use_or_ = false;
-    bool ascending_order_ = true;
-    int limit_ = INT_MAX;
+    QDateTime end_date_time = QDateTime(QDate(2200, 01, 01), QTime(23, 59, 59));
+    bool use_or = false;
+    bool ascending_order = true;
+    int limit = 200;
 };
 
 // TODO: merge this into Transaction
