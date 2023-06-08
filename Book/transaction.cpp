@@ -114,7 +114,7 @@ QJsonObject Transaction::toJson() const {
             }
         }
         if (!json_accounts.isEmpty()) {
-            json[Account::kTableName.value(account_type)] = json_accounts;
+            json[Account::kAccountTypeName.value(account_type)] = json_accounts;
         }
     }
     return json;
@@ -122,7 +122,7 @@ QJsonObject Transaction::toJson() const {
 
 void Transaction::addData(const QJsonObject& json) {
     for (auto account_type : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
-        QJsonObject categories = json[Account::kTableName.value(account_type)].toObject();
+        QJsonObject categories = json[Account::kAccountTypeName.value(account_type)].toObject();
         for (const QString& account : categories.keys()) {
             QString category_name  = account.split("|").at(0);
             QString account_name   = account.split("|").at(1);

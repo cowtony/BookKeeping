@@ -24,7 +24,7 @@ class TransactionsModel : public QSqlQueryModel {
 
 
     QSqlDatabase db_;
-    const int user_id_;
+    int& user_id_;
     TransactionFilter filter_;
     Transaction sum_transaction_;
 };

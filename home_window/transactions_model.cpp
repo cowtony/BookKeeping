@@ -4,7 +4,7 @@
 TransactionsModel::TransactionsModel(QObject *parent)
     : QSqlQueryModel(parent),
       db_(static_cast<HomeWindow*>(parent)->book.db),
-      user_id_(static_cast<HomeWindow*>(parent)->user_id) {
+    user_id_(static_cast<HomeWindow*>(parent)->user_id_) {
     refresh();
 }
 
@@ -17,21 +17,15 @@ QVariant TransactionsModel::data(const QModelIndex &index, int role) const {
         if (index.row() == rowCount() - 1) {  // Total row.
             switch (index.column()) {
             case 1: return sum_transaction_.description;
-            case 2:
-                return QJsonDocument(sum_transaction_.toJson().value("Expense").toObject()).toJson(QJsonDocument::Compact).toStdString().c_str();
-            case 3: return QJsonDocument(sum_transaction_.toJson().value("Revenue").toObject()).toJson(QJsonDocument::Compact).toStdString().c_str();
-            case 4: return QJsonDocument(sum_transaction_.toJson().value("Asset").toObject()).toJson(QJsonDocument::Compact).toStdString().c_str();
-            case 5: return QJsonDocument(sum_transaction_.toJson().value("Liability").toObject()).toJson(QJsonDocument::Compact).toStdString().c_str();
+            case 2: return QString(QJsonDocument(sum_transaction_.toJson().value("Expense")  .toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
+            case 3: return QString(QJsonDocument(sum_transaction_.toJson().value("Revenue")  .toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
+            case 4: return QString(QJsonDocument(sum_transaction_.toJson().value("Asset")    .toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
+            case 5: return QString(QJsonDocument(sum_transaction_.toJson().value("Liability").toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
             default: return QVariant();
             }
         }
         else if (index.column() <= 5 && index.column() >= 2) {
-            QJsonObject json_obj = QJsonDocument::fromJson(QSqlQueryModel::data(index).toString().toUtf8()).object();
-            QStringList lines;
-            for (const QString& account_name : json_obj.keys()) {
-                lines.append(QString(R"("%1": "%2")").arg(account_name).arg(json_obj.value(account_name).toString()));
-            }
-            return "{" + lines.join(",\n") + "}";
+            return QSqlQueryModel::data(index).toString().replace(R"(",)", "\",\n");
         }
     } else if (role == Qt::FontRole) {
         if (index.row() == rowCount() - 1) {  // Total row.

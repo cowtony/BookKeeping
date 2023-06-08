@@ -16,16 +16,18 @@ public:
     explicit HouseholdManager(QWidget *parent);
     ~HouseholdManager();
 
+    QSqlTableModel model_;
+
 private slots:
     void onPushButtonAddClicked();
     void onPushButtonDeleteClicked();
-    void onTableViewDoubleCLicked(const QModelIndex& index);
 
 private:
     bool nameExistsInOtherTable(const QString& name);
 
     Ui::HouseholdManager* ui;
-    QSqlTableModel model_;
+
+    int& user_id_;
 };
 
 #endif // HOUSEHOLD_MANAGER_H

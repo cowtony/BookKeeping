@@ -21,7 +21,7 @@ class AccountTreeNode {
     QString comment() const { return comment_; }
     bool isInvestment() const { return is_investment_; }
     std::shared_ptr<Account> account() const;
-    QString accountType() const;
+    Account::Type accountType() const;
     QString accountGroup() const;
 
     // Setters.

@@ -6,13 +6,17 @@
 #include <QInputDialog>
 
 HouseholdManager::HouseholdManager(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::HouseholdManager),
-    model_(QSqlTableModel(this, static_cast<HomeWindow*>(parent)->book.db)) {
+  QMainWindow(parent),
+  model_(QSqlTableModel(this, static_cast<HomeWindow*>(parent)->book.db)),
+  ui(new Ui::HouseholdManager),
+  user_id_(static_cast<HomeWindow*>(parent)->user_id_) {
+
     ui->setupUi(this);
 
     model_.setTable("book_household");
-    model_.setEditStrategy(QSqlTableModel::OnManualSubmit); // Set the edit strategy for the model
+    model_.setFilter(QString("user_id = %1").arg(user_id_));
+    model_.setSort(3, Qt::AscendingOrder);  // ORDER BY `rank`
+    model_.setEditStrategy(QSqlTableModel::OnFieldChange);  // So that the edit to the cell will apply to DB immediatly.
 
     // Select the data from the table
     model_.select();
@@ -22,9 +26,10 @@ HouseholdManager::HouseholdManager(QWidget *parent) :
 
     connect(ui->pushButtonAdd,    &QPushButton::clicked, this, &HouseholdManager::onPushButtonAddClicked);
     connect(ui->pushButtonDelete, &QPushButton::clicked, this, &HouseholdManager::onPushButtonDeleteClicked);
-    connect(ui->tableView, &QAbstractItemView::doubleClicked, this, &HouseholdManager::onTableViewDoubleCLicked);
 
     ui->tableView->setModel(&model_);
+    ui->tableView->hideColumn(0);  // household_id
+    ui->tableView->hideColumn(1);  // user_id
 }
 
 HouseholdManager::~HouseholdManager() {
@@ -34,24 +39,35 @@ HouseholdManager::~HouseholdManager() {
 void HouseholdManager::onPushButtonAddClicked() {
     bool ok;
     QString name = QInputDialog::getText(this, "Add Row", "Enter Name:", QLineEdit::Normal, "", &ok);
-    if (ok && !name.isEmpty()) {
-        // Insert a new row with the entered name
-        int new_row = model_.rowCount();
-        model_.insertRow(new_row);
-        model_.setData(model_.index(new_row, 1), name);
+    if (!ok || name.isEmpty()) {
+        return;
+    }
+    // Insert a new row with the entered name
+    int new_row = model_.rowCount();
+    if (!model_.insertRow(new_row)) {
+        // TODO: Error handling
+    }
+    if (!model_.setData(model_.index(new_row, 1), user_id_)) {
+        // TODO: Error handling
+    }
+    if (!model_.setData(model_.index(new_row, 2), name)) {
+        // TODO: Error handling
+    }
+    if (!model_.setData(model_.index(new_row, 3), /*rank=*/99)) {
+        // TODO: Error handling
+    }
 
-        // Submit the changes to the database
-        if (model_.submitAll()) {
-            qDebug() << "New row added successfully!";
-        } else {
-            qDebug() << "Failed to add new row:" << model_.lastError().text();
-            // Rollback the transaction
-            model_.database().rollback();
-            // Remove the inserted row
-            model_.removeRow(new_row);
-            // Show an error message
-            QMessageBox::critical(this, "Error", "Failed to add new row: " + model_.lastError().text());
-        }
+    // Submit the changes to the database
+    if (model_.submitAll()) {
+        qDebug() << "New row added successfully!";
+    } else {
+        qDebug() << "Failed to add new row:" << model_.lastError().text();
+        // Rollback the transaction
+        model_.database().rollback();
+        // Remove the inserted row
+        model_.removeRow(new_row);
+        // Show an error message
+        QMessageBox::critical(this, "Error", "Failed to add new row: " + model_.lastError().text());
     }
 }
 
@@ -104,29 +120,6 @@ void HouseholdManager::onPushButtonDeleteClicked() {
             ui->tableView->reset();
         } else {
             qDebug() << "Failed to delete selected row:" << model_.lastError().text();
-        }
-    }
-}
-
-void HouseholdManager::onTableViewDoubleCLicked(const QModelIndex& index) {
-    // Get the current name from the selected index
-    QString currentName = index.data().toString();
-    // Show an input dialog to edit the name
-    bool ok;
-    QString newName = QInputDialog::getText(this, "Edit Name", "Enter Name:", QLineEdit::Normal, currentName, &ok);
-    if (ok && !newName.isEmpty() && newName != currentName) {
-        // Set the new name to the model
-        model_.setData(index, newName);
-
-        // Submit the changes to the database
-        if (model_.submitAll()) {
-            qDebug() << "Name edited successfully!";
-        } else {
-            qDebug() << "Failed to edit name:" << model_.lastError().text();
-            // Rollback the transaction
-            model_.database().rollback();
-            // Show an error message
-            QMessageBox::critical(this, "Error", "Failed to edit name: " + model_.lastError().text());
         }
     }
 }

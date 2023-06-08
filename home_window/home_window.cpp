@@ -18,6 +18,9 @@ HomeWindow::HomeWindow(QWidget *parent)
       transactions_model_(this) {
 
     ui->setupUi(this);
+
+    user_id_ = book.getLastLoggedInUserId();
+
     g_currency.openDatabase();
     account_manager_   = QSharedPointer<AccountManager>  (new AccountManager(this));
     household_manager_ = QSharedPointer<HouseholdManager>(new HouseholdManager(this));
@@ -61,6 +64,9 @@ HomeWindow::HomeWindow(QWidget *parent)
     connect(ui->actionTransactionValidation, &QAction::triggered, this, &HomeWindow::onActionTransactionValidationTriggered);
     connect(ui->actionFinancialStatement,    &QAction::triggered, this, &HomeWindow::onActionFinancialStatementTriggered);
     connect(ui->actionInvestmentAnalysis,    &QAction::triggered, this, &HomeWindow::onActionInvestmentAnalysisTriggered);
+    connect(ui->actionLogin,                 &QAction::triggered, this, &HomeWindow::onActionLoginTriggered);
+    connect(ui->actionLogout,                &QAction::triggered, this, &HomeWindow::onActionLogoutTriggered);
+
     connect(ui->pushButtonDelete, &QPushButton::clicked, this, &HomeWindow::onPushButtonDeleteClicked);
     connect(ui->pushButtonMerge,  &QPushButton::clicked, this, &HomeWindow::onPushButtonMergeClicked);
     connect(ui->tableView, &QTableView::doubleClicked, this, &HomeWindow::onTableViewDoubleClicked);
@@ -197,7 +203,7 @@ void HomeWindow::onPushButtonMergeClicked() {
             merged_transaction += transaction;
             book.removeTransaction(transaction.id);
         }
-        book.insertTransaction(merged_transaction);
+        book.insertTransaction(user_id_, merged_transaction);
         refreshTable();
         break;
     }
@@ -288,4 +294,27 @@ void HomeWindow::onActionTransactionValidationTriggered() {
 
 void HomeWindow::onActionHouseholdManagerTriggered() {
     household_manager_->show();
+}
+
+void HomeWindow::onActionLoginTriggered() {
+    // TODO: Change to username & password login.
+    bool ok;
+    int user_id = QInputDialog::getInt(this, tr("QInputDialog::getInteger()"), tr("User ID:"), 0, 1, 100, 1, &ok);
+    if (ok) {
+        user_id_ = user_id;
+    }
+
+    book.updateLoginTime(user_id);
+    // TODO: Use signal / slot for user_id_ changed event.
+    household_manager_->model_.setFilter(QString("user_id = %1").arg(user_id_));
+    refreshTable();
+
+}
+
+void HomeWindow::onActionLogoutTriggered() {
+    user_id_ = -1;
+
+    // TODO: Use signal / slot for user_id_ changed event.
+    household_manager_->model_.setFilter(QString("user_id = %1").arg(user_id_));
+    refreshTable();
 }

@@ -18,7 +18,7 @@ class Book {
     void closeDatabase();
 
     // Transactions
-    bool insertTransaction(const Transaction& transaction, bool ignore_error = false) const;
+    bool insertTransaction(int user_id, const Transaction& transaction, bool ignore_error = false) const;
     QList<Transaction> queryTransactions(const TransactionFilter& filter = TransactionFilter()) const;
     QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
     void removeTransaction(int transaction_id) const;
@@ -34,9 +34,9 @@ class Book {
     QString setInvestment(const AssetAccount& asset, bool is_investment) const;
     bool IsInvestment(const Account& account) const;
 
-    bool insertCategory(const QString& tableName, const QString& category) const;
-    bool categoryExist (const QString& tableName, const QString& category) const;
-    bool renameCategory(const QString& tableName, const QString& category, const QString& newCategory) const;
+    bool insertCategory(Account::Type account_type, const QString& category) const;
+    bool categoryExist (Account::Type account_type, const QString& category) const;
+    bool renameCategory(Account::Type account_type, const QString& category, const QString& newCategory) const;
     bool insertAccount (const Account& account) const;
     bool removeAccount (const Account& account) const;
     bool accountExist  (const Account& account) const;
@@ -48,9 +48,12 @@ class Book {
 
     static QString getLastExecutedQuery(const QSqlQuery& query);
 
+    // Login related
+    bool updateLoginTime(int user_id) const;
+    int getLastLoggedInUserId() const;
+
   private:
     QDateTime start_time_;
-    const int kUserId = 1;  // TODO: add a login system for a real user_id.
 
     void logUsageTime();
     void reduceLoggingRows();

@@ -21,7 +21,7 @@ class HomeWindow : public QMainWindow {
       ~HomeWindow();
 
     Book book;
-    int user_id = 1;
+    int user_id_;
 
   public slots:
     void refreshTable();  // Show all filtered transactions.
@@ -38,14 +38,16 @@ class HomeWindow : public QMainWindow {
     void onActionInvestmentAnalysisTriggered();
     void onActionTransactionValidationTriggered();
     void onActionHouseholdManagerTriggered();
+    void onActionLoginTriggered();
+    void onActionLogoutTriggered();
 
     void onPushButtonMergeClicked();
     void onPushButtonDeleteClicked();
 
     void accountCategoryChanged(const Account::Type& table_type, const QString& category, QComboBox* name_combo_box);
-    void onTableViewDoubleClicked(const QModelIndex &index);
+    void onTableViewDoubleClicked(const QModelIndex& index);
 
-private:
+  private:
     void resizeTableView(QTableView* table_view);
 
     Ui::HomeWindow* ui;

@@ -163,7 +163,7 @@
      <x>0</x>
      <y>0</y>
      <width>692</width>
-     <height>21</height>
+     <height>17</height>
     </rect>
    </property>
    <property name="font">
@@ -182,7 +182,15 @@
     <addaction name="actionTransactionValidation"/>
     <addaction name="actionHouseholdManager"/>
    </widget>
+   <widget class="QMenu" name="menuLogin">
+    <property name="title">
+     <string>Login</string>
+    </property>
+    <addaction name="actionLogin"/>
+    <addaction name="actionLogout"/>
+   </widget>
    <addaction name="menuFunctions"/>
+   <addaction name="menuLogin"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -272,6 +280,16 @@
   <action name="actionHouseholdManager">
    <property name="text">
     <string>Household Manager</string>
+   </property>
+  </action>
+  <action name="actionLogin">
+   <property name="text">
+    <string>Log in</string>
+   </property>
+  </action>
+  <action name="actionLogout">
+   <property name="text">
+    <string>Log out</string>
    </property>
   </action>
  </widget>

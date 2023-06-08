@@ -7,8 +7,11 @@
 #include "book/book.h"
 #include "home_window/home_window.h"
 
-AddTransaction::AddTransaction(QWidget *parent): QMainWindow(parent), ui(new Ui::AddTransaction),
-    book_(static_cast<HomeWindow*>(parent)->book) {
+AddTransaction::AddTransaction(QWidget *parent)
+    : QMainWindow(parent),
+      ui(new Ui::AddTransaction),
+      book_(static_cast<HomeWindow*>(parent)->book),
+    kUserId(static_cast<HomeWindow*>(parent)->user_id_) {
     ui->setupUi(this);
 
     tableMap.insert(Account::Asset,     ui->tableWidget_Assets);
@@ -165,11 +168,11 @@ void AddTransaction::on_pushButton_Insert_clicked() {
         }
     }
 
-    book_.insertTransaction(t);
+    book_.insertTransaction(kUserId, t);
     if (ui->checkBox_RecursiveTransaction->isChecked()) {
         t.date_time = ui->dateEdit_nextTransaction->dateTime();
         t.description = "[R]" + ui->lineEdit_Description->text();
-        book_.insertTransaction(t, /*ignore_error=*/true);
+        book_.insertTransaction(kUserId, t, /*ignore_error=*/true);
     }
 
     emit insertTransactionFinished(this);

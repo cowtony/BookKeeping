@@ -16,5 +16,5 @@ void JsonDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, 
 //    for (const QString& account_name : jsonObj.keys()) {
 //        lines.append(account_name + ":" + jsonObj.value(account_name).toString());
 //    }
-//    painter->drawText(option.rect, option.displayAlignment, index.data().toString().replace(R"(",)", ",\n"));
+//    painter->drawText(option.rect, option.displayAlignment, index.data().toString().replace(R"(",)", "\",\n"));
 }

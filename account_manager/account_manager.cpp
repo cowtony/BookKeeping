@@ -53,7 +53,7 @@ void AccountManager::on_pushButton_Add_clicked() {
       bool ok;
       QString category_name = QInputDialog::getText(this, "Add category into table: " + item->name(), "Category:", QLineEdit::Normal, "", &ok);
       if (ok and !category_name.isEmpty()) {
-        if (item->accountType() == "Revenue" && category_name == "Investment") {
+          if (item->accountType() == Account::Revenue && category_name == "Investment") {
           QMessageBox::warning(this, "Insert Failed", "Cannot add Revenue::Investment since 'Investment' is reserved.", QMessageBox::Ok);
           return;
         }

@@ -142,7 +142,7 @@ QVariant AccountsModel::data(const QModelIndex& index, int role) const {
       }
       break;
     case Qt::CheckStateRole:
-      if (index.column() == 2 and node->depth() == 3 and node->accountType() == "Asset") {
+      if (index.column() == 2 and node->depth() == 3 and node->accountType() == Account::Asset) {
         return node->isInvestment()? Qt::Checked : Qt::Unchecked;
       }
       break;
@@ -241,7 +241,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
             }
             break;
         case Qt::CheckStateRole:
-            if (index.column() == 2 and node->depth() == 3 and node->accountType() == "Asset") {
+            if (index.column() == 2 and node->depth() == 3 and node->accountType() == Account::Asset) {
                 // TODO: Connect to database.
                 QString error = book_.setInvestment(*static_cast<AssetAccount*>(node->account().get()), value.toBool());
                 if (!error.isEmpty()) {
@@ -260,32 +260,32 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
 }
 
 Qt::ItemFlags AccountsModel::flags(const QModelIndex& index) const {
-  auto node = getItem(index);
-  if (!index.isValid()) {
-    return QAbstractItemModel::flags(index);
-  }
-  if (node->accountType() == "Revenue" and node->accountGroup() == "Investment") {
-    return QAbstractItemModel::flags(index) & ~Qt::ItemIsEnabled;
-  }
-  switch (node->depth()) {
-    case 1:  // Account type
-      return (Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled;
-    case 2:  // Account group
-      return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled;
-    case 3:  // Account name
-      if (node->accountType() == "Asset" and index.column() == 2) {
-        return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable);
-      } else {
-        return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled;
-      }
-  }
-  return Qt::NoItemFlags;
+    auto node = getItem(index);
+    if (!index.isValid()) {
+        return QAbstractItemModel::flags(index);
+    }
+    if (node->accountType() == Account::Revenue && node->accountGroup() == "Investment") {
+        return QAbstractItemModel::flags(index) & ~Qt::ItemIsEnabled;
+    }
+    switch (node->depth()) {
+        case 1:  // Account type
+            return (Qt::ItemIsEnabled | Qt::ItemIsSelectable) & ~Qt::ItemIsDragEnabled & ~Qt::ItemIsDropEnabled;
+        case 2:  // Account group
+            return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDropEnabled) & ~Qt::ItemIsDragEnabled;
+        case 3:  // Account name
+            if (node->accountType() == Account::Asset and index.column() == 2) {
+                return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable);
+            } else {
+                return (Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsDragEnabled) & ~Qt::ItemIsDropEnabled;
+            }
+    }
+    return Qt::NoItemFlags;
 }
 
 QStringList AccountsModel::mimeTypes() const {
-  QStringList types;
-  types << "application/vnd.text.list";
-  return types;
+    QStringList types;
+    types << "application/vnd.text.list";
+    return types;
 }
 
 QMimeData* AccountsModel::mimeData(const QModelIndexList& indexes) const {

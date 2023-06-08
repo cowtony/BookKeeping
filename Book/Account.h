@@ -5,8 +5,8 @@
 #include <QMap>
 
 struct Account {
-    typedef enum {Asset, Liability, Revenue, Expense, Equity} Type;
-    static const QMap<Type, QString> kTableName;
+    typedef enum {Asset, Liability, Revenue, Expense, Equity, INVALID} Type;
+    static const QMap<Type, QString> kAccountTypeName;
 
     explicit Account(Type account_type, const QString& category, const QString& name, const QString& comment = "")
                    : type(account_type), category(category), name(name), comment(comment) {}

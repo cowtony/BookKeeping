@@ -3,6 +3,7 @@
 `C:\Qt\6.4.1\mingw_64\bin\windeployqt.exe C:\Users\cowto\GitHub\build-BookKeeping-Desktop_Qt_6_4_1_MinGW_64_bit-Release\BookKeeping\release\Currency.dll`
 
 ## TODO
+- Bug: Credit Card|CHASE-Amazon.com(4053) cannot be filtered. After changing the name to Credit Card|CHASE-Amazon.com, it's good.
 - PreTax asset account
 - Household manager
 - QDatabaseModel
@@ -13,9 +14,7 @@
 - After adding a transaction, the list always goes to the top
 - Separated bar chart
 - Account Manager: Add currency selection
-
-BookKeeping:
-MAC dynamic library
+- Add a check box in Add Transaction to show "pending transactions", instead of using `!!!`
 
 
 ## Schema
