@@ -13,7 +13,7 @@ HouseholdManager::HouseholdManager(QWidget *parent) :
 
     ui->setupUi(this);
 
-    model_.setTable("book_household");
+    model_.setTable("book_households");
     model_.setFilter(QString("user_id = %1").arg(user_id_));
     model_.setSort(3, Qt::AscendingOrder);  // ORDER BY `rank`
     model_.setEditStrategy(QSqlTableModel::OnFieldChange);  // So that the edit to the cell will apply to DB immediatly.

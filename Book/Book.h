@@ -34,9 +34,9 @@ class Book {
     QString setInvestment(const AssetAccount& asset, bool is_investment) const;
     bool IsInvestment(const Account& account) const;
 
-    bool insertCategory(Account::Type account_type, const QString& category) const;
-    bool categoryExist (Account::Type account_type, const QString& category) const;
-    bool renameCategory(Account::Type account_type, const QString& category, const QString& newCategory) const;
+    bool insertCategory(Account::Type account_type, const QString& category_name) const;
+    bool categoryExist (Account::Type account_type, const QString& category_name) const;
+    bool renameCategory(Account::Type account_type, const QString& category_name, const QString& new_category_name) const;
     bool insertAccount (const Account& account) const;
     bool removeAccount (const Account& account) const;
     bool accountExist  (const Account& account) const;

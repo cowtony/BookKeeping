@@ -1,11 +1,11 @@
 #include "book.h"
 
 const QMap<Account::Type, QString> kAccountTableName =
-    {{Account::Asset,     "book_assets"},
-     {Account::Liability, "book_liabilities"},
-     {Account::Revenue,   "book_revenues"},
-     {Account::Expense,   "book_expenses"},
-     {Account::Equity,    "book_equities"}};
+    {{Account::Asset,     "book_asset"},
+     {Account::Liability, "book_liability"},
+     {Account::Revenue,   "book_revenue"},
+     {Account::Expense,   "book_expense"},
+     {Account::Equity,    "book_equity"}};
 
 Book::Book(const QString& dbPath) {
     QFileInfo fileInfo(dbPath);
@@ -349,7 +349,7 @@ QStringList Book::queryAccounts(Account::Type account_type, const QString& categ
 QList<AssetAccount> Book::getInvestmentAccounts() const {
   QList<AssetAccount> investments;
   QSqlQuery query(db);
-  if (!query.exec(R"sql(SELECT * FROM book_assets WHERE IsInvestment = True ORDER BY Name ASC)sql")) {
+  if (!query.exec(R"sql(SELECT * FROM book_asset WHERE IsInvestment = True ORDER BY Name ASC)sql")) {
     qDebug() << Q_FUNC_INFO << query.lastError();
     return {};
   }
@@ -440,7 +440,7 @@ QString Book::setInvestment(const AssetAccount& asset, bool is_investment) const
     }
 
     QSqlQuery query(db);
-    query.prepare("UPDATE book_assets SET IsInvestment = :i WHERE Category == :g AND Name = :n");
+    query.prepare("UPDATE book_asset SET IsInvestment = :i WHERE Category == :g AND Name = :n");
     query.bindValue(":g", asset.category);
     query.bindValue(":n", asset.name);
     query.bindValue(":i", is_investment);
@@ -486,10 +486,10 @@ bool Book::insertCategory(Account::Type account_type, const QString& category) c
 }
 
 
-bool Book::categoryExist(Account::Type account_type, const QString &category) const {
+bool Book::categoryExist(Account::Type account_type, const QString &category_name) const {
     QSqlQuery query(db);
     query.prepare(QString(R"sql(SELECT * FROM [%1] WHERE Category = :c)sql").arg(kAccountTableName.value(account_type)));
-    query.bindValue(":c", category);
+    query.bindValue(":c", category_name);
     query.exec();
     return query.next();
 }
