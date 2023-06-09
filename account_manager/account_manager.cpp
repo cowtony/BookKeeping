@@ -12,13 +12,14 @@ AccountManager::AccountManager(QWidget* parent)
     : QMainWindow(parent),
       ui(new Ui::AccountManager),
     book_(static_cast<HomeWindow*>(parent)->book),
-    account_model_(static_cast<HomeWindow*>(parent)->book) {
+    user_id_(static_cast<HomeWindow*>(parent)->user_id),
+    account_model_(parent) {
     ui->setupUi(this);
 
     ui->treeView->setModel(&account_model_);
     ui->gridLayout->addWidget(ui->treeView, 0, 0, 1, 2);
 
-    account_model_.setupAccounts(book_.queryAllAccountsFrom({Account::Asset, Account::Liability, Account::Revenue, Account::Expense}));
+    account_model_.setupAccounts(book_.queryAllAccounts(user_id_));
     ui->treeView->setDragDropMode(QAbstractItemView::InternalMove);
     ui->treeView->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->treeView->setDropIndicatorShown(true);
@@ -57,7 +58,7 @@ void AccountManager::on_pushButton_Add_clicked() {
           QMessageBox::warning(this, "Insert Failed", "Cannot add Revenue::Investment since 'Investment' is reserved.", QMessageBox::Ok);
           return;
         }
-        if (book_.insertCategory(item->accountType(), category_name)) {
+        if (book_.insertCategory(user_id_, item->accountType(), category_name)) {
           QModelIndex category_index = account_model_.appendRow(ui->treeView->currentIndex(), category_name);
           account_model_.appendRow(category_index, category_name);
         } else {
@@ -70,7 +71,7 @@ void AccountManager::on_pushButton_Add_clicked() {
       bool ok;
       QString account_name = QInputDialog::getText(this, "Add account into category: " + item->name(), "Name:", QLineEdit::Normal, "", &ok);
       if (ok and !account_name.isEmpty()) {
-        if (book_.insertAccount(Account(item->accountType(), item->accountGroup(), account_name))) {
+        if (book_.insertAccount(user_id_, Account(item->accountType(), item->accountGroup(), account_name))) {
           account_model_.appendRow(ui->treeView->currentIndex(), account_name);
         } else {
           QMessageBox::warning(this, "Insert Failed", item->name() + ": " + account_name, QMessageBox::Ok);
@@ -90,7 +91,7 @@ void AccountManager::on_pushButton_Delete_clicked() {
     QMessageBox::warning(this, "Warning", "Cannot delete the whole type or category.", QMessageBox::Ok);
     return;
   }
-  if (!book_.removeAccount(*item->account())) {
+  if (!book_.removeAccount(user_id_, *item->account())) {
     QMessageBox::warning(this, "Cannot delete!", "The account still have transactions link to it!", QMessageBox::Ok);
     return;
   }

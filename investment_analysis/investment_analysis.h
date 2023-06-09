@@ -32,6 +32,7 @@ class InvestmentAnalysis : public QMainWindow {
 
     Ui::InvestmentAnalysis *ui;
     Book& book_;
+    int& user_id_;
 
     QMap<QString, InvestmentAnalyzer> investments_;
 };

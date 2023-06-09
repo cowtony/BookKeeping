@@ -2,6 +2,7 @@
 #define ACCOUNTS_MODEL_H
 
 #include <QAbstractItemModel>
+
 #include "account_tree_node.h"
 #include "book/book.h"
 
@@ -13,7 +14,7 @@ class AccountsModel : public QAbstractItemModel {
     Q_OBJECT
 
   public:
-    explicit AccountsModel(Book& book, QObject *parent = nullptr);
+    explicit AccountsModel(QObject *parent);
     ~AccountsModel();
 
     void setupAccounts(const QList<std::shared_ptr<Account>>& accounts);
@@ -66,6 +67,7 @@ class AccountsModel : public QAbstractItemModel {
   private:
     AccountTreeNode* root_;
     Book& book_;
+    int& user_id_;
 };
 
 #endif // ACCOUNTS_MODEL_H

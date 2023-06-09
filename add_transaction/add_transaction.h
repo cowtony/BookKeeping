@@ -43,7 +43,7 @@ class AddTransaction : public QMainWindow {
 
     Ui::AddTransaction* ui;
     Book& book_;
-    const int kUserId;
+    int& user_id_;
 
     QMap<Account::Type, QTableWidget*> tableMap;
     int transaction_id_ = 0;

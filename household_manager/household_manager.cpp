@@ -9,7 +9,7 @@ HouseholdManager::HouseholdManager(QWidget *parent) :
   QMainWindow(parent),
   model_(QSqlTableModel(this, static_cast<HomeWindow*>(parent)->book.db)),
   ui(new Ui::HouseholdManager),
-  user_id_(static_cast<HomeWindow*>(parent)->user_id_) {
+    user_id_(static_cast<HomeWindow*>(parent)->user_id) {
 
     ui->setupUi(this);
 

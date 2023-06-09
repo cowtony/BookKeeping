@@ -21,7 +21,7 @@ class HomeWindow : public QMainWindow {
       ~HomeWindow();
 
     Book book;
-    int user_id_;
+    int user_id;
 
   public slots:
     void refreshTable();  // Show all filtered transactions.

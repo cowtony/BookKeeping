@@ -30,6 +30,7 @@ class AccountManager : public QMainWindow {
   private:
     Ui::AccountManager* ui;
     Book& book_;
+    int& user_id_;
     AccountsModel account_model_;
 };
 

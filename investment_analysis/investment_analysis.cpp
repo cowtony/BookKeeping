@@ -3,12 +3,15 @@
 
 #include "home_window/home_window.h"
 
-InvestmentAnalysis::InvestmentAnalysis(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::InvestmentAnalysis), book_(static_cast<HomeWindow*>(parent)->book) {
-  ui->setupUi(this);
+InvestmentAnalysis::InvestmentAnalysis(QWidget *parent):
+  QMainWindow(parent),
+  ui(new Ui::InvestmentAnalysis),
+  book_(static_cast<HomeWindow*>(parent)->book),
+  user_id_(static_cast<HomeWindow*>(parent)->user_id) {
+    ui->setupUi(this);
 
   // Scan, analysis and save all investment product:
-  QList<AssetAccount> investments = book_.getInvestmentAccounts();
+  QList<AssetAccount> investments = book_.getInvestmentAccounts(user_id_);
   QApplication::setOverrideCursor(Qt::WaitCursor);
   for (const AssetAccount& investment : investments) {
     InvestmentAnalyzer analyzer(investment,

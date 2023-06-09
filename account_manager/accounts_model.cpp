@@ -3,8 +3,12 @@
 #include <QApplication>
 #include <QMessageBox>
 
-AccountsModel::AccountsModel(Book& book, QObject *parent)
-    : QAbstractItemModel(parent), book_(book) {
+#include "home_window/home_window.h"
+
+AccountsModel::AccountsModel(QObject *parent):
+  QAbstractItemModel(parent),
+  book_(static_cast<HomeWindow*>(parent)->book),
+  user_id_(static_cast<HomeWindow*>(parent)->user_id) {
     root_ = new AccountTreeNode();
 }
 
@@ -166,12 +170,12 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
                     if (value.toString().isEmpty()) {
                         return false;
                     }
-                    if (book_.categoryExist(node->accountType(), value.toString())) {
+                    if (book_.categoryExist(user_id_, node->accountType(), value.toString())) {
                         emit errorMessage("Group name " + value.toString() + " already exist.");
                         return false;
                     }
                     QApplication::setOverrideCursor(Qt::WaitCursor);
-                    bool success = book_.renameCategory(node->accountType(), node->accountGroup(), value.toString());
+                    bool success = book_.renameCategory(user_id_, node->accountType(), node->accountGroup(), value.toString());
                     QApplication::restoreOverrideCursor();
                     if (success) {
                         node->setName(value.toString());
@@ -191,7 +195,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
                             Account old_account = *node->account();
                             Account new_account = old_account;
                             new_account.name = value.toString();
-                            bool account_exist = book_.accountExist(new_account);
+                            bool account_exist = book_.accountExist(user_id_, new_account);
 
                             if (account_exist) {  // new_account_name exist, perform merge.
                                 if (!node->comment().isEmpty()) {
@@ -210,7 +214,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
                             }
 
                             QApplication::setOverrideCursor(Qt::WaitCursor);
-                            QString error_msg = book_.moveAccount(old_account, new_account);
+                            QString error_msg = book_.moveAccount(user_id_, old_account, new_account);
                             QApplication::restoreOverrideCursor();
                             if (!error_msg.isEmpty()) {
                                 emit errorMessage(error_msg);
@@ -227,7 +231,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
                             break;
                         }
                         case 1: { // Comment
-                            if(!book_.updateAccountComment(*node->account(), value.toString())) {
+                            if(!book_.updateAccountComment(user_id_, *node->account(), value.toString())) {
                                 return false;
                             }
                             node->setComment(value.toString());
@@ -243,7 +247,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
         case Qt::CheckStateRole:
             if (index.column() == 2 and node->depth() == 3 and node->accountType() == Account::Asset) {
                 // TODO: Connect to database.
-                QString error = book_.setInvestment(*static_cast<AssetAccount*>(node->account().get()), value.toBool());
+                QString error = book_.setInvestment(user_id_, *static_cast<AssetAccount*>(node->account().get()), value.toBool());
                 if (!error.isEmpty()) {
                     emit errorMessage(error);
                     return false;

@@ -4,7 +4,7 @@
 TransactionsModel::TransactionsModel(QObject *parent)
     : QSqlQueryModel(parent),
       db_(static_cast<HomeWindow*>(parent)->book.db),
-    user_id_(static_cast<HomeWindow*>(parent)->user_id_) {
+    user_id_(static_cast<HomeWindow*>(parent)->user_id) {
     refresh();
 }
 
