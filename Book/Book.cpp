@@ -37,20 +37,50 @@ Book::Book(const QString& dbPath) {
 
     // Some schema migration work can be done here.
     if (false) {
+        QMap<Currency::Type, int> currency_mapping = {{Currency::USD, 1}, {Currency::CNY, 2}, {Currency::EUR, 3}, {Currency::GBP, 4}};
+
         QSqlQuery query(db);
-        query.prepare(R"sql(SELECT
-                                c.category_id AS category_id,
-                                old.Name AS name
-                            FROM book_expense AS old
-                            JOIN book_account_categories AS c ON old.Category = c.category_name AND c.account_type_id = 4)sql");
-        query.exec();
+        query.prepare(R"sql(SELECT * FROM book_transactions)sql");
+        if (!query.exec()) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+            return;
+        }
         while (query.next()) {
-            QSqlQuery query2(db);
-            query2.prepare(R"sql(INSERT INTO book_accounts (category_id, account_name) VALUES (:a, :b))sql");
-            query2.bindValue(":a", query.value("category_id").toInt());
-            query2.bindValue(":b", query.value("name").toString());
-            if (!query2.exec()) {
-                qDebug() << "Error: " << query2.lastError();
+            Transaction transaction;
+            transaction.date_time = query.value("date_time").toDateTime();
+            transaction.description = query.value("description").toString();
+            auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
+            transaction.addData(json_document.object());
+
+            for (const Account& account : transaction.getAccounts()) {
+                MoneyArray money_array = transaction.getMoneyArray(account);
+                for (int i = 0; i < money_array.amounts_.size(); ++i) {
+                    Money money = money_array.getMoney(i);
+                    if (abs(money.amount_) < 0.001) {
+                        continue;
+                    }
+
+                    QSqlQuery query2(db);
+                    query2.prepare(R"sql(INSERT INTO book_transaction_details (transaction_id, account_id, household_id, currency_id, amount)
+                                 VALUES (
+                                     :t_id,
+                                     (SELECT account_id FROM accounts_view WHERE user_id = 1 AND type_name = :type AND category_name = :cat AND account_name = :acc),
+                                     :household,
+                                     :currency,
+                                     :amount
+                                 ) )sql");
+                    query2.bindValue(":t_id", query.value("transaction_id").toInt());
+                    query2.bindValue(":type", account.typeName());
+                    query2.bindValue(":cat", account.category);
+                    query2.bindValue(":acc", account.name);
+                    query2.bindValue(":household", i + 1);
+                    query2.bindValue(":currency", currency_mapping.value(money.currency()));
+                    query2.bindValue(":amount", money.amount_);
+
+                    if (!query2.exec()) {
+                        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+                    }
+                }
             }
         }
     }
@@ -67,122 +97,178 @@ void Book::closeDatabase() {
     }
 }
 
-bool Book::insertTransaction(int user_id, const Transaction& transaction, bool ignore_error) const {
+bool Book::insertTransaction(int user_id, const Transaction& transaction, bool ignore_error) {
     if (!ignore_error && !transaction.validate().isEmpty()) {
         return false;
     }
 
+    db.transaction();
     QSqlQuery query(db);
+
     query.prepare(R"sql(INSERT INTO book_transactions (user_id, date_time, description, detail) VALUES (:user_id, :dateTime, :description, :detail))sql");
     query.bindValue(":user_id",     user_id);
     query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
     query.bindValue(":description", transaction.description);
-    query.bindValue(":detail",      QJsonDocument(transaction.toJson()).toJson(QJsonDocument::Indented).toStdString().c_str());
+    query.bindValue(":detail",      QJsonDocument(transaction.toJson()).toJson(QJsonDocument::Indented).toStdString().c_str()); // TODO: deprecate after migration
 
-    if (query.exec()) {
-        Logging(query);  // TODO: get the binded string from query.
-        return true;
-    } else {
-        qDebug() << Q_FUNC_INFO << "#Error Insert a transaction:" << query.lastError().text();
+    if (!query.exec()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+        db.rollback();
         return false;
     }
+    Logging(query);
+
+    query.prepare(R"sql(INSERT INTO book_transaction_details (transaction_id, account_id, household_id, currency_id, amount)
+                        VALUES (
+                            :transaction_id,
+                            (SELECT account_id FROM accounts_view WHERE user_id = :user_id AND type_name = :type_name AND category_name = :cat AND account_name = :acc),
+                            :household_id,
+                            (SELECT currency_id FROM currency_types WHERE Name = :currency_name),
+                            :amount
+                        ) )sql");
+    query.bindValue(":transaction_id", query.lastInsertId().toInt());
+    query.bindValue(":user_id", user_id);
+
+    for (const Account& account : transaction.getAccounts()) {
+        query.bindValue(":type_name", account.typeName());
+        query.bindValue(":cat", account.category);
+        query.bindValue(":acc", account.name);
+        MoneyArray money_array = transaction.getMoneyArray(account);
+        for (int i = 0; i < money_array.amounts_.size(); ++i) {
+            Money money = money_array.getMoney(i);
+            if (abs(money.amount_) < 0.001) {
+                continue;
+            }
+
+            query.bindValue(":household_id", i + 1); // TODO: fix this hardcoded mapping.
+            query.bindValue(":currency_name", Currency::kCurrencyToCode.value(money.currency()));
+            query.bindValue(":amount", money.amount_);
+            if (!query.exec()) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+                db.rollback();
+                return false;
+            }
+            Logging(query);
+        }
+    }
+
+    if (!db.commit()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+        db.rollback();
+        return false;
+    }
+    return true;
 }
 
-QList<Transaction> Book::queryTransactions(const TransactionFilter& filter) const {
+QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter& filter) const {
     QStringList statements;
     for (const Account& account : filter.getAccounts()) {
         if (!account.category.isEmpty()) {
-            statements << QString(R"sql((detail->'%1'->>'%2|%3' NOT NULL))sql").arg(account.typeName(), account.category, account.name);
+            statements << QString(R"sql((%1 LIKE '%%2|%3%'))sql").arg(account.typeName(), account.category, account.name);
         }
     }
 
     QSqlQuery query(db);
-    query.prepare(QString(R"sql(SELECT * FROM book_transactions WHERE (date_time BETWEEN :startDate AND :endDate) AND (description LIKE :description))sql") +
-                 (statements.empty()? "" : " AND ") +
-                 statements.join(filter.use_or? " OR " : " AND ") +
-                 " ORDER BY date_time " + (filter.ascending_order? "ASC" : "DESC") +
-                 " LIMIT :limit");
-
-    query.bindValue(":startDate", filter.date_time.toString(kDateTimeFormat));
-    query.bindValue(":endDate",   filter.end_date_time.toString(kDateTimeFormat));
+    query.prepare(QString(R"sql(SELECT *
+                                FROM   transaction_details_view
+                                WHERE  transaction_id IN (
+                                    SELECT DISTINCT transaction_id
+                                    FROM (
+                                        SELECT   transaction_id, Timestamp
+                                        FROM     transactions_view
+                                        WHERE    user_id = :user
+                                                 AND Timestamp BETWEEN :start AND :end
+                                                 AND Description LIKE :description
+                                                 AND (%1)
+                                )
+                                ORDER BY Timestamp %2, transaction_id %2
+                                LIMIT    :limit
+                            ) )sql").arg(statements.empty()? "TRUE" : statements.join(filter.use_or? " OR " : " AND "),
+                           filter.ascending_order? "ASC" : "DESC"));
+    query.bindValue(":user", user_id);
+    query.bindValue(":start", filter.date_time.toString(kDateTimeFormat));
+    query.bindValue(":end",   filter.end_date_time.toString(kDateTimeFormat));
     query.bindValue(":description", "%" + filter.description + "%");
     query.bindValue(":limit", filter.limit);
     qDebug() << query.lastQuery();
-
     if (!query.exec()) {
-        qDebug() << Q_FUNC_INFO << query.lastError();
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
         return {};
     }
 
     QList<Transaction> result;
+    int current_transaction_id = -1;
+    Transaction transaction;
     while (query.next()) {
-        Transaction transaction;
-        transaction.id = query.value("transaction_id").toInt();
-        transaction.description = query.value("description").toString();
-        transaction.date_time = query.value("date_time").toDateTime();
-        // TODO: somehow several outbounded transaction will also be selected.
-        // This hard code is to remove them.
-        if (transaction.date_time < filter.date_time or transaction.date_time > filter.end_date_time) {
-            continue;
+        if (query.value("transaction_id").toInt() != current_transaction_id) { // New transaction.
+            if (current_transaction_id > 0) {
+                result.push_back(transaction);
+            }
+            transaction.clear();
+            current_transaction_id = query.value("transaction_id").toInt();
+            transaction.id = current_transaction_id;
+            transaction.description = query.value("description").toString();
+            transaction.date_time = query.value("date_time").toDateTime();
         }
-        auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-        transaction.addData(json_document.object());
+
+        Account account(query.value("type_name").toString(), query.value("category_name").toString(), query.value("account_name").toString());
+        transaction.addMoneyArray(account, MoneyArray(Money(transaction.date_time.date(),
+                                                            Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
+                                                            query.value("amount").toDouble())));
+//        auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
+//        transaction.addData(json_document.object());
+    }
+    if (current_transaction_id > 0) {
         result.push_back(transaction);
     }
-
+    qDebug() << result.size();
     return result;
 }
 
-QList<FinancialStat> Book::getSummaryByMonth(const QDateTime &endDateTime) const {
+Transaction Book::getTransaction(int transaction_id) const {
     QSqlQuery query(db);
-    query.prepare(R"sql(SELECT * FROM book_transactions WHERE date_time <= :d ORDER BY date_time ASC)sql");
-    query.bindValue(":d", endDateTime.toString(kDateTimeFormat));
+    query.prepare(R"sql(SELECT * FROM transaction_details_view WHERE transaction_id = :id)sql");
+    query.bindValue(":id", transaction_id);
     if (!query.exec()) {
-        qDebug() << Q_FUNC_INFO << query.lastError();
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+        return Transaction();
     }
-
-  QList<FinancialStat> retSummarys;
-  FinancialStat monthlySummary;
-  QDate month = QDate(getFirstTransactionDateTime().date().year(), getFirstTransactionDateTime().date().month(), 1);
-
-  while (query.next()) {
     Transaction transaction;
-    transaction.date_time = query.value("date_time").toDateTime();
-    auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-    transaction.addData(json_document.object());
-
-    // Use `while` instead of `if` in case there was no transaction for successive months.
-    while (transaction.date_time.date() >= month.addMonths(1)) {
-      monthlySummary.description = month.toString("yyyy-MM");
-      retSummarys.push_front(monthlySummary);
-
-      month = month.addMonths(1);
-      monthlySummary.clear(Account::Revenue);
-      monthlySummary.clear(Account::Expense);
+    transaction.id = transaction_id;
+    while (query.next()) {
+        transaction.description = query.value("description").toString();
+        transaction.date_time = query.value("date_time").toDateTime();
+        Account account(query.value("type_name").toString(), query.value("category_name").toString(), query.value("account_name").toString());
+        transaction.addMoneyArray(account, MoneyArray(Money(transaction.date_time.date(),
+                                                            Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
+                                                            query.value("amount").toDouble())));
     }
-
-    // TODO: next line increate the time from 5s to 9s.
-    monthlySummary.changeDate(transaction.date_time.date());  // Must run this before set m_dateTime.
-    monthlySummary.date_time = transaction.date_time;
-    monthlySummary += transaction;
-    monthlySummary.retainedEarnings += transaction.getRetainedEarnings();
-    monthlySummary.transactionError += MoneyArray(transaction.getCheckSum());
-  }
-  monthlySummary.description = month.toString("yyyy-MM");
-  retSummarys.push_front(monthlySummary);
-
-  return retSummarys;
+    return transaction;
 }
 
-void Book::removeTransaction(int transaction_id) const {
+void Book::removeTransaction(int transaction_id) {
+    db.transaction();
     QSqlQuery query(db);
     query.prepare(R"sql(DELETE FROM book_transactions WHERE transaction_id = :id)sql");
     query.bindValue(":id", transaction_id);
-    if (query.exec()) {
-        Logging(query);
-    } else {
-        qDebug() << Q_FUNC_INFO << query.lastError();
+    if (!query.exec()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+        db.rollback();
+        return;
     }
+    query.prepare(R"sql(DELETE FROM book_transaction_details WHERE transaction_id = :id)sql");
+    query.bindValue(":id", transaction_id);
+    if (!query.exec()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+        db.rollback();
+        return;
+    }
+
+    if (!db.commit()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+        db.rollback();
+    }
+    Logging(query);
 }
 
 // TODO: This need to be changed after transactions table has been migrated.
@@ -272,6 +358,24 @@ QString Book::moveAccount(int user_id, const Account& old_account, const Account
     }
 
     return "";  // OK status.
+}
+
+QStringList Book::getHouseholds(int user_id) const {
+    QSqlQuery query(db);
+    query.prepare(R"sql(SELECT user_id, name
+                        FROM   book_households
+                        WHERE  user_id = :user
+                        ORDER BY rank ASC)sql");
+    query.bindValue(":user", user_id);
+    if (!query.exec()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+        return {};
+    }
+    QStringList households;
+    while (query.next()) {
+        households << query.value("name").toString();
+    }
+    return households;
 }
 
 Currency::Type Book::queryCurrencyType(int user_id, const Account& account) const {
@@ -644,8 +748,9 @@ QDateTime Book::getFirstTransactionDateTime() const {
     QSqlQuery query(R"sql(SELECT MIN(date_time) FROM book_transactions)sql", db);
     if (query.next()) {
         dateTime = query.value("MIN(date_time)").toDateTime();
-        if (!dateTime.isValid())
+        if (!dateTime.isValid()) {
             dateTime = QDateTime::currentDateTime();
+        }
     }
     return dateTime;
 }
@@ -656,8 +761,9 @@ QDateTime Book::getLastTransactionDateTime() const
     QSqlQuery query(R"sql(SELECT MAX(date_time) FROM book_transactions)sql", db);
     if (query.next()) {
         dateTime = query.value("MAX(date_time)").toDateTime();
-        if (!dateTime.isValid())
+        if (!dateTime.isValid()) {
             dateTime = QDateTime::currentDateTime();
+        }
     }
     return dateTime;
 }

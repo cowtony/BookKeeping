@@ -34,11 +34,13 @@ class FinancialStatement : public QMainWindow {
     Ui::FinancialStatement* ui;
 
     Book& book_;
+    int& user_id_;
 
     void setMoney(QTreeWidgetItem* item, int column, const Money& money);
     void setFont(int column, QTreeWidgetItem* item, int depth = -1);
     void display();
     QTreeWidgetItem* getAccountItem(const Account& account, bool create = false); // Get or create account item.
+    QList<FinancialStat> getSummaryByMonth(int user_id, const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
 
     static QFont m_financialStatementFont;
     static QFont m_tableSumFont;

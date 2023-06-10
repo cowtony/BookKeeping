@@ -4,7 +4,8 @@
 TransactionsModel::TransactionsModel(QObject *parent)
     : QSqlQueryModel(parent),
       db_(static_cast<HomeWindow*>(parent)->book.db),
-    user_id_(static_cast<HomeWindow*>(parent)->user_id) {
+      book_(static_cast<HomeWindow*>(parent)->book),
+      user_id_(static_cast<HomeWindow*>(parent)->user_id) {
     refresh();
 }
 
@@ -23,9 +24,8 @@ QVariant TransactionsModel::data(const QModelIndex &index, int role) const {
             case 5: return QString(QJsonDocument(sum_transaction_.toJson().value("Liability").toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
             default: return QVariant();
             }
-        }
-        else if (index.column() <= 5 && index.column() >= 2) {
-            return QSqlQueryModel::data(index).toString().replace(R"(",)", "\",\n");
+        } else if (index.column() <= 5 && index.column() >= 2) {
+            return QSqlQueryModel::data(index).toString().replace(R"(\n)", "\n");
         }
     } else if (role == Qt::FontRole) {
         if (index.row() == rowCount() - 1) {  // Total row.
@@ -58,34 +58,25 @@ void TransactionsModel::refresh() {
     QStringList statements;
     for (const Account& account : filter_.getAccounts()) {
         if (!account.category.isEmpty()) {
-            statements << QString(R"sql((detail->'%1'->>'%2|%3' NOT NULL))sql").arg(account.typeName(), account.category, account.name);
+            statements << QString(R"sql((%1 LIKE '%%2|%3%'))sql").arg(account.typeName(), account.category, account.name);
         }
     }
 
-    QString query = QString(R"sql(SELECT
-                                      date_time AS Timestamp,
-                                      description AS Description,
-                                      detail->'Expense'   AS Expense,
-                                      detail->'Revenue'   AS Revenue,
-                                      detail->'Asset'     AS Asset,
-                                      detail->'Liability' AS Liability,
-                                      transaction_id
-                                  FROM book_transactions
+    QString query = QString(R"sql(SELECT Timestamp, Description, Expense, Revenue, Asset, Liability, transaction_id
+                                  FROM   transactions_view
                                   WHERE
                                       user_id = %1
-                                      AND (date_time BETWEEN '%2' AND '%3')
-                                      AND (description LIKE '%%4%')
+                                      AND (Timestamp BETWEEN '%2' AND '%3')
+                                      AND (Description LIKE '%%4%')
                                       AND (%5)
-                                  ORDER BY Timestamp %6
+                                  ORDER BY Timestamp DESC
                                   LIMIT %7)sql")
         .arg(user_id_)
         .arg(filter_.date_time.toString(kDateTimeFormat))
         .arg(filter_.end_date_time.toString(kDateTimeFormat))
         .arg(filter_.description)
         .arg(statements.empty()? "TRUE" : statements.join(filter_.use_or? " OR " : " AND "))
-        .arg(filter_.ascending_order? "ASC" : "DESC")
-        .arg(filter_.limit);
-
+        .arg(200);
     setQuery(query, db_);
 
     sum_transaction_.clear();
@@ -96,15 +87,6 @@ void TransactionsModel::refresh() {
 }
 
 Transaction TransactionsModel::getTransaction(int row) {
-    static const QList<QString> kTypeName = {"Expense", "Revenue", "Asset", "Liability"};
-    QJsonObject json;
-    for (int i = 0; i < kTypeName.size(); ++i) {
-        QJsonDocument json_document = QJsonDocument::fromJson(data(createIndex(row, i + 2)).toString().toUtf8());
-        json[kTypeName[i]] = json_document.object();
-    }
-    Transaction transaction(data(createIndex(row, 0)).toDateTime(), data(createIndex(row, 1)).toString());
-    transaction.id = data(createIndex(row, 6)).toInt();
-    transaction.addData(json);
-    return transaction;
+    return book_.getTransaction(data(createIndex(row, 6)).toInt());
 }
 

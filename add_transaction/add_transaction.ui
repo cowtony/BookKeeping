@@ -268,26 +268,6 @@
          <string>Revenue Name</string>
         </property>
        </column>
-       <column>
-        <property name="text">
-         <string>牛牧</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Person 2</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Person 3</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Phoebe 妹妹</string>
-        </property>
-       </column>
       </widget>
       <widget class="QTableWidget" name="tableWidget_Expenses">
        <property name="font">
@@ -303,26 +283,6 @@
        <column>
         <property name="text">
          <string>Expense Name</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Person 1</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Person 2</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Person 3</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Person 4</string>
         </property>
        </column>
       </widget>

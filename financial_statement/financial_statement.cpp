@@ -14,7 +14,8 @@ QFont FinancialStatement::m_categorySumFont;
 FinancialStatement::FinancialStatement(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::FinancialStatement),
-    book_(static_cast<HomeWindow*>(parent)->book) {
+      book_(static_cast<HomeWindow*>(parent)->book),
+      user_id_(static_cast<HomeWindow*>(parent)->user_id) {
 
     ui->setupUi(this);
 
@@ -39,7 +40,7 @@ FinancialStatement::FinancialStatement(QWidget *parent)
 
 void FinancialStatement::on_pushButton_Query_clicked() {
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    m_records = book_.getSummaryByMonth(ui->dateTimeEdit->dateTime());
+    m_records = getSummaryByMonth(user_id_, ui->dateTimeEdit->dateTime());
     QApplication::restoreOverrideCursor();
 
     display();
@@ -349,8 +350,37 @@ void FinancialStatement::onPushButtonShowMoreClicked() {
 }
 
 void FinancialStatement::onPushButtonShowAllClicked() {
-  while (ui->treeWidget->columnCount() <= m_records.size()) {
-    onPushButtonShowMoreClicked();
-  }
+    while (ui->treeWidget->columnCount() <= m_records.size()) {
+        onPushButtonShowMoreClicked();
+    }
+}
+
+QList<FinancialStat> FinancialStatement::getSummaryByMonth(int user_id, const QDateTime &endDateTime) const {
+    QList<FinancialStat> retSummarys;
+    FinancialStat monthlySummary;
+    QDate month = QDate(book_.getFirstTransactionDateTime().date().year(), book_.getFirstTransactionDateTime().date().month(), 1);  // TODO: This is calling the query twice.
+
+    for (const Transaction& transaction : book_.queryTransactions(user_id, TransactionFilter().toTime(endDateTime).orderByAscending())) {
+        // Use `while` instead of `if` in case there was no transaction for successive months.
+        while (transaction.date_time.date() >= month.addMonths(1)) {
+            monthlySummary.description = month.toString("yyyy-MM");
+            retSummarys.push_front(monthlySummary);
+
+            month = month.addMonths(1);
+            monthlySummary.clear(Account::Revenue);
+            monthlySummary.clear(Account::Expense);
+        }
+
+        // TODO: next line increate the time from 5s to 9s.
+        monthlySummary.changeDate(transaction.date_time.date());  // Must run this before set m_dateTime.
+        monthlySummary.date_time = transaction.date_time;
+        monthlySummary += transaction;
+        monthlySummary.retainedEarnings += transaction.getRetainedEarnings();
+        monthlySummary.transactionError += MoneyArray(transaction.getCheckSum());
+    }
+    monthlySummary.description = month.toString("yyyy-MM");
+    retSummarys.push_front(monthlySummary);
+
+    return retSummarys;
 }
 

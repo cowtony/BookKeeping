@@ -10,19 +10,19 @@ InvestmentAnalysis::InvestmentAnalysis(QWidget *parent):
   user_id_(static_cast<HomeWindow*>(parent)->user_id) {
     ui->setupUi(this);
 
-  // Scan, analysis and save all investment product:
-  QList<AssetAccount> investments = book_.getInvestmentAccounts(user_id_);
-  QApplication::setOverrideCursor(Qt::WaitCursor);
-  for (const AssetAccount& investment : investments) {
-    InvestmentAnalyzer analyzer(investment,
-                                book_.queryTransactions(TransactionFilter({investment, Account(Account::Revenue, "Investment", investment.name)})
-                                                                          .toTime(QDateTime::currentDateTime())
-                                                                          .orderByAscending()
-                                                                          .useOr()));
-    analyzer.runAnalysis();
-    investments_.insert(investment.name, std::move(analyzer));
-  }
-  QApplication::restoreOverrideCursor();
+    // Scan, analysis and save all investment product:
+    QList<AssetAccount> investments = book_.getInvestmentAccounts(user_id_);
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    for (const AssetAccount& investment : investments) {
+        InvestmentAnalyzer analyzer(investment,
+                                book_.queryTransactions(user_id_, TransactionFilter({investment, Account(Account::Revenue, "Investment", investment.name)})
+                                                                                    .toTime(QDateTime::currentDateTime())
+                                                                                    .orderByAscending()
+                                                                                    .useOr()));
+        analyzer.runAnalysis();
+        investments_.insert(investment.name, std::move(analyzer));
+    }
+    QApplication::restoreOverrideCursor();
 
   // Get all investment info into list:
   ui->investmentTableWidget->setRowCount(investments.size());

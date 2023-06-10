@@ -14,12 +14,11 @@
 HomeWindow::HomeWindow(QWidget *parent)
     : QMainWindow(parent),
       book("Book.db"),
+      user_id(book.getLastLoggedInUserId()),
       ui(new Ui::HomeWindow),
       transactions_model_(this) {
 
     ui->setupUi(this);
-    
-    user_id = book.getLastLoggedInUserId();
 
     g_currency.openDatabase();
     account_manager_   = QSharedPointer<AccountManager>  (new AccountManager(this));
@@ -273,7 +272,7 @@ void HomeWindow::onActionTransactionValidationTriggered() {
     // Display validation message
     QString errorMessage = "";
     // Query ALL transactions.
-    for (const Transaction& transaction : book.queryTransactions()) {
+    for (const Transaction& transaction : book.queryTransactions(user_id)) {
         if (!transaction.validate().empty()) {
             errorMessage += transaction.date_time.toString("yyyy/MM/dd HH:mm:ss") + ": ";
             errorMessage += transaction.description + '\n';

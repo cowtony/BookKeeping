@@ -7,11 +7,11 @@
 #include "book/book.h"
 #include "home_window/home_window.h"
 
-AddTransaction::AddTransaction(QWidget *parent):
-  QMainWindow(parent),
-  ui(new Ui::AddTransaction),
-  book_(static_cast<HomeWindow*>(parent)->book),
-  user_id_(static_cast<HomeWindow*>(parent)->user_id) {
+AddTransaction::AddTransaction(QWidget *parent)
+    : QMainWindow(parent),
+      ui(new Ui::AddTransaction),
+      book_(static_cast<HomeWindow*>(parent)->book),
+      user_id_(static_cast<HomeWindow*>(parent)->user_id) {
     ui->setupUi(this);
 
     tableMap.insert(Account::Asset,     ui->tableWidget_Assets);
@@ -38,45 +38,53 @@ AddTransaction::~AddTransaction() {
 }
 
 void AddTransaction::initialization() {
-  // Date Time
+    // Date Time
     ui->dateTimeEdit->setDateTime(QDateTime::currentDateTime());
     ui->calendarWidget->setSelectedDate(ui->dateTimeEdit->date());   // maybe not necessary?
 
-  // Description
-  ui->lineEdit_Description->clear();
+    // Description
+    ui->lineEdit_Description->clear();
 
-  // Insert Button
-  ui->pushButton_Insert->setText("Insert");
+    // Insert Button
+    ui->pushButton_Insert->setText("Insert");
 
-  // Recursive Transaction
-  ui->checkBox_RecursiveTransaction->setChecked(false);
-  ui->dateEdit_nextTransaction->setEnabled(false);
+    // Recursive Transaction
+    ui->checkBox_RecursiveTransaction->setChecked(false);
+    ui->dateEdit_nextTransaction->setEnabled(false);
 
-  for (QTableWidget* tableWidget : {ui->tableWidget_Assets, ui->tableWidget_Revenues, ui->tableWidget_Expenses, ui->tableWidget_Liabilities}) {
-    while (tableWidget->rowCount() > 0) {
-      tableWidget->removeRow(0);
+    for (QTableWidget* tableWidget : {ui->tableWidget_Assets, ui->tableWidget_Revenues, ui->tableWidget_Expenses, ui->tableWidget_Liabilities}) {
+        while (tableWidget->rowCount() > 0) {
+            tableWidget->removeRow(0);
+        }
+        // Set cell width & height.
+        tableWidget->insertRow(0);
+        tableWidget->setRowHeight(0, 20);
+        tableWidget->setColumnWidth(0, 100);
+        tableWidget->setColumnWidth(1, 200);
+        for (int col = 2; col < tableWidget->columnCount(); ++col) {
+            tableWidget->setColumnWidth(col, 80);
+        }
+
+        QPushButton* add_row = new QPushButton;
+        add_row->setText("Add");
+        connect(add_row, &QPushButton::clicked, this, [this, tableWidget](){ insertTableRow(tableWidget); });
+        tableWidget->setCellWidget(0, 0, add_row);
+        tableWidget->cellWidget(0, 0)->setToolTip("Add a new row");
+        // Disable all cells on the right of `AddRow` button.
+        for (int col = 1; col < tableWidget->columnCount(); ++col) {
+            QTableWidgetItem* item = new QTableWidgetItem();
+            tableWidget->setItem(0, col, item);
+            item->setFlags(item->flags() & ~Qt::ItemIsEnabled);  // set to disable
+        }
     }
-    // Set cell width & height.
-    tableWidget->insertRow(0);
-    tableWidget->setRowHeight(0, 20);
-    tableWidget->setColumnWidth(0, 100);
-    tableWidget->setColumnWidth(1, 200);
-    for (int col = 2; col < tableWidget->columnCount(); ++col) {
-      tableWidget->setColumnWidth(col, 80);
-    }
 
-    QPushButton* add_row = new QPushButton;
-    add_row->setText("Add");
-    connect(add_row, &QPushButton::clicked, [this, tableWidget](){ this->insertTableRow(tableWidget); } );
-    tableWidget->setCellWidget(0, 0, add_row);
-    tableWidget->cellWidget(0, 0)->setToolTip("Add a new row");
-    // Disable all cells on the right of `AddRow` button.
-    for (int col = 1; col < tableWidget->columnCount(); ++col) {
-      QTableWidgetItem* item = new QTableWidgetItem();
-      tableWidget->setItem(0, col, item);
-      item->setFlags(item->flags() & ~Qt::ItemIsEnabled);  // set to disable
+    // Set the household columns for Revenue & Expense.
+    // TODO: Create a Add button and dropdown menu for more flexibility.
+    QStringList households = book_.getHouseholds(user_id_);
+    for (QTableWidget* tableWidget : {ui->tableWidget_Revenues, ui->tableWidget_Expenses}) {
+        tableWidget->setColumnCount(2 + households.size());
+        tableWidget->setHorizontalHeaderLabels(QStringList() << "Category" << "Account" << households);
     }
-  }
 }
 
 void AddTransaction::setTransaction(const Transaction& transaction) {

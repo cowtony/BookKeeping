@@ -65,7 +65,7 @@ struct TransactionFilter : public Transaction {
     QDateTime end_date_time = QDateTime(QDate(2200, 01, 01), QTime(23, 59, 59));
     bool use_or = false;
     bool ascending_order = true;
-    int limit = 200;
+    int limit = 99999999;
 };
 
 // TODO: merge this into Transaction

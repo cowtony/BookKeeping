@@ -19,10 +19,10 @@ class Book {
     void closeDatabase();
 
     // Transactions
-    bool insertTransaction(int user_id, const Transaction& transaction, bool ignore_error = false) const;
-    QList<Transaction> queryTransactions(const TransactionFilter& filter = TransactionFilter()) const;
-    QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
-    void removeTransaction(int transaction_id) const;
+    bool insertTransaction(int user_id, const Transaction& transaction, bool ignore_error = false);
+    QList<Transaction> queryTransactions(int user_id, const TransactionFilter& filter = TransactionFilter()) const;
+    Transaction getTransaction(int transaction_id) const;
+    void removeTransaction(int transaction_id);  // TODO: return bool of remove status
     QDateTime getFirstTransactionDateTime() const;
     QDateTime getLastTransactionDateTime() const;
 
@@ -43,6 +43,7 @@ class Book {
     bool removeAccount (int user_id, const Account& account) const;
     bool accountExist  (int user_id, const Account& account) const;
     QString moveAccount(int user_id, const Account& old_account, const Account& new_account) const; // Return the error string, empty if no error. // TODO: Use StatusOr<>
+    QStringList getHouseholds(int user_id) const;
 
     // Login related
     bool updateLoginTime(int user_id) const;

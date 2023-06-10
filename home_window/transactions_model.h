@@ -2,6 +2,8 @@
 #define TRANSACTIONS_MODEL_H
 
 #include <QSqlQueryModel>
+
+#include "book/book.h"
 #include "book/transaction.h"
 
 const QVector<Account::Type> kAccountTypes = {Account::Expense, Account::Revenue, Account::Asset, Account::Liability};
@@ -24,6 +26,7 @@ class TransactionsModel : public QSqlQueryModel {
 
 
     QSqlDatabase db_;
+    Book& book_;
     int& user_id_;
     TransactionFilter filter_;
     Transaction sum_transaction_;

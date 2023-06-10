@@ -15,14 +15,14 @@ class AddTransaction;
 class AddTransaction : public QMainWindow {
     Q_OBJECT
 
-  public:
+public:
     explicit AddTransaction(QWidget *parent);
       ~AddTransaction();
 
     void initialization();
     void setTransaction(const Transaction& t);
 
-  private slots:
+private slots:
     void onCalendarWidgetSelectionChanged();
     void onDateTimeEditDateTimeChanged(const QDateTime& date_time);
     void on_lineEdit_Description_editingFinished();
@@ -32,10 +32,10 @@ class AddTransaction : public QMainWindow {
 
     void on_checkBox_RecursiveTransaction_stateChanged(int arg1);
 
-  signals:
+signals:
     void insertTransactionFinished(AddTransaction *obj);
 
-  private:
+private:
     int insertTableRow(QTableWidget *tableWidget);
     void setTableRow(QTableWidget *tableWidget, Account account, const MoneyArray& amounts);
 
