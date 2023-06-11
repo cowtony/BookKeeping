@@ -27,7 +27,7 @@ class Book {
     QDateTime getLastTransactionDateTime() const;
 
     // Accounts
-    QList<std::shared_ptr<Account>> queryAllAccounts(int user_id) const;  // TODO: use QSharedPointer
+    QList<QSharedPointer<Account>> queryAllAccounts(int user_id) const;
 
     QList<AssetAccount> getInvestmentAccounts(int user_id) const;
     Currency::Type queryCurrencyType(int user_id, const Account& account) const;

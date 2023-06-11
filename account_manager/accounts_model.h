@@ -17,7 +17,7 @@ class AccountsModel : public QAbstractItemModel {
     explicit AccountsModel(QObject *parent);
     ~AccountsModel();
 
-    void setupAccounts(const QList<std::shared_ptr<Account>>& accounts);
+    void setupAccounts(const QList<QSharedPointer<Account>>& accounts);
     static AccountTreeNode* getItem(const QModelIndex& index);
 
     // Header:

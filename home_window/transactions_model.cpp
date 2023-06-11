@@ -18,10 +18,10 @@ QVariant TransactionsModel::data(const QModelIndex &index, int role) const {
         if (index.row() == rowCount() - 1) {  // Total row.
             switch (index.column()) {
             case 1: return sum_transaction_.description;
-            case 2: return QString(QJsonDocument(sum_transaction_.toJson().value("Expense")  .toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
-            case 3: return QString(QJsonDocument(sum_transaction_.toJson().value("Revenue")  .toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
-            case 4: return QString(QJsonDocument(sum_transaction_.toJson().value("Asset")    .toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
-            case 5: return QString(QJsonDocument(sum_transaction_.toJson().value("Liability").toObject()).toJson(QJsonDocument::Compact).toStdString().c_str()).replace(R"(",)", "\",\n");
+            case 2: return sum_transaction_.toString(Account::Expense);
+            case 3: return sum_transaction_.toString(Account::Revenue);
+            case 4: return sum_transaction_.toString(Account::Asset);
+            case 5: return sum_transaction_.toString(Account::Liability);
             default: return QVariant();
             }
         } else if (index.column() <= 5 && index.column() >= 2) {

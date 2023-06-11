@@ -16,7 +16,7 @@ AccountsModel::~AccountsModel() {
     delete root_;
 }
 
-void AccountsModel::setupAccounts(const QList<std::shared_ptr<Account>>& accounts) {
+void AccountsModel::setupAccounts(const QList<QSharedPointer<Account>>& accounts) {
     root_->clear();
 
     // Preset 4 basic account type in case there is no account for one of them.
@@ -24,7 +24,7 @@ void AccountsModel::setupAccounts(const QList<std::shared_ptr<Account>>& account
         root_->insertChild(new AccountTreeNode(type_name));
     }
 
-    for (const std::shared_ptr<Account>& account : accounts) {
+    for (const QSharedPointer<Account>& account : accounts) {
         AccountTreeNode* current_node = root_;
         for (const QString& name : {account->typeName(), account->category, account->name}) {
             if (current_node->childAt(name) == nullptr) {

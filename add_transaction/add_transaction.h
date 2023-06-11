@@ -37,7 +37,7 @@ signals:
 
 private:
     int insertTableRow(QTableWidget *tableWidget);
-    void setTableRow(QTableWidget *tableWidget, Account account, const MoneyArray& amounts);
+    void setTableRow(QTableWidget* tableWidget, const Account& account, const QHash<QString, Money>& households);
 
     Transaction getTransaction();
 
@@ -45,7 +45,8 @@ private:
     Book& book_;
     int& user_id_;
 
-    QMap<Account::Type, QTableWidget*> tableMap;
+    QMap<Account::Type, QTableWidget*> table_widgets_;
+    QMap<QString, int> household_to_column_;
     int transaction_id_ = 0;
 };
 

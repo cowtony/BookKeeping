@@ -2,8 +2,9 @@
 #define ACCOUNTTREENODE_H
 
 // Note: Used for accounts_model.
-#include "book/account.h"
 #include <QList>
+
+#include "book/account.h"
 
 class AccountTreeNode {
   public:
@@ -20,7 +21,7 @@ class AccountTreeNode {
     QString name() const { return name_; }
     QString comment() const { return comment_; }
     bool isInvestment() const { return is_investment_; }
-    std::shared_ptr<Account> account() const;
+    QSharedPointer<Account> account() const;
     Account::Type accountType() const;
     QString accountGroup() const;
 

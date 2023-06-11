@@ -1,37 +1,44 @@
 #include "transaction.h"
 
 Transaction::Transaction(const QDateTime& date_time, const QString& description)
-  : date_time(date_time), description(description) {
-  data_[Account::Expense];
-  data_[Account::Revenue];
-  data_[Account::Asset];
-  data_[Account::Liability];
-}
+    : date_time(date_time),
+      description(description),
+      id(-1),
+      data_({{Account::Expense, {}}, {Account::Expense, {}}, {Account::Expense, {}}, {Account::Expense, {}}}) {}
 
 Transaction Transaction::operator +(Transaction transaction) const {
-  // dateTime is the maximum dateTime
-  transaction.date_time = transaction.date_time > date_time? transaction.date_time : date_time;
+    // dateTime is the maximum dateTime
+    transaction.date_time = transaction.date_time > date_time? transaction.date_time : date_time;
 
-  // merge description
-  if (description.contains(transaction.description)) {
-    transaction.description = description;
-  } else if (!transaction.description.contains(description)) {
-    transaction.description = description + "; " + transaction.description;
-  }
-
-  // Add up account
-  for (const Account &account : getAccounts()) {
-    transaction.addMoneyArray(account, this->getMoneyArray(account));
-
-    if (transaction.getMoneyArray(account).isZero()) {
-      transaction.data_[account.type][account.category].remove(account.name);
-      if (transaction.data_[account.type][account.category].isEmpty()) {
-        transaction.data_[account.type].remove(account.category);
-      }
+    // merge description
+    if (description.contains(transaction.description)) {
+        transaction.description = description;
+    } else if (!transaction.description.contains(description)) {
+        transaction.description = description + "; " + transaction.description;
     }
-  }
 
-  return transaction;
+    // Add up account
+    for (const auto& [account_type, categories] : data_.asKeyValueRange()) {
+        for (const auto& [category, accounts] : categories.asKeyValueRange()) {
+            for (const auto& [account, households] : accounts.asKeyValueRange()) {
+                for (const auto& [household, money] : households.asKeyValueRange()) {
+                    transaction.data_[account_type][category][account][household] += money;
+                    // Recursively remove empty key.
+                    if (transaction.data_[account_type][category][account][household].isZero()) {
+                        transaction.data_[account_type][category][account].remove(household);
+                        if (transaction.data_[account_type][category][account].isEmpty()) {
+                            transaction.data_[account_type][category].remove(account);
+                            if (transaction.data_[account_type][category].isEmpty()) {
+                                transaction.data_[account_type].remove(category);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return transaction;
 }
 
 void Transaction::operator +=(const Transaction &t) {
@@ -41,37 +48,41 @@ void Transaction::operator +=(const Transaction &t) {
 void Transaction::clear() {
     date_time = QDateTime();
     description.clear();
-    for (const Account::Type &tableType : data_.keys()) {
-        clear(tableType);
-    }
+    id = -1;
+    data_ = {{Account::Expense, {}}, {Account::Expense, {}}, {Account::Expense, {}}, {Account::Expense, {}}};
 }
 
-void Transaction::clear(Account::Type tableType)
-{
+void Transaction::clear(Account::Type tableType) {
     data_[tableType].clear();
 }
 
-bool Transaction::accountExist(const Account &account) const {
-  if (data_.contains(account.type)) {
-    if (data_.value(account.type).contains(account.category)) {
-      if (data_.value(account.type).value(account.category).contains(account.name)) {
-        return true;
-      }
+bool Transaction::accountExist(const Account& account) const {
+    if (data_.contains(account.type)) {
+        if (data_.value(account.type).contains(account.category)) {
+            if (data_.value(account.type).value(account.category).contains(account.name)) {
+                return true;
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 Money Transaction::getCheckSum() const {
-  Money sum(date_time.date());
-  for (const Account &account : getAccounts()) {
-    if (account.type == Account::Expense or account.type == Account::Asset)
-      sum += getMoneyArray(account).sum();
-    else
-      sum -= getMoneyArray(account).sum();
-  }
-
-  return sum;
+    Money sum(date_time.date());
+    for (const auto& [account_type, categories] : data_.asKeyValueRange()) {
+        for (const auto& [category, accounts] : categories.asKeyValueRange()) {
+            for (const auto& [account, households] : accounts.asKeyValueRange()) {
+                for (const auto& [household, money] : households.asKeyValueRange()) {
+                    if (account_type == Account::Expense || account_type == Account::Asset) {
+                        sum += money;
+                    } else {
+                        sum -= money;
+                    }
+                }
+            }
+        }
+    }
+    return sum;
 }
 
 QStringList Transaction::validate() const {
@@ -85,51 +96,30 @@ QStringList Transaction::validate() const {
         data_.value(Account::Liability).isEmpty()) {
         errorMessage << "No account entries.";
     }
-    if (qFabs(getCheckSum().amount_) > 0.005)
-        errorMessage << "The sum of the transaction is not zero: " + QString::number(getCheckSum().amount_);
+    Money sum = getCheckSum();
+    if (sum.isZero()) {
+        errorMessage << "The sum of the transaction is not zero: " + QString::number(sum.amount_);
+    }
 
     return errorMessage;
 }
 
-QString Transaction::toString(Account::Type table_type) const {
+QString Transaction::toString(Account::Type account_type) const {
     QStringList result;
-    for (const Account& account : getAccounts(table_type)) {
-        MoneyArray moneyArray = getMoneyArray(account);
-        if (!moneyArray.isZero()) {
-            result << QString("[%1|%2: %3]").arg(account.category, account.name, moneyArray);
-        }
-    }
-    return result.join("\n");
-}
-
-QJsonObject Transaction::toJson() const {
-    QJsonObject json;
-    for (const auto& [account_type, categories] : data_.asKeyValueRange()) {
-        QJsonObject json_accounts;
-        for (const auto& [category_name, accounts] : categories.asKeyValueRange()) {
-            for (const auto& [account_name, money_array] : accounts.asKeyValueRange()) {
-                if (!money_array.isZero()) {
-                    json_accounts[category_name + "|" + account_name] = QString(money_array);
+    for (const auto& [category, accounts] : data_[account_type].asKeyValueRange()) {
+        for (const auto& [account, households] : accounts.asKeyValueRange()) {
+            for (const auto& [household, money] : households.asKeyValueRange()) {
+                if (!money.isZero()) {
+                    if (account_type == Account::Expense || account_type == Account::Revenue) {
+                        result << QString("[%1|%2|%3: %4]").arg(category, account, household, money);
+                    } else {
+                        result << QString("[%1|%2: %3]").arg(category, account, money);
+                    }
                 }
             }
         }
-        if (!json_accounts.isEmpty()) {
-            json[Account::kAccountTypeName.value(account_type)] = json_accounts;
-        }
     }
-    return json;
-}
-
-void Transaction::addData(const QJsonObject& json) {
-    for (auto account_type : {Account::Asset, Account::Liability, Account::Expense, Account::Revenue}) {
-        QJsonObject categories = json[Account::kAccountTypeName.value(account_type)].toObject();
-        for (const QString& account : categories.keys()) {
-            QString category_name  = account.split("|").at(0);
-            QString account_name   = account.split("|").at(1);
-            QString amounts = categories.value(account).toString();
-            addMoneyArray(Account(account_type, category_name, account_name), MoneyArray(date_time.date(), amounts));
-        }
-    }
+    return result.join("\n");
 }
 
 QList<Account> Transaction::getAccounts() const {
@@ -154,57 +144,63 @@ QList<Account> Transaction::getAccounts(Account::Type account_type) const {
     return retAccounts;
 }
 
-MoneyArray Transaction::getMoneyArray(const Account &account) const {
+HouseholdMoney Transaction::getHouseholdMoney(const Account& account) const {
     if (account.type == Account::Equity) {
-        qDebug() << Q_FUNC_INFO << "Equity should be here.";
+        qDebug() << Q_FUNC_INFO << "Equity shouldn't be here.";
+        return HouseholdMoney();
     }
 
     if (accountExist(account)) {
         return data_.value(account.type).value(account.category).value(account.name);
     } else {
-        return MoneyArray(date_time.date(), Currency::USD);
+        return HouseholdMoney();
     }
 }
 
-void Transaction::addMoneyArray(const Account& account, const MoneyArray& moneyArray) {
+void Transaction::addHouseholdMoney(const Account& account, const HouseholdMoney& household_money) {
     if (account.type == Account::Equity) {
         qDebug() << Q_FUNC_INFO << "Transaction don't store equity, it's calculated by others.";
         return;
     }
+    data_[account.type][account.category][account.name] += household_money;
+}
 
-    if (!accountExist(account)) {
-        data_[account.type][account.category][account.name] = MoneyArray(moneyArray.date_, moneyArray.currency());
+HouseholdMoney Transaction::getRetainedEarnings() const {
+    HouseholdMoney household_money;
+    for (Account::Type account_type : {Account::Revenue, Account::Expense}) {
+        for (const auto& [category, accounts] : data_[Account::Revenue].asKeyValueRange()) {
+            for (const auto& [account, households] : accounts.asKeyValueRange()) {
+                for (const auto& [household, money] : households.asKeyValueRange()) {
+                    if (account_type == Account::Revenue) {
+                        household_money[household] += money;
+                    } else {
+                        household_money[household] -= money;
+                    }
+                    if (household_money[household].isZero()) {
+                        household_money.remove(household);
+                    }
+                }
+            }
+        }
     }
-    data_[account.type][account.category][account.name] += moneyArray;
+    return household_money;
 }
 
-MoneyArray Transaction::getRetainedEarnings() const {
-  MoneyArray ret(date_time.date(), Currency::USD);
-  for (const Account &account : getAccounts(Account::Revenue)) {
-    ret += getMoneyArray(account);
-  }
-  for (const Account &account : getAccounts(Account::Expense)) {
-    ret -= getMoneyArray(account);
-  }
-  return ret;
-}
-
-MoneyArray Transaction::getXXXContributedCapital() const
-{
-    return MoneyArray(date_time.date(), Currency::USD);
+HouseholdMoney Transaction::getXXXContributedCapital() const {
+    return HouseholdMoney(date_time.date(), Currency::USD);
 }
 
 //////////////////// Transaction Filter ////////////////////////////
 TransactionFilter::TransactionFilter(const QList<Account>& accounts)
-  : Transaction(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), "") {
-  for (const Account& account : accounts) {
-    addAccount(account);
-  }
+    : Transaction(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), "") {
+    for (const Account& account : accounts) {
+        addAccount(account);
+    }
 }
 
 TransactionFilter& TransactionFilter::addAccount(const Account& account) {
-  addMoneyArray(account, MoneyArray(QDate(), "$1"));
-  return *this;
+    data_[account.type][account.category][account.name]["foo"] = Money(QDate(), "$1");
+    return *this;
 }
 
 TransactionFilter& TransactionFilter::fromTime(const QDateTime& start_time) {
@@ -242,51 +238,59 @@ TransactionFilter& TransactionFilter::orderByDescending() {
   return *this;
 }
 
-TransactionFilter& TransactionFilter::setLimit(int limit) {
-  limit = limit;
+TransactionFilter& TransactionFilter::setLimit(int lim) {
+  limit = lim;
   return *this;
 }
 
 //////////////////// Financial Summary /////////////////////////////
 FinancialStat::FinancialStat() : Transaction() {}
 
-MoneyArray FinancialStat::getMoneyArray(const Account &account) const {
+HouseholdMoney FinancialStat::getHouseholdMoney(const Account &account) const {
   if (account == Account(Account::Equity, "Retained Earnings", "Retained Earning")) {
     return retainedEarnings;
   } else if (account == Account(Account::Equity, "Retained Earnings", "Currency Error")) {
-    return currencyError;
+    return HouseholdMoney("All", currencyError);
   } else if (account == Account(Account::Equity, "Retained Earnings", "Transaction Error")) {
-    return transactionError;
+    return HouseholdMoney("All", transactionError);
   } else if (account == Account(Account::Equity, "Contributed Capitals", "Contributed Capital")) {
-    return MoneyArray(date_time.date(), Currency::USD); // Empty money array.
+    return HouseholdMoney(); // Empty HouseholdMoney.
   }
-  return Transaction::getMoneyArray(account);
+  return Transaction::getHouseholdMoney(account);
 }
 
 QList<Account> FinancialStat::getAccounts() const {
-  QList<Account> accounts = Transaction::getAccounts();
-  accounts.push_back(Account(Account::Equity, "Retained Earnings", "Retained Earning"));
-  accounts.push_back(Account(Account::Equity, "Retained Earnings", "Currency Error"));
-  accounts.push_back(Account(Account::Equity, "Retained Earnings", "Transaction Error"));
-  accounts.push_back(Account(Account::Equity, "Contributed Capitals", "Contributed Capital"));
-  return accounts;
+    QList<Account> accounts = Transaction::getAccounts();
+    accounts.push_back(Account(Account::Equity, "Retained Earnings", "Retained Earning"));
+    accounts.push_back(Account(Account::Equity, "Retained Earnings", "Currency Error"));
+    accounts.push_back(Account(Account::Equity, "Retained Earnings", "Transaction Error"));
+    accounts.push_back(Account(Account::Equity, "Contributed Capitals", "Contributed Capital"));
+    return accounts;
 }
 
 void FinancialStat::changeDate(const QDate& nextDate) {
-  // Skip when next transaction is the same day of current transaction.
-  if (date_time.date() == nextDate) {
-    return;
-  }
-  MoneyArray before(date_time.date(), currencyError.currency());
-  MoneyArray after(nextDate, currencyError.currency());
-  for (const Account& account : Transaction::getAccounts(Account::Asset)) {
-    before += getMoneyArray(account);
-    after += getMoneyArray(account);
-  }
-  for (const Account& account : Transaction::getAccounts(Account::Liability)) {
-    before -= getMoneyArray(account);
-    after -= getMoneyArray(account);
-  }
+    // Skip when next transaction is the same day of current transaction.
+    if (date_time.date() == nextDate) {
+        return;
+    }
+    Money before(date_time.date(), currencyError.currency());
+    Money after(nextDate, currencyError.currency());
 
-  currencyError += after - before;
+    for (Account::Type account_type : {Account::Asset, Account::Liability}) {
+        for (const auto& [category, accounts] : data_[account_type].asKeyValueRange()) {
+            for (const auto& [account, households] : accounts.asKeyValueRange()) {
+                for (const auto& [household, money] : households.asKeyValueRange()) {
+                    if (account_type == Account::Asset) {
+                        before += money;
+                        after += money;
+                    } else {
+                        before -= money;
+                        after -= money;
+                    }
+                }
+            }
+        }
+    }
+
+    currencyError += after - before;
 }

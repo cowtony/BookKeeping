@@ -2,6 +2,7 @@
 #define ACCOUNT_H
 
 #include <QString>
+#include <QSharedPointer>
 #include <QMap>
 
 struct Account {
@@ -36,6 +37,6 @@ struct AssetAccount : public Account {
     bool is_investment;
 };
 
-std::shared_ptr<Account> FactoryCreateAccount(Account::Type account_type, const QString& category, const QString& name, const QString& comment = "");
+QSharedPointer<Account> FactoryCreateAccount(Account::Type account_type, const QString& category, const QString& name, const QString& comment = "");
 
 #endif // ACCOUNT_H

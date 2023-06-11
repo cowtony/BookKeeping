@@ -30,7 +30,7 @@ int AccountTreeNode::index() const {
   return index;
 }
 
-std::shared_ptr<Account> AccountTreeNode::account() const {
+QSharedPointer<Account> AccountTreeNode::account() const {
   if (depth_ != 3) {
     // Return an invalid account.
     return FactoryCreateAccount(Account::Liability, "", "");

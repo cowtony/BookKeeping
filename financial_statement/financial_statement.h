@@ -22,15 +22,12 @@ class FinancialStatement : public QMainWindow {
     void onTreeWidgetItemCollapsed(QTreeWidgetItem *item);
     void onTreeWidgetItemExpanded(QTreeWidgetItem *item);
     void onTreeWidgetItemClicked(QTreeWidgetItem *item, int column);
-    void on_radioButton_all_clicked();
-    void on_radioButton_1_clicked();
-    void on_radioButton_2_clicked();
-    void on_radioButton_3_clicked();
+    void on_comboBoxHousehold_currentIndexChanged(int index);
     void onPushButtonExportClicked();
     void onPushButtonShowMoreClicked();
     void onPushButtonShowAllClicked();
 
-  private:
+private:
     Ui::FinancialStatement* ui;
 
     Book& book_;
@@ -40,12 +37,11 @@ class FinancialStatement : public QMainWindow {
     void setFont(int column, QTreeWidgetItem* item, int depth = -1);
     void display();
     QTreeWidgetItem* getAccountItem(const Account& account, bool create = false); // Get or create account item.
-    QList<FinancialStat> getSummaryByMonth(int user_id, const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
+    QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
 
     static QFont m_financialStatementFont;
     static QFont m_tableSumFont;
     static QFont m_categorySumFont;
-    int m_viewSelection;  // -1: all, 0: person 0, 1: person 1
 
     QList<FinancialStat> m_records;
 };

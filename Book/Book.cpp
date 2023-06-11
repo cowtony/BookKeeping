@@ -53,7 +53,7 @@ Book::Book(const QString& dbPath) {
             transaction.addData(json_document.object());
 
             for (const Account& account : transaction.getAccounts()) {
-                MoneyArray money_array = transaction.getMoneyArray(account);
+                MoneyArray money_array = transaction.getHouseholdMoney(account);
                 for (int i = 0; i < money_array.amounts_.size(); ++i) {
                     Money money = money_array.getMoney(i);
                     if (abs(money.amount_) < 0.001) {
@@ -105,11 +105,10 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
     db.transaction();
     QSqlQuery query(db);
 
-    query.prepare(R"sql(INSERT INTO book_transactions (user_id, date_time, description, detail) VALUES (:user_id, :dateTime, :description, :detail))sql");
+    query.prepare(R"sql(INSERT INTO book_transactions (user_id, date_time, description) VALUES (:user_id, :dateTime, :description))sql");
     query.bindValue(":user_id",     user_id);
     query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
     query.bindValue(":description", transaction.description);
-    query.bindValue(":detail",      QJsonDocument(transaction.toJson()).toJson(QJsonDocument::Indented).toStdString().c_str()); // TODO: deprecate after migration
 
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
@@ -122,33 +121,34 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
                         VALUES (
                             :transaction_id,
                             (SELECT account_id FROM accounts_view WHERE user_id = :user_id AND type_name = :type_name AND category_name = :cat AND account_name = :acc),
-                            :household_id,
+                            (SELECT household_id FROM book_households WHERE user_id = :user_id AND name = :household_name),
                             (SELECT currency_id FROM currency_types WHERE Name = :currency_name),
                             :amount
                         ) )sql");
     query.bindValue(":transaction_id", query.lastInsertId().toInt());
     query.bindValue(":user_id", user_id);
 
-    for (const Account& account : transaction.getAccounts()) {
-        query.bindValue(":type_name", account.typeName());
-        query.bindValue(":cat", account.category);
-        query.bindValue(":acc", account.name);
-        MoneyArray money_array = transaction.getMoneyArray(account);
-        for (int i = 0; i < money_array.amounts_.size(); ++i) {
-            Money money = money_array.getMoney(i);
-            if (abs(money.amount_) < 0.001) {
-                continue;
+    for (const auto& [account_type, categories] : transaction.data_.asKeyValueRange()) {
+        query.bindValue(":type_name", Account::kAccountTypeName.value(account_type));
+        for (const auto& [category, accounts] : categories.asKeyValueRange()) {
+            query.bindValue(":cat", category);
+            for (const auto& [account, household_money] : accounts.asKeyValueRange()) {
+                query.bindValue(":acc", account);
+                for (const auto& [household, money] : household_money.asKeyValueRange()) {
+                    if (money.isZero()) {
+                        continue;
+                    }
+                    query.bindValue(":household_name", household);
+                    query.bindValue(":currency_name", Currency::kCurrencyToCode.value(money.currency()));
+                    query.bindValue(":amount", money.amount_);
+                    if (!query.exec()) {
+                        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+                        db.rollback();
+                        return false;
+                    }
+                    Logging(query);
+                }
             }
-
-            query.bindValue(":household_id", i + 1); // TODO: fix this hardcoded mapping.
-            query.bindValue(":currency_name", Currency::kCurrencyToCode.value(money.currency()));
-            query.bindValue(":amount", money.amount_);
-            if (!query.exec()) {
-                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
-                db.rollback();
-                return false;
-            }
-            Logging(query);
         }
     }
 
@@ -211,12 +211,13 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
             transaction.date_time = query.value("date_time").toDateTime();
         }
 
-        Account account(query.value("type_name").toString(), query.value("category_name").toString(), query.value("account_name").toString());
-        transaction.addMoneyArray(account, MoneyArray(Money(transaction.date_time.date(),
-                                                            Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
-                                                            query.value("amount").toDouble())));
-//        auto json_document = QJsonDocument::fromJson(query.value("detail").toString().toUtf8());
-//        transaction.addData(json_document.object());
+        Money money(transaction.date_time.date(),
+                    Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
+                    query.value("amount").toDouble());
+        transaction.data_[Account::kAccountTypeName.key(query.value("type_name").toString())]
+                         [query.value("category_name").toString()]
+                         [query.value("account_name").toString()]
+                         [query.value("household_name").toString()] += money;
     }
     if (current_transaction_id > 0) {
         result.push_back(transaction);
@@ -238,10 +239,13 @@ Transaction Book::getTransaction(int transaction_id) const {
     while (query.next()) {
         transaction.description = query.value("description").toString();
         transaction.date_time = query.value("date_time").toDateTime();
-        Account account(query.value("type_name").toString(), query.value("category_name").toString(), query.value("account_name").toString());
-        transaction.addMoneyArray(account, MoneyArray(Money(transaction.date_time.date(),
-                                                            Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
-                                                            query.value("amount").toDouble())));
+        Money money(transaction.date_time.date(),
+                    Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
+                    query.value("amount").toDouble());
+        transaction.data_[Account::kAccountTypeName.key(query.value("type_name").toString())]
+                         [query.value("category_name").toString()]
+                         [query.value("account_name").toString()]
+                         [query.value("household_name").toString()] += money;
     }
     return transaction;
 }
@@ -475,7 +479,7 @@ QList<AssetAccount> Book::getInvestmentAccounts(int user_id) const {
     return investments;
 }
 
-QList<std::shared_ptr<Account>> Book::queryAllAccounts(int user_id) const {
+QList<QSharedPointer<Account>> Book::queryAllAccounts(int user_id) const {
     QSqlQuery query(db);
     query.prepare(R"sql(SELECT   type_name, category_name, account_name, comment, is_investment
                         FROM     accounts_view
@@ -486,9 +490,9 @@ QList<std::shared_ptr<Account>> Book::queryAllAccounts(int user_id) const {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
     }
 
-    QList<std::shared_ptr<Account>> accounts;
+    QList<QSharedPointer<Account>> accounts;
     while (query.next()) {
-        std::shared_ptr<Account> account = FactoryCreateAccount(Account::kAccountTypeName.key(query.value("type_name").toString()),
+        QSharedPointer<Account> account = FactoryCreateAccount(Account::kAccountTypeName.key(query.value("type_name").toString()),
                                                                 query.value("category_name").toString(),
                                                                 query.value("account_name").toString(),
                                                                 query.value("comment").toString());

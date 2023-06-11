@@ -48,11 +48,11 @@ bool Account::operator ==(const Account &account) const {
   return account.type == type and account.category == category and account.name == name;
 }
 
-std::shared_ptr<Account> FactoryCreateAccount(Account::Type account_type, const QString& category, const QString& name, const QString& comment) {
+QSharedPointer<Account> FactoryCreateAccount(Account::Type account_type, const QString& category, const QString& name, const QString& comment) {
   switch (account_type) {
     case Account::Asset:
-      return std::make_shared<AssetAccount>(account_type, category, name, comment);
+    return QSharedPointer<AssetAccount>(new AssetAccount(account_type, category, name, comment));
     default:
-      return std::make_shared<Account>(account_type, category, name, comment);
+    return QSharedPointer<Account>(new Account(account_type, category, name, comment));
   }
 }
