@@ -265,6 +265,7 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
                     return false;
                 }
                 node->account()->setIsInvestment(value.toBool());
+                // TODO: Also add/remove the item to Revenue::Investment
             }
             break;
         default:

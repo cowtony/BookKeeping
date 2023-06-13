@@ -37,6 +37,7 @@ Book::Book(const QString& dbPath) {
 
     // Some schema migration work can be done here.
     if (false) {
+        Q_ASSERT(false);
     }
 }
 
@@ -232,7 +233,7 @@ void Book::removeTransaction(int transaction_id) {
 }
 
 // TODO: This need to be changed after transactions table has been migrated.
-QString Book::moveAccount(int user_id, const Account& old_account, const Account& new_account) const {
+QString Book::moveAccount(int user_id, const Account& old_account, const Account& new_account) {
     if (old_account.accountType() != new_account.accountType()) {
         return "Does not support move account between different account type yet.";
     }
@@ -538,38 +539,75 @@ bool Book::updateAccountComment(int account_id, const QString& comment) const {
     return true;
 }
 
-QString Book::setInvestment(int user_id, const AssetAccount& asset, bool is_investment) const {
-    if (!is_investment) {
+QString Book::setInvestment(int user_id, const AssetAccount& asset, bool is_investment) {
+    if (!is_investment) {  // Set to false
+        auto investment_account = getAccount(user_id, Account::Revenue, "Investment", asset.accountName());
+        if (investment_account) {
+            QSqlQuery query(db);
+            // Check for any transacion still associate with this Investment account.
+            query.prepare(R"sql(SELECT * FROM book_transaction_details WHERE account_id = :account_id LIMIT 1)sql");
+            query.bindValue(":account_id", investment_account->accountId());
+            if (!query.exec()) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+                return "ERROR: " + query.lastError().text();
+            }
+            if (query.next()) {
+                return "Error: Cannot remove " + asset.accountName() + " from investment since there still are transactions associate with it.";
+            }
+
+            db.transaction();
+            query.prepare(R"sql(UPDATE book_accounts SET is_investment = False WHERE account_id = :account_id)sql");
+            query.bindValue(":account_id", asset.accountId());
+            if (!query.exec()) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+                db.rollback();
+                return "ERROR: " + query.lastError().text();
+            }
+            query.prepare(R"sql(DELETE FROM book_accounts WHERE account_id = :account_id)sql");
+            query.bindValue(":account_id", investment_account->accountId());
+            if (!query.exec()) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+                db.rollback();
+                return "ERROR: " + query.lastError().text();
+            }
+            if (!db.commit()) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+                db.rollback();
+                return "ERROR: " + db.lastError().text();
+            }
+        }
+
+    } else { // Set to true
+        db.transaction();
         QSqlQuery query(db);
-        query.prepare(R"sql(SELECT * FROM book_transactions WHERE detail->'Revenue' LIKE :expression)sql");
-        query.bindValue(":expression", QString(R"json(%"Investment|%1":%)json").arg(asset.accountName()));
+        query.prepare(R"sql(UPDATE book_accounts SET is_investment = True WHERE account_id = :account_id)sql");
+        query.bindValue(":account_id", asset.accountId());
         if (!query.exec()) {
-            return query.lastError().text();
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+            db.rollback();
+            return "ERROR: " + query.lastError().text();
         }
-        if (query.next()) {
-            return "Error: Cannot remove " + asset.accountName() + " from investment since there still are transactions associate with it.";
+        // Cannot call `insertAccount()` for this because we want it in a transaction, also `insertAccount()` prevent manipulation of Investment category.
+        query.prepare(R"sql(INSERT INTO book_accounts (category_id, account_name, comment)
+                            VALUES (
+                                (SELECT category_id FROM book_account_categories WHERE user_id = :user_id AND account_type_id = 3 AND category_name = 'Investment' LIMIT 1),
+                                :account_name,
+                                'Auto generated account'
+                            ) )sql");
+        query.bindValue(":user_id", user_id);
+        query.bindValue(":account_name", asset.accountName());
+        if (!query.exec()) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+            db.rollback();
+            return "ERROR: " + query.lastError().text();
+        }
+        if (!db.commit()) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+            db.rollback();
+            return "ERROR: " + db.lastError().text();
         }
     }
-
-    QSqlQuery query(db);
-    query.prepare(R"sql(UPDATE book_accounts
-                        SET    is_investment = :i
-                        WHERE  account_id IN (
-                            SELECT account_id
-                            FROM   accounts_view
-                            WHERE  user_id = :user AND account_typd_id = 1 AND category_name = :cat AND account_name = :acc
-                        )Category == :g AND Name = :n)sql");
-    query.bindValue(":user", user_id);
-    query.bindValue(":cat", asset.categoryName());
-    query.bindValue(":acc", asset.accountName());
-    query.bindValue(":i", is_investment);
-
-    if (!query.exec()) {
-        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
-        return query.lastError().text();
-    } else {
-        return "";
-    }
+    return "";  // Ok status
 }
 
 bool Book::IsInvestment(int user_id, const Account& account) const {
@@ -595,6 +633,9 @@ bool Book::IsInvestment(int user_id, const Account& account) const {
 }
 
 bool Book::renameCategory(int user_id, Account::Type account_type, const QString& category_name, const QString& new_category_name) const {
+    if (account_type == Account::Revenue && category_name == "Investment") {
+        return false; // Cannot manipulate Investment category.
+    }
     if (new_category_name.isEmpty() || getCategory(user_id, account_type, new_category_name)) {
         return false;
     }
@@ -619,10 +660,6 @@ bool Book::renameCategory(int user_id, Account::Type account_type, const QString
 }
 
 QSharedPointer<Account> Book::getCategory(int user_id, Account::Type account_type, const QString &category_name) const {
-    if (account_type == Account::Revenue && category_name == "Investment") {
-        return Account::create(-1, -1, Account::Revenue, "Investment", "");  // Reserved category.
-    }
-
     QSqlQuery query(db);
     query.prepare(R"sql(SELECT *
                         FROM   book_account_categories AS c
@@ -692,6 +729,10 @@ QSharedPointer<Account> Book::insertCategory(int user_id, Account::Type account_
 }
 
 QSharedPointer<Account> Book::insertAccount(int user_id, Account::Type account_type, const QString& category_name, const QString& account_name) const {
+    if (account_type == Account::Revenue && category_name == "Investment") {
+        return nullptr;  // Investment is a auto managed category, cannot insert account there.
+    }
+
     QSharedPointer<Account> category = getCategory(user_id, account_type, category_name);
     if (!category) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Category '" << category_name << "' does not exist!";
@@ -713,6 +754,7 @@ QSharedPointer<Account> Book::insertAccount(int user_id, Account::Type account_t
 }
 
 bool Book::removeCategory(int category_id) const {
+    // TODO: add check to prevent remove category Revenue::Investment.
     // Check if the category still has accounts associated with it.
     QSqlQuery query(db);
     query.prepare(R"sql(SELECT * FROM book_accounts WHERE category_id = :category_id LIMIT 1)sql");
@@ -737,6 +779,8 @@ bool Book::removeCategory(int category_id) const {
 }
 
 bool Book::removeAccount(int account_id) const {
+    // TODO: add check to prevent remove account from Revenue::Investment.
+
     // Check if the account still has transactions associated with it.
     QSqlQuery query(db);
     query.prepare(R"sql(SELECT * FROM book_transaction_details WHERE account_id = :account_id LIMIT 1)sql");
@@ -749,6 +793,8 @@ bool Book::removeAccount(int account_id) const {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Has transactions still related with this account.";
         return false;
     }
+
+    // TODO: What if removing an account that still "IsInvestment"?
 
     // Remove this account:
     query.prepare(R"sql(DELETE FROM book_accounts WHERE account_id = :account_id)sql");

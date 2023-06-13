@@ -272,6 +272,7 @@ void HomeWindow::onActionTransactionValidationTriggered() {
             errorMessage += transaction.date_time.toString("yyyy/MM/dd HH:mm:ss") + ": ";
             errorMessage += transaction.description + '\n';
             errorMessage += "\t" + transaction.validate().join("; ") + "\n\n";
+            break;  // TODO: for debugging
         }
     }
 

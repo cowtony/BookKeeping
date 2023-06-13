@@ -38,9 +38,9 @@ public:
     QSharedPointer<Account> getAccount(int user_id, Account::Type account_type, const QString& category_name, const QString& account_name) const;
     QSharedPointer<Account> insertCategory(int user_id, Account::Type account_type, const QString& category_name) const;
     QSharedPointer<Account> insertAccount(int user_id, Account::Type account_type, const QString& category_name, const QString& account_name) const;
-    QString setInvestment(int user_id, const AssetAccount& asset, bool is_investment) const;
+    QString setInvestment(int user_id, const AssetAccount& asset, bool is_investment); // Return the error string, empty if no error. // TODO: Use StatusOr<>
     bool updateAccountComment(int account_id, const QString& comment) const;
-    QString moveAccount(int user_id, const Account& old_account, const Account& new_account) const; // Return the error string, empty if no error. // TODO: Use StatusOr<>
+    QString moveAccount(int user_id, const Account& old_account, const Account& new_account); // Return the error string, empty if no error. // TODO: Use StatusOr<>
     bool renameCategory(int user_id, Account::Type account_type, const QString& category_name, const QString& new_category_name) const;
     bool removeCategory(int category_id) const;
     bool accountExist  (int user_id, const Account& account) const;  // TODO: This may be replaced by getAccount()?

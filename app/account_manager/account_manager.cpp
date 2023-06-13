@@ -57,6 +57,7 @@ void AccountManager::on_pushButton_Add_clicked() {
             if (!ok || category_name.isEmpty()) {
                 return;
             }
+            // TODO: this should not needed.
             if (item->accountType() == Account::Revenue && category_name == "Investment") {
                 QMessageBox::warning(this, "Insert Failed", "Cannot add Revenue::Investment since 'Investment' is reserved.", QMessageBox::Ok);
                 return;
@@ -101,6 +102,10 @@ void AccountManager::on_pushButton_Delete_clicked() {
             return;
         }
     } else if (item->depth() == 3) {
+        if (item->account()->isInvestment()) {
+            QMessageBox::warning(this, "Cannot delete investment account!", "Please uncheck the investment first.", QMessageBox::Ok);
+            return;
+        }
         if (!book_.removeAccount(item->account()->accountId())) {
             QMessageBox::warning(this, "Cannot delete!", "The account still have transaction(s) link to it!", QMessageBox::Ok);
             return;

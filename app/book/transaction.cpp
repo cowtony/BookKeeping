@@ -83,7 +83,7 @@ QStringList Transaction::validate() const {
         errorMessage << "No account entries.";
     }
     Money sum = getCheckSum();
-    if (sum.isZero()) {
+    if (!sum.isZero()) {
         errorMessage << "The sum of the transaction is not zero: " + QString::number(sum.amount_);
     }
 

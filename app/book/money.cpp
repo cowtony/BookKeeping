@@ -107,7 +107,7 @@ Money Money::round() const {
 }
 
 bool Money::isZero() const {
-    return qFabs(amount_) < 1e-4;
+    return qFabs(amount_) < 0.005;
 }
 
 /*************** Money Array ********************/
