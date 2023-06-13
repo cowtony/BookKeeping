@@ -19,40 +19,41 @@ Currency::~Currency() {
 
 bool Currency::openDatabase() {
     // First try to connect to PostgreSQL:
-    database_ = QSqlDatabase::addDatabase("QPSQL", "Postgre_Currency");  // Note: To use PostgreSQL, need to add "C:\Program Files\PostgreSQL\15\lib" to system path.
-    database_.setHostName("localhost");
-    database_.setDatabaseName("book_keeping");
-    database_.setUserName("postgres");
-    database_.setPassword("19900525");
-    if (database_.open()) {
+    db_ = QSqlDatabase::addDatabase("QPSQL", "Postgre_Currency");  // Note: To use PostgreSQL, need to add "C:\Program Files\PostgreSQL\15\lib" to system path.
+    db_.setHostName("localhost");
+    db_.setDatabaseName("book_keeping");
+    db_.setUserName("postgres");
+    db_.setPassword("19900525");
+    if (db_.open()) {
         qDebug() << "Connect to PostgreSQL: currency_currency";
         removeInvalidCurrency();
+        fillEmptyDate(QDate::currentDate().addYears(-1));
         return true;
     } else {
-        qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << database_.lastError();
-        database_.removeDatabase("Postgre_Currency");
+        qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db_.lastError();
+        db_.removeDatabase("Postgre_Currency");
     }
 
     // Second try to connect to SQLite:
-    database_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
+    db_ = QSqlDatabase::addDatabase("QSQLITE", "CURRENCY");
     QFileInfo fileInfo("Currency.db");
     if (fileInfo.exists()) {
-        database_.setDatabaseName(fileInfo.absoluteFilePath());
-        if (!database_.open()) {
-            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << database_.lastError();
+        db_.setDatabaseName(fileInfo.absoluteFilePath());
+        if (!db_.open()) {
+            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db_.lastError();
             return false;
         }
     } else {  // Create new DB from script.
-        database_.setDatabaseName("Currency.db");
+        db_.setDatabaseName("Currency.db");
         //        Q_INIT_RESOURCE(Currency);
         QFile DDL(":/currency/CreateDbCurrency.sql");
-        if (database_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (db_.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QString statement;
             while (!DDL.atEnd()) {
                 QString line = DDL.readLine();
                 statement += line;
                 if (statement.contains(';')) {
-                    QSqlQuery(statement, database_);
+                    QSqlQuery(statement, db_);
                     statement.clear();
                 }
             }
@@ -64,12 +65,13 @@ bool Currency::openDatabase() {
     }
     qDebug() << "Connect to SQLite: currency";
     removeInvalidCurrency();
+    fillEmptyDate(QDate::currentDate().addMonths(-1));
     return true;
 }
 
 void Currency::closeDatabase() {
-  if (database_.isOpen()) {
-    database_.close();
+    if (db_.isOpen()) {
+        db_.close();
   }
 }
 
@@ -78,41 +80,60 @@ double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_sy
         return 1.0;
     }
 
-    QSqlQuery query(database_);
-    query.prepare(R"sql(SELECT * FROM currency_currency WHERE "Date" <= :d ORDER BY "Date" DESC LIMIT 1)sql");
-    query.bindValue(":d", date);
+    QSqlQuery query(db_);
+    // Get the most recent exchange rate.
+    query.prepare(R"sql(SELECT * FROM currency_currency WHERE "Date" <= :date ORDER BY "Date" DESC LIMIT 1)sql");
+    query.bindValue(":date", date);
     if (!query.exec()) {
         qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
     }
-    double result = 0.0 / 0.0;  // NaN.
     if (query.next()) {
-        // Get the most recent exchange rate.
-        result = query.value(kCurrencyToCode.value(to_symbol)).toDouble() / query.value(kCurrencyToCode.value(from_symbol)).toDouble();
-        if (query.value("Date").toDate() == date) {
-            return result;
+        if (query.value("Date").toDate() != date) {
+            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date << "The most recent one is" << query.value("Date").toDate();
         }
+        return query.value(kCurrencyToCode.value(to_symbol)).toDouble() / query.value(kCurrencyToCode.value(from_symbol)).toDouble();
+    } else {
+        return 0.0 / 0.0;  // NaN.
     }
-    qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date;
-    if (!requested_date_.contains(date) and date < QDate::currentDate()) {
-        requested_date_.insert(date);
-        // access_key:
-        // "077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
-        // "b6ec9d9dd5efa56c094fc370fd68fbc8"  // cowtony@163.com        19900525
-        // "af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
-        QUrl url(QString("http://data.fixer.io/api/%1?access_key=%2&symbols=%3").arg(date.toString("yyyy-MM-dd"), "b6ec9d9dd5efa56c094fc370fd68fbc8", kCurrencyToCode.values().join(',')));
-        //             "&base=EUR"    // This is for paid user only.
-        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Requesting:" << url;
-        web_ctrl_.get(QNetworkRequest(url));
-    }
-    return result;
 }
 
 void Currency::removeInvalidCurrency() {
-    QSqlQuery(R"sql(DELETE FROM currency_currency WHERE EUR IS NULL OR USD IS NULL OR CNY IS NULL OR GBP IS NULL)sql", database_);
+    // TODO: This query currently have error "QPSQL: Unable to create query".
+    QSqlQuery query(db_);
+    query.prepare(R"sql(DELETE FROM currency_currency WHERE EUR IS NULL OR USD IS NULL OR CNY IS NULL OR GBP IS NULL)sql");
+    if (!query.exec()) {
+        qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+    }
+}
+
+void Currency::fillEmptyDate(const QDate& start_date) {
+    QSqlQuery query(db_);
+    query.prepare(R"sql(SELECT "Date" FROM currency_currency WHERE "Date" BETWEEN :start_date AND :end_date ORDER BY "Date" ASC)sql");
+    query.bindValue(":start_date", start_date);
+    query.bindValue(":end_date", QDate::currentDate());
+    if (!query.exec()) {
+        qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+        return;
+    }
+    QSet<QDate> existing_date;
+    while (query.next()) {
+        existing_date.insert(query.value("Date").toDate());
+    }
+    for (QDate date = start_date; date < QDate::currentDate(); date = date.addDays(1)) {
+        if (!existing_date.contains(date)) {
+            // access_key:
+            // "077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525
+            // "b6ec9d9dd5efa56c094fc370fd68fbc8"  // cowtony@163.com        19900525
+            // "af07896d862782074e282611f63bc64b"  // mniu@umich.edu         19900525
+            QUrl url(QString("http://data.fixer.io/api/%1?access_key=%2&symbols=%3").arg(date.toString("yyyy-MM-dd"), "af07896d862782074e282611f63bc64b", kCurrencyToCode.values().join(',')));
+            //             "&base=EUR"    // This is for paid user only.
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m"<< "Requesting for date:" << date  << url;
+            web_ctrl_.get(QNetworkRequest(url));
+        }
+    }
 }
 
 void Currency::onNetworkReply(QNetworkReply* reply) {
-    qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << "\e[0m";
     if (reply->error() != QNetworkReply::NoError) {
         qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << reply->errorString();
     }
@@ -127,8 +148,7 @@ void Currency::onNetworkReply(QNetworkReply* reply) {
     dateTime.setSecsSinceEpoch(jsonObject.value("timestamp").toInt());
     QJsonObject jsonRates = jsonObject.value("rates").toObject();
 
-    QSqlQuery query(database_);
-//    query.prepare(QString(R"sql(INSERT OR REPLACE INTO currency_currency ("Date", %1) VALUES (:d, :%2))sql").arg(kCurrencyToCode.values().join(", "), kCurrencyToCode.values().join(", :").toLower()));
+    QSqlQuery query(db_);
     query.prepare(R"sql(INSERT INTO currency_currency ("Date", "EUR", "USD", "CNY", "GBP")
                         VALUES (:d, :eur, :usd, :cny, :gbp)
                         ON CONFLICT ("Date") DO UPDATE SET

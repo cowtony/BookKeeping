@@ -56,8 +56,11 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
     if (!ignore_error && !transaction.validate().isEmpty()) {
         return false;
     }
+    if (!db.transaction()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+        return false;
+    }
 
-    db.transaction();
     QSqlQuery query(db);
 
     query.prepare(R"sql(INSERT INTO book_transactions (user_id, date_time, description) VALUES (:user_id, :dateTime, :description))sql");
@@ -70,27 +73,25 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
         db.rollback();
         return false;
     }
-    Logging(query);
-
-    query.prepare(R"sql(INSERT INTO book_transaction_details (transaction_id, account_id, household_id, currency_id, amount)
+    int transaction_id = query.lastInsertId().toInt();
+    for (const auto& [account, household_money] : transaction.getAccounts()) {
+        for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
+            if (money.isZero()) {
+                continue;
+            }
+            query.prepare(R"sql(INSERT INTO book_transaction_details (transaction_id, account_id, household_id, currency_id, amount)
                         VALUES (
                             :transaction_id,
-                            (SELECT account_id FROM accounts_view WHERE user_id = :user_id AND type_name = :type_name AND category_name = :cat AND account_name = :acc),
+                            (SELECT account_id FROM accounts_view WHERE user_id = :user_id AND type_name = :type_name AND category_name = :category_name AND account_name = :account_name),
                             (SELECT household_id FROM book_households WHERE user_id = :user_id AND name = :household_name),
                             (SELECT currency_id FROM currency_types WHERE Name = :currency_name),
                             :amount
                         ) )sql");
-    query.bindValue(":transaction_id", query.lastInsertId().toInt());
-    query.bindValue(":user_id", user_id);
-
-    for (const auto& [account, household_money] : transaction.getAccounts()) {
-        query.bindValue(":type_name", account->typeName());
-        query.bindValue(":cat", account->categoryName());
-        query.bindValue(":acc", account->accountName());
-        for (const auto& [household, money] : household_money.asKeyValueRange()) {
-            if (money.isZero()) {
-                continue;
-            }
+            query.bindValue(":transaction_id", transaction_id);
+            query.bindValue(":user_id", user_id);
+            query.bindValue(":type_name", account->typeName());
+            query.bindValue(":category_name", account->categoryName());
+            query.bindValue(":account_name", account->accountName());
             query.bindValue(":household_name", household);
             query.bindValue(":currency_name", Currency::kCurrencyToCode.value(money.currency()));
             query.bindValue(":amount", money.amount_);
@@ -99,7 +100,6 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
                 db.rollback();
                 return false;
             }
-            Logging(query);
         }
     }
 
@@ -108,6 +108,7 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
         db.rollback();
         return false;
     }
+    qDebug() << "Successfully inserted transaction.";
     return true;
 }
 
@@ -123,18 +124,15 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
     query.prepare(QString(R"sql(SELECT *
                                 FROM   transaction_details_view
                                 WHERE  transaction_id IN (
-                                    SELECT DISTINCT transaction_id
-                                    FROM (
-                                        SELECT   transaction_id, Timestamp
-                                        FROM     transactions_view
-                                        WHERE    user_id = :user
-                                                 AND Timestamp BETWEEN :start AND :end
-                                                 AND Description LIKE :description
-                                                 AND (%1)
+                                    SELECT transaction_id
+                                    FROM   transactions_view
+                                    WHERE  user_id = :user
+                                           AND Timestamp BETWEEN :start AND :end
+                                           AND Description LIKE :description
+                                           AND (%1)
+                                    LIMIT  :limit
                                 )
-                                ORDER BY Timestamp %2, transaction_id %2
-                                LIMIT    :limit
-                            ) )sql").arg(statements.empty()? "TRUE" : statements.join(filter.use_or? " OR " : " AND "),
+                                ORDER BY date_time %2, transaction_id %2)sql").arg(statements.empty()? "TRUE" : statements.join(filter.use_or? " OR " : " AND "),
                            filter.ascending_order? "ASC" : "DESC"));
     query.bindValue(":user", user_id);
     query.bindValue(":start", filter.date_time.toString(kDateTimeFormat));
@@ -148,6 +146,7 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
 
     QList<Transaction> result;
     int current_transaction_id = -1;
+    // TODO: figure out a way to share the same code from getTransaction().
     Transaction transaction;
     while (query.next()) {
         if (query.value("transaction_id").toInt() != current_transaction_id) { // New transaction.
@@ -170,12 +169,17 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
         Money money(transaction.date_time.date(),
                     Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
                     query.value("amount").toDouble());
-        transaction.addMoney(account, query.value("household_name").toString(), money);
+        if (account->getFinancialStatementName() == "Balance Sheet") {
+            transaction.addMoney(account, "All", money);
+        } else {
+            transaction.addMoney(account, query.value("household_name").toString(), money);
+        }
+
     }
     if (current_transaction_id > 0) {
         result.push_back(transaction);
     }
-    qDebug() << result.size();
+    qDebug() << "Total transactions queried: " << result.size();
     return result;
 }
 
@@ -187,6 +191,7 @@ Transaction Book::getTransaction(int transaction_id) const {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
         return Transaction();
     }
+
     Transaction transaction;
     transaction.id = transaction_id;
     while (query.next()) {
@@ -202,34 +207,43 @@ Transaction Book::getTransaction(int transaction_id) const {
         Money money(transaction.date_time.date(),
                     Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
                     query.value("amount").toDouble());
-        transaction.addMoney(account, query.value("household_name").toString(), money);
+        if (account->getFinancialStatementName() == "Balance Sheet") {
+            transaction.addMoney(account, "All", money);
+        } else {
+            transaction.addMoney(account, query.value("household_name").toString(), money);
+        }
     }
     return transaction;
 }
 
-void Book::removeTransaction(int transaction_id) {
-    db.transaction();
+bool Book::removeTransaction(int transaction_id) {
+    if (!db.transaction()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+        return false;
+    }
     QSqlQuery query(db);
     query.prepare(R"sql(DELETE FROM book_transactions WHERE transaction_id = :id)sql");
     query.bindValue(":id", transaction_id);
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
         db.rollback();
-        return;
+        return false;
     }
     query.prepare(R"sql(DELETE FROM book_transaction_details WHERE transaction_id = :id)sql");
     query.bindValue(":id", transaction_id);
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
         db.rollback();
-        return;
+        return false;
     }
 
     if (!db.commit()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
         db.rollback();
+        return false;
     }
     Logging(query);
+    return true;
 }
 
 // TODO: This need to be changed after transactions table has been migrated.
@@ -365,22 +379,19 @@ Currency::Type Book::queryCurrencyType(int user_id, Account::Type account_type, 
 
 QStringList Book::queryCategories(int user_id, Account::Type account_type) const {
     QSqlQuery query(db);
-    query.prepare(R"sql(SELECT c.category_name AS category_name
+    query.prepare(R"sql(SELECT c.category_name
                         FROM book_account_categories AS c
                         JOIN book_account_types      AS t ON c.account_type_id = t.account_type_id
-                        WHERE c.user_id = :user AND t.type_name = :type
+                        WHERE c.user_id = :user_id AND t.type_name = :type_name
                         ORDER BY category_name ASC)sql");
-    query.bindValue(":user", user_id);
-    query.bindValue(":type", Account::kAccountTypeName.value(account_type));
+    query.bindValue(":user_id", user_id);
+    query.bindValue(":type_name", Account::kAccountTypeName.value(account_type));
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
     }
     QStringList categories;
     while (query.next()) {
         categories << query.value("category_name").toString();
-    }
-    if (account_type == Account::Revenue) {
-        categories << "Investment";
     }
     return categories;
 }
@@ -555,7 +566,10 @@ QString Book::setInvestment(int user_id, const AssetAccount& asset, bool is_inve
                 return "Error: Cannot remove " + asset.accountName() + " from investment since there still are transactions associate with it.";
             }
 
-            db.transaction();
+            if (!db.transaction()) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+                return "ERROR: " + db.lastError().text();
+            }
             query.prepare(R"sql(UPDATE book_accounts SET is_investment = False WHERE account_id = :account_id)sql");
             query.bindValue(":account_id", asset.accountId());
             if (!query.exec()) {
@@ -578,7 +592,10 @@ QString Book::setInvestment(int user_id, const AssetAccount& asset, bool is_inve
         }
 
     } else { // Set to true
-        db.transaction();
+        if (!db.transaction()) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
+            return "ERROR: " + db.lastError().text();
+        }
         QSqlQuery query(db);
         query.prepare(R"sql(UPDATE book_accounts SET is_investment = True WHERE account_id = :account_id)sql");
         query.bindValue(":account_id", asset.accountId());

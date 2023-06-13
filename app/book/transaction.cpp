@@ -19,17 +19,11 @@ Transaction Transaction::operator +(Transaction transaction) const {
 
     // Add up account
     for (const auto& [account, household_money] : getAccounts()) {
-        for (const auto& [household, money] : household_money.asKeyValueRange()) {
+        for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
             transaction.addMoney(account, household, money);
-            // Recursively remove empty key.
-            if (transaction.data_[account->accountType()][account->categoryName()][account->accountName()].second[household].isZero()) {
-                transaction.data_[account->accountType()][account->categoryName()][account->accountName()].second.remove(household);
-                if (transaction.data_[account->accountType()][account->categoryName()][account->accountName()].second.isEmpty()) {
-                    transaction.data_[account->accountType()][account->categoryName()].remove(account->accountName());
-                    if (transaction.data_[account->accountType()][account->categoryName()].isEmpty()) {
-                        transaction.data_[account->accountType()].remove(account->categoryName());
-                    }
-                }
+            // Remove empty account.
+            if (transaction.data_[account->accountType()][account->categoryName()][account->accountName()].second.data().isEmpty()) {
+                transaction.data_[account->accountType()][account->categoryName()].remove(account->accountName());
             }
         }
     }
@@ -54,17 +48,12 @@ void Transaction::clear(Account::Type tableType) {
 
 Money Transaction::getCheckSum() const {
     Money sum(date_time.date());
-    for (const auto& [account_type, categories] : data_.asKeyValueRange()) {
-        for (const auto& [category, accounts] : categories.asKeyValueRange()) {
-            for (const auto& [account, data_pair] : accounts.asKeyValueRange()) {
-                const auto& [account_id, households] = data_pair;
-                for (const auto& [household, money] : households.asKeyValueRange()) {
-                    if (account_type == Account::Expense || account_type == Account::Asset) {
-                        sum += money;
-                    } else {
-                        sum -= money;
-                    }
-                }
+    for (const auto& [account, household_money] : getAccounts()) {
+        for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
+            if (account->accountType() == Account::Expense || account->accountType() == Account::Asset) {
+                sum += money;
+            } else {
+                sum -= money;
             }
         }
     }
@@ -95,7 +84,7 @@ QString Transaction::toString(Account::Type account_type) const {
     for (const auto& [category, accounts] : data_[account_type].asKeyValueRange()) {
         for (const auto& [account, data_pair] : accounts.asKeyValueRange()) {
             const auto& [account_id, household_money] = data_pair;
-            for (const auto& [household, money] : household_money.asKeyValueRange()) {
+            for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
                 if (!money.isZero()) {
                     if (account_type == Account::Expense || account_type == Account::Revenue) {
                         result << QString("[%1|%2|%3: %4]").arg(category, account, household, money);
@@ -162,33 +151,23 @@ HouseholdMoney Transaction::getHouseholdMoney(Account::Type account_type, const 
     return HouseholdMoney();
 }
 
-void Transaction::addMoney(QSharedPointer<Account> account, const QString &household, Money money) {
-    if (!contains(*account)) {
-        data_[account->accountType()][account->categoryName()][account->accountName()].first = account;
+void Transaction::addMoney(QSharedPointer<Account> account, const QString& household, Money money) {
+    Q_ASSERT(account && account->currencyType() == money.currency());
+    if (account->getFinancialStatementName() == "Balance Sheet") {
+        Q_ASSERT(household == "All");  // The balance sheet account shouldn't have multiple household, so using "All".
     }
-    data_[account->accountType()][account->categoryName()][account->accountName()].second[household] += money;
-}
 
-HouseholdMoney Transaction::getRetainedEarnings() const {
-    HouseholdMoney retained_earning;
-    for (Account::Type account_type : {Account::Revenue, Account::Expense}) {
-        for (const auto& [category_name, accounts] : data_[Account::Revenue].asKeyValueRange()) {
-            for (const auto& [account_name, data_pair] : accounts.asKeyValueRange()) {
-                const auto& [account, household_money] = data_pair;
-                for (const auto& [household, money] : household_money.asKeyValueRange()) {
-                    if (account_type == Account::Revenue) {
-                        retained_earning[household] += money;
-                    } else {
-                        retained_earning[household] -= money;
-                    }
-                    if (retained_earning[household].isZero()) {
-                        retained_earning.remove(household);
-                    }
-                }
-            }
-        }
+    if (money.isZero()) {
+        return;
     }
-    return retained_earning;
+    if (!contains(*account)) {
+        auto& [account_ptr, household_money] = data_[account->accountType()][account->categoryName()][account->accountName()];
+        account_ptr = account;
+        household_money = HouseholdMoney(household, money);  // This to avoid auto convert currency type to default USD.
+    } else {
+        auto& [account_ptr, household_money] = data_[account->accountType()][account->categoryName()][account->accountName()];
+        household_money.add(household, money);
+    }
 }
 
 HouseholdMoney Transaction::getXXXContributedCapital() const {
@@ -253,11 +232,11 @@ FinancialStat::FinancialStat() : Transaction() {}
 
 HouseholdMoney FinancialStat::getHouseholdMoney(Account::Type account_type, const QString& category_name, const QString& account_name) const {
     if (account_type == Account::Equity && category_name == "Retained Earnings" && account_name == "Retained Earning") {
-        return retained_earnings;
+        return retained_earning_;
     } else if (account_type == Account::Equity && category_name == "Retained Earnings" && account_name == "Currency Error") {
         return HouseholdMoney("All", currency_error_);
     } else if (account_type == Account::Equity && category_name == "Retained Earnings" && account_name == "Transaction Error") {
-        return HouseholdMoney("All", transaction_error);
+        return HouseholdMoney("All", cumulated_check_sum_);
     } else if (account_type == Account::Equity && category_name == "Contributed Capitals" && account_name == "Contributed Capital") {
         return HouseholdMoney(); // Empty HouseholdMoney.
     }
@@ -267,24 +246,42 @@ HouseholdMoney FinancialStat::getHouseholdMoney(Account::Type account_type, cons
 QList<QPair<QSharedPointer<Account>, HouseholdMoney>> FinancialStat::getAccounts() const {
     QList<QPair<QSharedPointer<Account>, HouseholdMoney>> result = Transaction::getAccounts();
     // TODO: Make sure these are reserved account.
-    result << qMakePair(Account::create(-1, -1, Account::Equity, "Retained Earnings", "Retained Earning"),       HouseholdMoney());
-    result << qMakePair(Account::create(-1, -1, Account::Equity, "Retained Earnings", "Currency Error"),         HouseholdMoney());
-    result << qMakePair(Account::create(-1, -1, Account::Equity, "Retained Earnings", "Transaction Error"),      HouseholdMoney());
+    result << qMakePair(Account::create(-1, -1, Account::Equity, "Retained Earnings", "Retained Earning"),       retained_earning_);
+    result << qMakePair(Account::create(-1, -1, Account::Equity, "Retained Earnings", "Currency Error"),         HouseholdMoney("All", currency_error_));
+    result << qMakePair(Account::create(-1, -1, Account::Equity, "Retained Earnings", "Transaction Error"),      HouseholdMoney("All", cumulated_check_sum_));
     result << qMakePair(Account::create(-1, -1, Account::Equity, "Contributed Capitals", "Contributed Capital"), HouseholdMoney());
     return result;
 }
 
-void FinancialStat::changeDate(const QDate& nextDate) {
+void FinancialStat::cumulateRetainedEarning() {
+    for (Account::Type account_type : {Account::Revenue, Account::Expense}) {
+        for (const auto& [account, household_money] : Transaction::getAccounts(account_type)) {
+            for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
+                if (account_type == Account::Revenue) {
+                    retained_earning_.add(household, money);
+                } else {
+                    retained_earning_.minus(household, money);
+                }
+            }
+        }
+    }
+}
+
+void FinancialStat::cumulateCurrencyError(const QDateTime& new_date_time) {
     // Skip when next transaction is the same day of current transaction.
-    if (date_time.date() == nextDate) {
+    if (date_time.date() == new_date_time.date()) {
         return;
     }
+
     Money before(date_time.date(), currency_error_.currency());
-    Money after(nextDate, currency_error_.currency());
+    Money after(new_date_time.date(), currency_error_.currency());
 
     for (Account::Type account_type : {Account::Asset, Account::Liability}) {
-        for (const auto& [acount_ptr, household_money] : Transaction::getAccounts(account_type)) {
-            for (const auto& [household, money] : household_money.asKeyValueRange()) {
+        for (const auto& [acount, household_money] : Transaction::getAccounts(account_type)) {
+            if (acount->currencyType() == Currency::USD) {
+                continue;
+            }
+            for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
                 if (account_type == Account::Asset) {
                     before += money;
                     after += money;
@@ -295,6 +292,27 @@ void FinancialStat::changeDate(const QDate& nextDate) {
             }
         }
     }
-
     currency_error_ += after - before;
+    date_time = new_date_time;
+}
+
+void FinancialStat::cumulateTransaction(const Transaction& transaction) {
+    for (const auto& [account, household_money] : transaction.getAccounts()) {
+        for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
+            // Adds up Transaction.
+            addMoney(account, household, money);
+            // Remove empty account.
+            // TODO: I don't understand why adding this will make the aggregated transaction correct.
+            if (data_[account->accountType()][account->categoryName()][account->accountName()].second.data().isEmpty()) {
+                data_[account->accountType()][account->categoryName()].remove(account->accountName());
+            }
+
+            // Update transaction_error, same as CheckSum().
+            if (account->accountType() == Account::Expense || account->accountType() == Account::Asset) {
+                cumulated_check_sum_ += money;
+            } else {
+                cumulated_check_sum_ -= money;
+            }
+        }
+    }
 }

@@ -58,7 +58,7 @@ Money Money::operator /(int val) const {
 
 Money Money::operator +(Money money) const {
     money.date_ = qMax(date_, money.date_);
-    money.changeCurrency(currency_type_);
+    money.changeCurrency(currency_type_);  // Align to existing currency type.
     money.amount_ += amount_;
     return money;
 }
@@ -81,16 +81,16 @@ bool Money::operator <(Money money) const {
     return amount_ < money.amount_;
 }
 
-void Money::operator +=(const Money &money) {
+void Money::operator +=(const Money& money) {
     *this = *this + money;
 }
 
-void Money::operator -=(const Money &money) {
+void Money::operator -=(const Money& money) {
     *this = *this - money;
 }
 
 Money::operator QString() const {
-    // TODO: This returns ($100.00) instead of -$100.00 now.
+    // Example of negative: ($100.00)
     return QLocale(QLocale::English).toCurrencyString(getRoundedAmount(), Currency::kCurrencyToSymbol.value(currency_type_), 2);
 }
 
@@ -110,71 +110,21 @@ bool Money::isZero() const {
     return qFabs(amount_) < 0.005;
 }
 
-/*************** Money Array ********************/
-/*
-MoneyArray::MoneyArray(const QDate& date, const QString& money_str)
-    : Money(date, Currency::USD, 0.00) {
-    for (const QString &moneyString : money_str.split(", ")) {
-        Money money(date_, moneyString);
-        changeCurrency(money.currency());
-        push_back(money);
-    }
-}
-
-MoneyArray::MoneyArray(const Money& money)
-  : Money(money.date_, money.currency(), 0.00) {
-  amounts_.push_back(money.amount_);
-}
-
-MoneyArray MoneyArray::operator -() const {
-  MoneyArray moneyArray(*this);
-  for (int i = 0; i < amounts_.size(); i++) {
-    moneyArray.amounts_[i] = -moneyArray.amounts_.at(i);
-  }
-  return moneyArray;
-}
-
-bool MoneyArray::isZero() const {
-    for (const double &amount : amounts_)
-        if (qFabs(amount) > 1e-4)
-            return false;
-    return true;
-}
-
-void MoneyArray::push_back(Money money) {
-  if (amounts_.isEmpty()) {
-    date_ = money.date_;
-  }
-  money.changeCurrency(currency_type_);
-  amounts_.push_back(money.amount_);
-}
-
-MoneyArray::operator QString() const {
-    QStringList result;
-    for (const double& amount : amounts_) {
-        result << Money(date_, currency_type_, amount);
-    }
-    return result.join(", ");
-}
-
-
-
-*/
-
-//////////////// Class HouseholdMoney ////////////////////////
+/*************** HouseholdMoney ********************/
 HouseholdMoney::HouseholdMoney(const QDate& date, Currency::Type type)
     : currency_type_(type), date_(date) {}
 
-HouseholdMoney::HouseholdMoney(const QString &household, const Money &money) {
-    (*this)[household] = money;
+HouseholdMoney::HouseholdMoney(const QString& household, const Money& money) {
+    data_[household] = money;
     date_ = money.date_;
     currency_type_ = money.currency();
 }
 
 Money HouseholdMoney::sum() const {
-    Money result;
-    for (const auto& [_, money] : asKeyValueRange())
+    Money result(date_, currency_type_);
+    for (const auto& [_, money] : data_.asKeyValueRange()) {
         result += money;
+    }
     return result;
 }
 
@@ -182,43 +132,45 @@ Currency::Type HouseholdMoney::currencyType() const {
     return currency_type_;
 }
 
-HouseholdMoney HouseholdMoney::operator +(const HouseholdMoney &household_money) const {
-    return addMinus(household_money, [](double x, double y){return x + y;});
+const QHash<QString, Money>& HouseholdMoney::data() const {
+    return data_;
 }
 
-void HouseholdMoney::operator +=(const HouseholdMoney &household_money) {
-    *this = *this + household_money;
-}
-
-//HouseholdMoney HouseholdMoney::operator -(const HouseholdMoney &household_money) const {
-//    return addMinus(household_money, [](double x, double y){return x - y;});
-//}
-
-//void HouseholdMoney::operator -=(const HouseholdMoney &household_money) {
-//    *this = *this - household_money;
-//}
-
-HouseholdMoney HouseholdMoney::addMinus(HouseholdMoney household_money, double f(double, double)) const {
+HouseholdMoney HouseholdMoney::operator +(const HouseholdMoney& household_money) const {
     HouseholdMoney result = *this;
-    result.date_ = qMax(date_, household_money.date_);
-    household_money.changeCurrency(currency_type_);
-
-    for (const auto& [household, money] : household_money.asKeyValueRange()) {
-        if (!result.contains(household)) {
-            result[household] = Money(result.date_, currency_type_);
-        }
-        result[household].amount_ = f(result[household].amount_, money.amount_);
-        if (result[household].isZero()) {
-            result.remove(household);
-        }
+    for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
+        result.add(household, money);
     }
-
     return result;
+}
+
+void HouseholdMoney::operator +=(const HouseholdMoney& household_money) {
+    *this = *this + household_money;
 }
 
 void HouseholdMoney::changeCurrency(Currency::Type new_currency_type) {
     currency_type_ = new_currency_type;
-    for (const QString& name : keys()) {
-        (*this)[name].changeCurrency(new_currency_type);
+    for (const QString& name : data_.keys()) {
+        data_[name].changeCurrency(new_currency_type);
+    }
+}
+
+void HouseholdMoney::add(const QString& household, Money money) {
+    Q_ASSERT(money.currency() == currency_type_);
+//    money.changeCurrency(currency_type_);
+    data_[household] += money;
+    removeIfZero(household);
+}
+
+void HouseholdMoney::minus(const QString &household, Money money) {
+    Q_ASSERT(money.currency() == currency_type_);
+//    money.changeCurrency(currency_type_);
+    data_[household] -= money;
+    removeIfZero(household);
+}
+
+void HouseholdMoney::removeIfZero(const QString &household) {
+    if (data_.contains(household) && data_.value(household).isZero()) {
+        data_.remove(household);
     }
 }

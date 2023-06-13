@@ -57,7 +57,7 @@ void AccountManager::on_pushButton_Add_clicked() {
             if (!ok || category_name.isEmpty()) {
                 return;
             }
-            // TODO: this should not needed.
+            // This should not be needed because this category is disabled for selection.
             if (item->accountType() == Account::Revenue && category_name == "Investment") {
                 QMessageBox::warning(this, "Insert Failed", "Cannot add Revenue::Investment since 'Investment' is reserved.", QMessageBox::Ok);
                 return;

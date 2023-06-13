@@ -30,34 +30,35 @@ public:
     Currency::Type currency() const;
     Money& changeCurrency(Currency::Type currency_type);
 
-protected:
-    Currency::Type currency_type_; // Making this private because change this value will cause m_amounts change as well.
-
 private:
     double getRoundedAmount() const;
+
+    Currency::Type currency_type_; // Making this private because change this value will cause m_amounts change as well.
 };
 
-class HouseholdMoney : public QHash<QString, Money> {
+class HouseholdMoney {
 public:
     explicit HouseholdMoney(const QDate& date = QDate(1990, 05, 25), Currency::Type type = Currency::USD);
     explicit HouseholdMoney(const QString& household, const Money& money);
 
+    // Getters:
     Money sum() const;
     Currency::Type currencyType() const;
+    const QHash<QString, Money>& data() const;
 
+    // Setters:
     void changeCurrency(Currency::Type new_currency_type);
+    void add(const QString& household, Money money);
+    void minus(const QString& household, Money money);
+    void removeIfZero(const QString& household);
 
-//    HouseholdMoney operator -() const;
     HouseholdMoney operator  +(const HouseholdMoney& household_money) const;
-    void           operator +=(const HouseholdMoney& household_money);
-//    HouseholdMoney operator  -(const HouseholdMoney& household_money) const;
-//    void           operator -=(const HouseholdMoney& household_money);
+    void           operator +=(const HouseholdMoney& household_money);  
 
 private:
-    HouseholdMoney addMinus(HouseholdMoney household_money, double f(double, double)) const;
-
     Currency::Type currency_type_;
     QDate  date_;
+    QHash<QString, Money> data_;
 };
 
 #endif // MONEY_H

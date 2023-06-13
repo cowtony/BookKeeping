@@ -103,10 +103,6 @@ void HomeWindow::refreshTable() {
 void HomeWindow::onTableViewDoubleClicked(const QModelIndex &index) {
     int row = index.row();
     Transaction transaction = transactions_model_.getTransaction(row);
-    if (transaction.description.isEmpty()) {
-        QMessageBox::warning(this, "Warning", "Please do not double click on non-transaction rows.", QMessageBox::Ok);
-        return;
-    }
     AddTransaction *add_transaction = new AddTransaction(this);
     add_transaction->setAttribute(Qt::WA_DeleteOnClose);
     add_transaction->setTransaction(transaction);
@@ -272,13 +268,11 @@ void HomeWindow::onActionTransactionValidationTriggered() {
             errorMessage += transaction.date_time.toString("yyyy/MM/dd HH:mm:ss") + ": ";
             errorMessage += transaction.description + '\n';
             errorMessage += "\t" + transaction.validate().join("; ") + "\n\n";
-            break;  // TODO: for debugging
         }
     }
 
     QMessageBox msgBox;
     if (!errorMessage.isEmpty()) {
-        qDebug() << errorMessage;
         msgBox.setText("The following transaction(s) not passing validation:");
     } else {
         msgBox.setText("No invalid transaction!");

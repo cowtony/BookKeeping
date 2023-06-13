@@ -118,10 +118,7 @@ Transaction AddTransaction::getTransaction() {
     transaction.description = ui->lineEdit_Description->text();
 
     for (QTableWidget* table_widget : {ui->tableWidget_Assets, ui->tableWidget_Expenses, ui->tableWidget_Revenues, ui->tableWidget_Liabilities}) {
-        const Account::Type account_type = table_widgets_.key(table_widget);
-
         for (int row = 0; row < table_widget->rowCount() - 1; ++row) {
-            QComboBox *cateComboBox = static_cast<QComboBox*>(table_widget->cellWidget(row, 0));
             QComboBox *nameComboBox = static_cast<QComboBox*>(table_widget->cellWidget(row, 1));
 
             if (nameComboBox->currentText().isEmpty()) {
@@ -130,9 +127,10 @@ Transaction AddTransaction::getTransaction() {
 
             auto account = nameComboBox->currentData().value<QSharedPointer<Account>>();
             Q_ASSERT(account);
+            HouseholdMoney household_money(ui->dateTimeEdit->date(), account->currencyType());
             for (int col = 2; col < table_widget->columnCount(); col++) {
                 QLineEdit *line_edit = static_cast<QLineEdit*>(table_widget->cellWidget(row, col));
-                QString household = table_widget->horizontalHeaderItem(col)->text();
+                QString household = account->getFinancialStatementName() == "Balance Sheet"? "All" : table_widget->horizontalHeaderItem(col)->text();
                 Money money(ui->dateTimeEdit->date(), line_edit->text(), account->currencyType());
                 if (!line_edit->text().isEmpty()) {
                     line_edit->setText(money);
@@ -142,7 +140,7 @@ Transaction AddTransaction::getTransaction() {
                         line_edit->setStyleSheet("color: black");
                     }
                 }
-                transaction.getHouseholdMoney(account_type, cateComboBox->currentText(), nameComboBox->currentText())[household] += money;
+                transaction.addMoney(account, household, money);
             }
         }
     }
@@ -311,7 +309,7 @@ int AddTransaction::insertTableRow(QTableWidget* tableWidget) {
     return row;
 }
 
-void AddTransaction::setTableRow(QTableWidget* table_widget, const Account& account, const QHash<QString, Money>& households) {
+void AddTransaction::setTableRow(QTableWidget* table_widget, const Account& account, const HouseholdMoney& household_money) {
     int row = insertTableRow(table_widget);
 
     QComboBox *cateComboBox = static_cast<QComboBox*>(table_widget->cellWidget(row, 0));
@@ -319,8 +317,8 @@ void AddTransaction::setTableRow(QTableWidget* table_widget, const Account& acco
     QComboBox *nameComboBox = static_cast<QComboBox*>(table_widget->cellWidget(row, 1));
     nameComboBox->setCurrentText(account.accountName());
 
-    for (const auto& [household, money] : households.asKeyValueRange()) {
-        int col = household_to_column_.value(household);
+    for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
+        int col = account.getFinancialStatementName() == "Balance Sheet"? 2 : household_to_column_.value(household);
         QLineEdit *lineEdit = static_cast<QLineEdit*>(table_widget->cellWidget(row, col));
         lineEdit->setText(money);
         if (money.amount_ < 0) {

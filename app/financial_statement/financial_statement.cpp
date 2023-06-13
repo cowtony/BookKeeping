@@ -279,20 +279,25 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
             barChart->setAttribute(Qt::WA_DeleteOnClose);
             barChart->setTitle(pathway.join("::"));
 
-            QStringList xAxis;
-            for (int i = 0; i < monthly_stats_.size(); i++)
-                xAxis.push_front(monthly_stats_.at(i).description);
-            barChart->setAxisX(xAxis);
-
-            QList<qreal> yAxis1;
-            QList<qreal> yAxis2;
-            QStringList households = book_.getHouseholds(user_id_);
+            QStringList x_axis(monthly_stats_.size());
             for (int i = 0; i < monthly_stats_.size(); i++) {
-                yAxis1.push_front(monthly_stats_.at(i).getHouseholdMoney(Account::kAccountTypeName.key(pathway.at(1)), pathway.at(2), pathway.at(3))[households[0]].amount_);
-                yAxis2.push_front(monthly_stats_.at(i).getHouseholdMoney(Account::kAccountTypeName.key(pathway.at(1)), pathway.at(2), pathway.at(3))[households[1]].amount_);
+                x_axis[monthly_stats_.size() - 1 - i] = monthly_stats_.at(i).description;
             }
-            barChart->addBarSet("Person 1", yAxis1);
-            barChart->addBarSet("Person 2", yAxis2);
+            barChart->setAxisX(x_axis);
+
+            QHash<QString, QList<qreal>> y_axes;
+            for (int i = 0; i < monthly_stats_.size(); i++) {
+                HouseholdMoney household_money = monthly_stats_.at(i).getHouseholdMoney(Account::kAccountTypeName.key(pathway.at(1)), pathway.at(2), pathway.at(3));
+                for (const auto& [household_name, money] : household_money.data().asKeyValueRange()) {
+                    if (!y_axes.contains(household_name)) {
+                        y_axes[household_name] = QList<qreal>(monthly_stats_.size(), 0.0);
+                    }
+                    y_axes[household_name][monthly_stats_.size() - 1 - i] = money.amount_;
+                }
+            }
+            for (const auto& [household_name, y_axis] : y_axes.asKeyValueRange()) {
+                barChart->addBarSet(household_name, y_axis);
+            }
 
             barChart->show();
             break;
@@ -310,14 +315,11 @@ void FinancialStatement::onPushButtonShowMoreClicked() {
     ui->treeWidget->headerItem()->setText(index + 1, monthly_stats_.at(index).description);
 
     for (const auto& [account, household_money] : monthly_stats_.at(index).getAccounts()) {
-        if (!account) {
-            qDebug() << "nullptr";
-        }
         QTreeWidgetItem* accountItem = getAccountItem(*account, true);
         if (ui->comboBoxHousehold->currentText() == "All") {
             setMoney(accountItem, index + 1, household_money.sum());
         } else {
-            setMoney(accountItem, index + 1, household_money[ui->comboBoxHousehold->currentText()]);
+            setMoney(accountItem, index + 1, household_money.data().value(ui->comboBoxHousehold->currentText()));
         }
     }
 
@@ -338,11 +340,13 @@ QList<FinancialStat> FinancialStatement::getSummaryByMonth(const QDateTime &end_
     FinancialStat monthly_stat;
     QDate first_transaction_date = book_.getFirstTransactionDateTime().date();
     QDate month = QDate(first_transaction_date.year(), first_transaction_date.month(), 1);
-
+    QElapsedTimer timer;
+    timer.start();
     for (const Transaction& transaction : book_.queryTransactions(user_id_, TransactionFilter().toTime(end_date_time).orderByAscending())) {
         // Use `while` instead of `if` in case there was no transaction for successive months.
         while (transaction.date_time.date() >= month.addMonths(1)) {
             monthly_stat.description = month.toString("yyyy-MM");
+            monthly_stat.cumulateRetainedEarning();
             result.push_front(monthly_stat);
 
             month = month.addMonths(1);
@@ -350,19 +354,16 @@ QList<FinancialStat> FinancialStatement::getSummaryByMonth(const QDateTime &end_
             monthly_stat.clear(Account::Expense);
         }
 
-        // TODO: next line increate the time from 5s to 9s.
-        monthly_stat.changeDate(transaction.date_time.date());  // Must run this before set `date_time`.
-        monthly_stat.date_time = transaction.date_time;
-        monthly_stat += transaction;
-        monthly_stat.retained_earnings += transaction.getRetainedEarnings();
-        monthly_stat.transaction_error += transaction.getCheckSum();
+        monthly_stat.cumulateCurrencyError(transaction.date_time);  // This is the most time consuming part because this loop through all accounts in monthly_stat, which is ALL accounts in db.
+        monthly_stat.cumulateTransaction(transaction);
     }
-    monthly_stat.description = month.toString("yyyy-MM");
-    result.push_front(monthly_stat);
 
+    monthly_stat.description = month.toString("yyyy-MM");
+    monthly_stat.cumulateRetainedEarning();
+    result.push_front(monthly_stat);
+    qDebug() << "Total Time used: " << timer.elapsed() / 1000.0 << "seconds";
     return result;
 }
-
 
 void FinancialStatement::on_comboBoxHousehold_currentIndexChanged(int /* index */) {
     display();

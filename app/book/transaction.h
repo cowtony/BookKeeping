@@ -21,23 +21,20 @@ public:
     void addMoney(QSharedPointer<Account> account, const QString& household, Money money);  // This should be the only setter.
 
     // Getters:
-    HouseholdMoney getHouseholdMoney(const Account& account) const;
+            HouseholdMoney getHouseholdMoney(const Account& account) const;
     virtual HouseholdMoney getHouseholdMoney(Account::Type account_type, const QString& category_name, const QString& account_name) const;
+    virtual QList<QPair<QSharedPointer<Account>, HouseholdMoney>> getAccounts() const;
     Money getCheckSum() const;
     QStringList validate() const;  // Return error messages
     QString toString(Account::Type account_type) const;
-    virtual QList<QPair<QSharedPointer<Account>, HouseholdMoney>> getAccounts() const;
-    HouseholdMoney getRetainedEarnings() const;
 
     QDateTime date_time;
     QString description;
     int id;
 
 protected:
-    QList<QPair<QSharedPointer<Account>, HouseholdMoney>> getAccounts(Account::Type tableType) const;
-
-private:
-    Transaction operator + (Transaction p_transaction) const;
+    QList<QPair<QSharedPointer<Account>, HouseholdMoney>> getAccounts(Account::Type account_type) const;
+    Transaction operator + (Transaction transaction) const;
     bool contains(const Account& account) const;
     HouseholdMoney getXXXContributedCapital() const;  // not used yet
 
@@ -69,17 +66,18 @@ class FinancialStat : public Transaction {
 public:
     explicit FinancialStat();
 
-    HouseholdMoney retained_earnings;
-    Money transaction_error;
-
+    // Getters:
     virtual HouseholdMoney getHouseholdMoney(Account::Type account_type, const QString& category_name, const QString& account_name) const override;
     virtual QList<QPair<QSharedPointer<Account>, HouseholdMoney>> getAccounts() const override;
 
-    // Change date so that the currencyError is calculated and counted.
-    void changeDate(const QDate& newDate);
+    void cumulateRetainedEarning();
+    void cumulateCurrencyError(const QDateTime& new_date_time);  // Change date so that the currencyError is calculated and counted.
+    void cumulateTransaction(const Transaction& transaction);
 
 private:
-    Money currency_error_;
+    HouseholdMoney retained_earning_;
+    Money currency_error_;  // Error caused by currency rate different from day to day.
+    Money cumulated_check_sum_;  // The sum of each transaction's check_sum, abs(each) normally smaller than $0.005
 };
 
 #endif // TRANSACTION_H

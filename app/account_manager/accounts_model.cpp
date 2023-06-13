@@ -381,17 +381,17 @@ Qt::DropActions AccountsModel::supportedDropActions() const {
 }
 
 bool AccountsModel::insertRows(int row, int count, const QModelIndex& parent) {
-  AccountTreeNode* parent_node = getItem(parent);
-  if (!parent_node) {
-    return false;
-  }
-  beginInsertRows(parent, row, row + count - 1);
-  for (int r = row; r < row + count; r++) {
-    // TODO: change the default value (which is datatime now.)
-    parent_node->insertChild(new AccountTreeNode(QDateTime::currentDateTime().toString()), r);
-  }
-  endInsertRows();
-  return true;
+    AccountTreeNode* parent_node = getItem(parent);
+    if (!parent_node) {
+        return false;
+    }
+    beginInsertRows(parent, row, row + count - 1);
+    for (int r = row; r < row + count; r++) {
+        // TODO: change the default value (which is datatime now.)
+        parent_node->insertChild(new AccountTreeNode(QDateTime::currentDateTime().toString()), r);
+    }
+    endInsertRows();
+    return true;
 }
 
 QModelIndex AccountsModel::appendRow(const QModelIndex& parent, const QString& name, QSharedPointer<Account> account) {

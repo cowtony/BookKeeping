@@ -20,7 +20,7 @@ public:
     ~AddTransaction();
 
     void initialization();
-    void setTransaction(const Transaction& t);
+    void setTransaction(const Transaction& transaction);
 
 private slots:
     void onCalendarWidgetSelectionChanged();
@@ -37,7 +37,7 @@ signals:
 
 private:
     int insertTableRow(QTableWidget *tableWidget);
-    void setTableRow(QTableWidget* tableWidget, const Account& account, const QHash<QString, Money>& households);
+    void setTableRow(QTableWidget* tableWidget, const Account& account, const HouseholdMoney& household_money);
 
     Transaction getTransaction();
 

@@ -22,7 +22,7 @@ public:
     bool insertTransaction(int user_id, const Transaction& transaction, bool ignore_error = false);
     QList<Transaction> queryTransactions(int user_id, const TransactionFilter& filter = TransactionFilter()) const;
     Transaction getTransaction(int transaction_id) const;
-    void removeTransaction(int transaction_id);  // TODO: return bool of remove status
+    bool removeTransaction(int transaction_id);
     QDateTime getFirstTransactionDateTime() const;
     QDateTime getLastTransactionDateTime() const;
 

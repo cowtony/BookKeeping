@@ -18,18 +18,19 @@ class Currency : public QObject {
     static const QMap<Type, QString> kCurrencyToCode;  // Three letter code such as "USD".
 
     bool openDatabase();
-    void closeDatabase();
-    double getExchangeRate(const QDate& date, Type fromSymbol, Type toSymbol);
+
+    double getExchangeRate(const QDate& date, Type from_symbol, Type to_symbol);
 
   private slots:
     void onNetworkReply(QNetworkReply*);
 
   private:
-    QSqlDatabase database_;
-    QNetworkAccessManager web_ctrl_;
-    QSet<QDate> requested_date_;
-
+    void closeDatabase();
     void removeInvalidCurrency();
+    void fillEmptyDate(const QDate& start_date);
+
+    QSqlDatabase db_;
+    QNetworkAccessManager web_ctrl_;
 };
 
 extern Currency g_currency;
