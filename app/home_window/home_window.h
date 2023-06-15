@@ -6,8 +6,9 @@
 #include <QTableView>
 
 #include "account_manager/account_manager.h"
-#include "transactions_model.h"
 #include "household_manager/household_manager.h"
+#include "financial_statement/financial_statement.h"
+#include "transactions_model.h"
 
 namespace Ui {
 class HomeWindow;
@@ -22,6 +23,9 @@ public:
 
     Book book;
     int user_id;
+    AccountManager     account_manager;
+    HouseholdManager   household_manager;
+    FinancialStatement financial_statement;
 
 public slots:
     void refreshTable();  // Show all filtered transactions.
@@ -33,14 +37,13 @@ protected:
 
 private slots:
     void onActionAddTransactionTriggered();
-    void onActionAccountManagerTriggered();
-    void onActionFinancialStatementTriggered();
+    void onActionAccountManagerTriggered()     { account_manager.show(); }
+    void onActionHouseholdManagerTriggered()   { household_manager.show(); }
+    void onActionFinancialStatementTriggered() { financial_statement.show(); }
     void onActionInvestmentAnalysisTriggered();
     void onActionTransactionValidationTriggered();
-    void onActionHouseholdManagerTriggered();
     void onActionLoginTriggered();
     void onActionLogoutTriggered();
-
     void onPushButtonMergeClicked();
     void onPushButtonDeleteClicked();
 
@@ -51,9 +54,6 @@ private:
     void resizeTableView(QTableView* table_view);
 
     Ui::HomeWindow* ui;
-
-    QSharedPointer<AccountManager>   account_manager_;
-    QSharedPointer<HouseholdManager> household_manager_;
 
     TransactionsModel transactions_model_;
 

@@ -33,12 +33,11 @@ private slots:
     void on_checkBox_RecursiveTransaction_stateChanged(int arg1);
 
 signals:
-    void insertTransactionFinished(AddTransaction *obj);
+    void insertTransactionFinished(QDate modified_date);
 
 private:
     int insertTableRow(QTableWidget *tableWidget);
     void setTableRow(QTableWidget* tableWidget, const Account& account, const HouseholdMoney& household_money);
-
     Transaction getTransaction();
 
     Ui::AddTransaction* ui;
@@ -47,7 +46,7 @@ private:
 
     QMap<Account::Type, QTableWidget*> table_widgets_;
     QMap<QString, int> household_to_column_;
-    int transaction_id_ = 0;
+    int transaction_id_ = -1;
 };
 
 #endif // ADD_TRANSACTION_H

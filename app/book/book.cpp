@@ -179,7 +179,7 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
     if (current_transaction_id > 0) {
         result.push_back(transaction);
     }
-    qDebug() << "Total transactions queried: " << result.size();
+    qDebug() << "Total transactions queried:" << result.size();
     return result;
 }
 
@@ -239,10 +239,8 @@ bool Book::removeTransaction(int transaction_id) {
 
     if (!db.commit()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
-        db.rollback();
         return false;
     }
-    Logging(query);
     return true;
 }
 

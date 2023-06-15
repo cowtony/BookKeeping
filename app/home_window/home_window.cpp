@@ -8,19 +8,18 @@
 #include "add_transaction/add_transaction.h"
 #include "currency/currency.h"
 #include "investment_analysis/investment_analysis.h"
-#include "financial_statement/financial_statement.h"
 
 HomeWindow::HomeWindow(QWidget *parent)
-    : QMainWindow(parent),
-      book("Book.db"),
-      user_id(book.getLastLoggedInUserId()),
-      ui(new Ui::HomeWindow),
-      transactions_model_(this) {
+  : QMainWindow(parent),
+    book("Book.db"),
+    user_id(book.getLastLoggedInUserId()),
+    account_manager(this), household_manager(this), financial_statement(this),
+    ui(new Ui::HomeWindow),
+    transactions_model_(this) {
 
     ui->setupUi(this);
     g_currency.openDatabase();
-    account_manager_   = QSharedPointer<AccountManager>  (new AccountManager(this));
-    household_manager_ = QSharedPointer<HouseholdManager>(new HouseholdManager(this));
+
     ui->tableView->setModel(&transactions_model_);
     ui->tableView->hideColumn(6);  // hide transaction_id
 
@@ -85,8 +84,8 @@ void HomeWindow::closeEvent(QCloseEvent *event) {
 void HomeWindow::refreshTable() {
     // Build transaction filter.
     TransactionFilter filter = TransactionFilter()
-                               .fromTime(QDateTime(ui->dateEditFrom->date(), QTime(00, 00, 00)))
-                                   .toTime(QDateTime(ui->dateEditTo->date(), QTime(23, 59, 59)))
+                                   .startTime(QDateTime(ui->dateEditFrom->date(), QTime(00, 00, 00)))
+                                   .endTime(QDateTime(ui->dateEditTo->date(), QTime(23, 59, 59)))
                                    .setDescription(ui->lineEditDescriptionFilter->text())
                                .useAnd()
                                .orderByDescending()
@@ -187,13 +186,32 @@ void HomeWindow::onPushButtonMergeClicked() {
     warningMsgBox.setDefaultButton(QMessageBox::Cancel);
     switch (warningMsgBox.exec()) {
     case QMessageBox::Ok: {
+        QDate earliest_date(2200, 12, 31);
+        if (!book.db.transaction()) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << book.db.lastError();
+            return;
+        }
         Transaction merged_transaction;
         for (int row : rows) {
             Transaction transaction = transactions_model_.getTransaction(row);
+            earliest_date = qMin(earliest_date, transaction.date_time.date());
             merged_transaction += transaction;
-            book.removeTransaction(transaction.id);
+            if (!book.removeTransaction(transaction.id)) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m";
+                book.db.rollback();
+                return;
+            }
         }
-        book.insertTransaction(user_id, merged_transaction);
+        if (!book.insertTransaction(user_id, merged_transaction)) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m";
+            book.db.rollback();
+            return;
+        }
+        if (!book.db.commit()) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << book.db.lastError();
+            return;
+        }
+        financial_statement.getStartStateFor(earliest_date);
         refreshTable();
         break;
     }
@@ -227,7 +245,11 @@ void HomeWindow::onPushButtonDeleteClicked() {
     switch (warningMsgBox.exec()) {
     case QMessageBox::Ok:
         for (int row : rows) {
-            book.removeTransaction(transactions_model_.data(row, 6).toUInt());
+            if (!book.removeTransaction(transactions_model_.data(row, 6).toUInt())) {
+                qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m";
+                return;
+            }
+            financial_statement.getStartStateFor(transactions_model_.data(row, 0).toDateTime().date());
         }
         refreshTable();
         break;
@@ -240,17 +262,6 @@ void HomeWindow::onActionAddTransactionTriggered() {
     AddTransaction* addTransaction = new AddTransaction(this);
     addTransaction->setAttribute(Qt::WA_DeleteOnClose);
     addTransaction->show();
-}
-
-void HomeWindow::onActionAccountManagerTriggered() {
-    account_manager_->show();
-}
-
-void HomeWindow::onActionFinancialStatementTriggered() {
-    FinancialStatement* financial_statement = new FinancialStatement(this);
-    financial_statement->setAttribute(Qt::WA_DeleteOnClose);
-    financial_statement->on_pushButton_Query_clicked();
-    financial_statement->show();
 }
 
 void HomeWindow::onActionInvestmentAnalysisTriggered() {
@@ -282,10 +293,6 @@ void HomeWindow::onActionTransactionValidationTriggered() {
     msgBox.exec();
 }
 
-void HomeWindow::onActionHouseholdManagerTriggered() {
-    household_manager_->show();
-}
-
 void HomeWindow::onActionLoginTriggered() {
     // TODO: Change to username & password login.
     bool ok;
@@ -296,7 +303,7 @@ void HomeWindow::onActionLoginTriggered() {
 
     book.updateLoginTime(user_id);
     // TODO: Use signal / slot for user_id_ changed event.
-    household_manager_->model_.setFilter(QString("user_id = %1").arg(user_id));
+    household_manager.model_.setFilter(QString("user_id = %1").arg(user_id));
     setCategoryComboBox();
     refreshTable();
 }
@@ -305,6 +312,6 @@ void HomeWindow::onActionLogoutTriggered() {
     user_id = -1;
 
     // TODO: Use signal / slot for user_id_ changed event.
-    household_manager_->model_.setFilter(QString("user_id = %1").arg(user_id));
+    household_manager.model_.setFilter(QString("user_id = %1").arg(user_id));
     refreshTable();
 }

@@ -15,9 +15,10 @@ InvestmentAnalysis::InvestmentAnalysis(QWidget *parent)
     QApplication::setOverrideCursor(Qt::WaitCursor);
     for (const AssetAccount& investment : investments) {
         InvestmentAnalyzer analyzer(investment,
-                                    book_.queryTransactions(user_id_, TransactionFilter({QSharedPointer<Account>(new AssetAccount(investment)),
-                                                                                         Account::create(-1, -1, Account::Revenue, "Investment", investment.accountName())})
-                                                                          .toTime(QDateTime::currentDateTime())
+                                    book_.queryTransactions(user_id_, TransactionFilter()
+                                                                          .addAccount(QSharedPointer<Account>(new AssetAccount(investment)))
+                                                                          .addAccount(Account::create(-1, -1, Account::Revenue, "Investment", investment.accountName()))
+                                                                          .endTime(QDateTime::currentDateTime())
                                                                           .orderByAscending()
                                                                           .useOr()));
         analyzer.runAnalysis();

@@ -175,24 +175,27 @@ HouseholdMoney Transaction::getXXXContributedCapital() const {
 }
 
 //////////////////// Transaction Filter ////////////////////////////
-TransactionFilter::TransactionFilter(const QList<QSharedPointer<Account>>& accounts)
+TransactionFilter::TransactionFilter()
     : Transaction(QDateTime(QDate(1990, 05, 25), QTime(0, 0, 0)), "") {
-    for (QSharedPointer<Account> account : accounts) {
-        addAccount(account);
-    }
+// TODO: This may not be necessary because if there are no account, then all account will be queried.
+// Comment out on 2023/06/14
+//    for (QSharedPointer<Account> account : accounts) {
+//        addAccount(account);
+//    }
 }
 
 TransactionFilter& TransactionFilter::addAccount(QSharedPointer<Account> account) {
-    addMoney(account, "foo", Money(QDate(), "$1"));
+    // Make household_name to "All" for all account type, because this will only be used to show account to filter.
+    addMoney(account, "All", Money(QDate(), "$1"));
     return *this;
 }
 
-TransactionFilter& TransactionFilter::fromTime(const QDateTime& start_time) {
+TransactionFilter& TransactionFilter::startTime(const QDateTime& start_time) {
     date_time = start_time;
     return *this;
 }
 
-TransactionFilter& TransactionFilter::toTime(const QDateTime& end_time) {
+TransactionFilter& TransactionFilter::endTime(const QDateTime& end_time) {
     end_date_time = end_time;
     return *this;
 }

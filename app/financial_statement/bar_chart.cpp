@@ -1,79 +1,68 @@
 #include "bar_chart.h"
 
-BarChart::BarChart(QWidget *parent) : QMainWindow(parent)
-{
-    m_barSeries = new QBarSeries();
+BarChart::BarChart(QWidget *parent) : QMainWindow(parent) {
+    bar_series_ = new QBarSeries();
 
-    m_lineSeries = new QLineSeries();
-//    m_lineSeries->setColor(QColor(0, 0, 0));
+    line_series_ = new QLineSeries();
+    //    m_lineSeries->setColor(QColor(0, 0, 0));
 
-    m_stackedBarSeries = new QStackedBarSeries();
+    stacked_bar_series_ = new QStackedBarSeries();
 
-    m_chart = new QChart();
-    m_chart->setAnimationOptions(QChart::SeriesAnimations);
-    m_chart->legend()->setVisible(true);
-    m_chart->legend()->setAlignment(Qt::AlignBottom);
+    chart_ = new QChart();
+    chart_->setAnimationOptions(QChart::SeriesAnimations);
+    chart_->legend()->setVisible(true);
+    chart_->legend()->setAlignment(Qt::AlignBottom);
 
-    m_axisX = new QBarCategoryAxis();
-    m_axisX->setLabelsFont(QFont("Time New Roman", 8, 1, false));
-    m_axisX->setLabelsAngle(270);
-    m_axisX->setTitleText("Summary by month");
+    x_axis_ = new QBarCategoryAxis();
+    x_axis_->setLabelsFont(QFont("Time New Roman", 8, 1, false));
+    x_axis_->setLabelsAngle(270);
+    x_axis_->setTitleText("Summary by month");
 
-    m_axisY = new QValueAxis();
-    m_axisY->setTitleText("US Dollar");
-    m_axisY->setLabelFormat("$%d");
+    y_axis_ = new QValueAxis();
+    y_axis_->setTitleText("US Dollar");
+    y_axis_->setLabelFormat("$%d");
 
-    m_chartView = new QChartView();
-    m_chartView->setRenderHint(QPainter::Antialiasing);
-    m_chartView->setRubberBand(QChartView::HorizontalRubberBand);
+    chart_view_ = new QChartView();
+    chart_view_->setRenderHint(QPainter::Antialiasing);
+    chart_view_->setRubberBand(QChartView::HorizontalRubberBand);
 }
 
-BarChart::~BarChart()
-{
-}
-
-void BarChart::addBarSet(const QString &name, const QList<qreal> &data)
-{
+void BarChart::addBarSet(const QString &name, const QList<qreal> &data) {
     QBarSet *barSet = new QBarSet(name);
     barSet->append(data);
-    m_barSeries->append(barSet);
+    bar_series_->append(barSet);
 }
 
-void BarChart::addLine(const QString &name, const QList<qreal> &data)
-{
-    m_lineSeries->clear();
-    m_lineSeries->setName(name);
+void BarChart::addLine(const QString &name, const QList<qreal> &data) {
+    line_series_->clear();
+    line_series_->setName(name);
     for (int i = 0; i < data.size(); i++)
-        m_lineSeries->append(i, data.at(i));
+        line_series_->append(i, data.at(i));
 }
 
-void BarChart::addBarSetToStackedBarSeries(const QString &name, const QList<qreal> &data)
-{
+void BarChart::addBarSetToStackedBarSeries(const QString &name, const QList<qreal> &data) {
     QBarSet *barSet = new QBarSet(name);
     barSet->append(data);
-    m_stackedBarSeries->append(barSet);
+    stacked_bar_series_->append(barSet);
 }
 
-void BarChart::setAxisX(const QStringList &p_axisX)
-{
-    m_axisX->append(p_axisX);
+void BarChart::setAxisX(const QStringList &p_axisX) {
+    x_axis_->append(p_axisX);
 }
 
-void BarChart::setTitle(const QString &title)
-{
-    m_chart->setTitle(title);
+void BarChart::setTitle(const QString &title) {
+    chart_->setTitle(title);
 }
 
-void BarChart::show()
-{
-    m_chart->addSeries(m_barSeries);
-    m_chart->addAxis(m_axisX, Qt::AlignBottom);
-    m_barSeries->attachAxis(m_axisX);
-    m_chart->addAxis(m_axisY, Qt::AlignLeft);
-    m_barSeries->attachAxis(m_axisY);
-    m_axisY->applyNiceNumbers();
-    m_chartView->setChart(m_chart);
-    setCentralWidget(m_chartView);
+void BarChart::show() {
+    chart_->addSeries(bar_series_);
+    chart_->addAxis(x_axis_, Qt::AlignBottom);
+    bar_series_->attachAxis(x_axis_);
+    chart_->addAxis(y_axis_, Qt::AlignLeft);
+    bar_series_->attachAxis(y_axis_);
+    y_axis_->applyNiceNumbers();
+    chart_view_->setChart(chart_);
+    setCentralWidget(chart_view_);
     resize(1280, 600);
 
     QMainWindow::show();
@@ -81,20 +70,20 @@ void BarChart::show()
 
 void BarChart::showStackedBarChart()
 {
-    m_chart->addSeries(m_stackedBarSeries);
-    m_chart->addSeries(m_lineSeries);
+    chart_->addSeries(stacked_bar_series_);
+    chart_->addSeries(line_series_);
 
-    m_chart->addAxis(m_axisX, Qt::AlignBottom);
-    m_stackedBarSeries->attachAxis(m_axisX);
-    m_lineSeries->attachAxis(m_axisX);
+    chart_->addAxis(x_axis_, Qt::AlignBottom);
+    stacked_bar_series_->attachAxis(x_axis_);
+    line_series_->attachAxis(x_axis_);
 
-    m_chart->addAxis(m_axisY, Qt::AlignLeft);
-    m_stackedBarSeries->attachAxis(m_axisY);
-    m_lineSeries->attachAxis(m_axisY);
-    m_axisY->applyNiceNumbers();
+    chart_->addAxis(y_axis_, Qt::AlignLeft);
+    stacked_bar_series_->attachAxis(y_axis_);
+    line_series_->attachAxis(y_axis_);
+    y_axis_->applyNiceNumbers();
 
-    m_chartView->setChart(m_chart);
-    setCentralWidget(m_chartView);
+    chart_view_->setChart(chart_);
+    setCentralWidget(chart_view_);
     resize(1280, 600);
 
     QMainWindow::show();

@@ -43,11 +43,11 @@ protected:
 };
 
 struct TransactionFilter : public Transaction {
-    TransactionFilter(const QList<QSharedPointer<Account>>& accounts = {});
+    TransactionFilter();
 
     TransactionFilter& addAccount(QSharedPointer<Account> account);
-    TransactionFilter& fromTime(const QDateTime& start_time);
-    TransactionFilter& toTime(const QDateTime& start_time);
+    TransactionFilter& startTime(const QDateTime& start_time);
+    TransactionFilter& endTime(const QDateTime& start_time);
     TransactionFilter& setDescription(const QString& description);
     TransactionFilter& useOr();
     TransactionFilter& useAnd();

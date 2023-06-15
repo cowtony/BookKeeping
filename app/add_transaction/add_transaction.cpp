@@ -31,6 +31,7 @@ AddTransaction::AddTransaction(QWidget *parent)
     connect(ui->calendarWidget, &QCalendarWidget::selectionChanged, this, &AddTransaction::onCalendarWidgetSelectionChanged);
     connect(ui->dateTimeEdit,   &QDateTimeEdit::dateTimeChanged,    this, &AddTransaction::onDateTimeEditDateTimeChanged);
     connect(this, &AddTransaction::insertTransactionFinished, static_cast<HomeWindow*>(parent), &HomeWindow::refreshTable);
+    connect(this, &AddTransaction::insertTransactionFinished, &static_cast<HomeWindow*>(parent)->financial_statement, &FinancialStatement::getStartStateFor);
 }
 
 AddTransaction::~AddTransaction() {
@@ -84,6 +85,9 @@ void AddTransaction::initialization() {
     for (QTableWidget* tableWidget : {ui->tableWidget_Revenues, ui->tableWidget_Expenses}) {
         tableWidget->setColumnCount(2 + households.size());
         tableWidget->setHorizontalHeaderLabels(QStringList() << "Category" << "Account" << households);
+        for (int i = 0; i < households.size(); ++i) {
+            tableWidget->setColumnWidth(i + 2, 60);
+        }
     }
     for (int i = 0; i < households.size(); ++i) {
         household_to_column_[households[i]] = i + 2;
@@ -150,37 +154,39 @@ Transaction AddTransaction::getTransaction() {
 void AddTransaction::on_pushButton_Insert_clicked() {
     QStringList errorMsg;
 
-    Transaction t = getTransaction();
-    errorMsg << t.validate();
+    Transaction transaction = getTransaction();
+    errorMsg << transaction.validate();
 
     if (!errorMsg.empty()) {
         QMessageBox::warning(this, "Warning!", errorMsg.join('\n'), QMessageBox::Ok);
         return;
     }
-
-    if (ui->pushButton_Insert->text() == "Replace") {
+    QDate earliest_date(2200, 12, 31);
+    if (transaction_id_ > 0) {  // This will be a Replace action.
         QMessageBox warningMsgBox;
         warningMsgBox.setText("You are trying to replace a transaction");
         warningMsgBox.setInformativeText("The action cannot be undone, are you sure?");
         warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
         warningMsgBox.setDefaultButton(QMessageBox::Cancel);
         switch ( warningMsgBox.exec()) {
-            case QMessageBox::Ok:
-                book_.removeTransaction(transaction_id_);
-                break;
-            case QMessageBox::Cancel:
-                return;
+        case QMessageBox::Ok:
+            earliest_date = qMin(earliest_date, book_.getTransaction(transaction_id_).date_time.date());
+            book_.removeTransaction(transaction_id_);
+            break;
+        case QMessageBox::Cancel:
+            return;
         }
     }
 
-    book_.insertTransaction(user_id_, t);
+    book_.insertTransaction(user_id_, transaction);
     if (ui->checkBox_RecursiveTransaction->isChecked()) {
-        t.date_time = ui->dateEdit_nextTransaction->dateTime();
-        t.description = "[R]" + ui->lineEdit_Description->text();
-        book_.insertTransaction(user_id_, t, /*ignore_error=*/true);
+        transaction.date_time = ui->dateEdit_nextTransaction->dateTime();
+        transaction.description = "[R]" + ui->lineEdit_Description->text();
+        book_.insertTransaction(user_id_, transaction, /*ignore_error=*/true);
+        earliest_date = qMin(earliest_date, transaction.date_time.date());
     }
 
-    emit insertTransactionFinished(this);
+    emit insertTransactionFinished(earliest_date);
     close();
     destroy();
     deleteLater();

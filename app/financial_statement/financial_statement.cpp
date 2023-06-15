@@ -34,14 +34,15 @@ FinancialStatement::FinancialStatement(QWidget *parent)
     connect(ui->treeWidget, &QTreeWidget::itemClicked,   this, &FinancialStatement::onTreeWidgetItemClicked);
     connect(ui->pushButtonExport,   &QPushButton::clicked, this, &FinancialStatement::onPushButtonExportClicked);
     connect(ui->pushButtonShowMore, &QPushButton::clicked, this, &FinancialStatement::onPushButtonShowMoreClicked);
+    connect(ui->pushButtonShowMore, &QPushButton::clicked, this, [this](){ columns_to_display_++; });
     connect(ui->pushButtonShowAll,  &QPushButton::clicked, this, &FinancialStatement::onPushButtonShowAllClicked);
 }
 
 void FinancialStatement::on_pushButton_Query_clicked() {
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    monthly_stats_ = getSummaryByMonth(ui->dateTimeEdit->dateTime());
+    getSummaryByMonth(ui->dateTimeEdit->dateTime());
     QApplication::restoreOverrideCursor();
-    display();
+    refreshTableWidget();
 }
 
 void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money& money) {
@@ -49,64 +50,61 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money
         return;
     }
 
-  // Get the last date of the month.
-    QDate date = QDate::fromString(ui->treeWidget->headerItem()->text(column), "yyyy-MM");
-  date = date.addMonths(1);
-  date = date.addDays(-1);
-  const Money difference = money - Money(date, item->text(column));
+    const Money difference = money - Money(money.date_, item->text(column));
 
-  item->setText(column, money);
-  if (money.amount_ < 0) {
-    item->setForeground(column, Qt::red);
-  } else {
-    item->setForeground(column, QColor(Qt::black));
-  }
-
-  // Recursivly update parent sum:
-  if (item->parent() != nullptr) {
-    const Money parentMoney(date, item->parent()->text(column));
-
-    if (item->text(0) == "Expense" || item->text(0) == "Liability") {
-      setMoney(item->parent(), column, parentMoney - difference);
-    } else if (item->text(0) == "Equity") {
-      // do nothing.
+    item->setText(column, money);
+    if (money.amount_ < 0) {
+        item->setForeground(column, Qt::red);
     } else {
-      setMoney(item->parent(), column, parentMoney + difference);
+        item->setForeground(column, QColor(Qt::black));
     }
-  }
+
+    // Recursivly update parent sum:
+    if (item->parent() != nullptr) {
+        const Money parentMoney(money.date_, item->parent()->text(column));
+
+        if (item->text(0) == "Expense" || item->text(0) == "Liability") {
+            setMoney(item->parent(), column, parentMoney - difference);
+        } else if (item->text(0) == "Equity") {
+            // do nothing.
+        } else {
+            setMoney(item->parent(), column, parentMoney + difference);
+        }
+    }
 }
 
 void FinancialStatement::setFont(int column, QTreeWidgetItem* item, int depth) {
-  switch (depth) {
+    switch (depth) {
     case 0:
-      item->setFont(column, m_financialStatementFont);
-      break;
+        item->setFont(column, m_financialStatementFont);
+        break;
     case 1:
-      item->setFont(column, m_tableSumFont);
-      break;
+        item->setFont(column, m_tableSumFont);
+        break;
     case 2:
-      item->setFont(column, m_categorySumFont);
-      break;
+        item->setFont(column, m_categorySumFont);
+        break;
     case 3:
-      break;
+        break;
     default:
-      break;
-  }
-  if (column > 0) {
-    item->setTextAlignment(column, Qt::AlignRight);
-  }
+        break;
+    }
+    if (column > 0) {
+        item->setTextAlignment(column, Qt::AlignRight);
+    }
 
     for (int i = 0; i < item->childCount(); i++) {
         setFont(column, item->child(i), depth + 1);
     }
 }
 
-void FinancialStatement::display() {
+void FinancialStatement::refreshTableWidget() {
     ui->treeWidget->clear();
     ui->treeWidget->header()->setDefaultAlignment(Qt::AlignCenter);
     ui->treeWidget->setColumnCount(1);
     ui->treeWidget->setHeaderLabels({"Name"});
-    for (int i = 0; i < 10; i++) {  // Show the most recent 10 month.
+    columns_to_display_ = qMin(columns_to_display_, 12);  // Cap the column number otherwise it's taking too much time.
+    for (int i = 0; i < columns_to_display_; i++) {
         onPushButtonShowMoreClicked();
     }
     ui->treeWidget->expandToDepth(1);
@@ -195,31 +193,27 @@ void FinancialStatement::onTreeWidgetItemExpanded(QTreeWidgetItem* /* item */) {
   }
 }
 
-void FinancialStatement::onPushButtonExportClicked()
-{
+void FinancialStatement::onPushButtonExportClicked() {
     QStringList rows;
 
     QStringList cells;
-    for (int i = 0; i <= monthly_stats_.size(); i++)
-    {
-    cells << ui->treeWidget->headerItem()->text(i);
+    for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
+        cells << ui->treeWidget->headerItem()->text(i);
     }
     rows << cells.join('\t');
 
-    for (QTreeWidgetItem *item : ui->treeWidget->findItems("", Qt::MatchContains | Qt::MatchRecursive, 0))
-    {
+    for (QTreeWidgetItem *item : ui->treeWidget->findItems("", Qt::MatchContains | Qt::MatchRecursive, 0)) {
         QStringList cells;
 
         QStringList names;
         QTreeWidgetItem *tempItem = item;
-        while (tempItem != nullptr)
-        {
+        while (tempItem != nullptr) {
             names.push_front(tempItem->text(0));
             tempItem = tempItem->parent();
         }
         cells << names.join("::");
 
-        for (int i = 1; i <= monthly_stats_.size(); i++) {
+        for (int i = 1; i < ui->treeWidget->columnCount(); i++) {
             cells << item->text(i);
         }
         rows << cells.join('\t');
@@ -240,9 +234,9 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
         case 1: // click on financial statement
         case 2: // click on table
         case 3: { // click on category
-            BarChart *barChart = new BarChart(this);
-            barChart->setAttribute(Qt::WA_DeleteOnClose);
-            barChart->setTitle(pathway.join("::"));
+            BarChart *bar_chart = new BarChart(this);
+            bar_chart->setAttribute(Qt::WA_DeleteOnClose);
+            bar_chart->setTitle(pathway.join("::"));
 
             QStringList xAxis;
             QList<qreal> sum;
@@ -250,8 +244,8 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
                 xAxis.push_front(ui->treeWidget->headerItem()->text(col));
                 sum.push_front(Money(QDate(), item->text(col)).amount_);
             }
-            barChart->setAxisX(xAxis);
-            barChart->addLine(item->text(0), sum);
+            bar_chart->setAxisX(xAxis);
+            bar_chart->addLine(item->text(0), sum);
 
             for (int index = 0; index < item->childCount(); index++) {
                 QList<qreal> data;
@@ -268,22 +262,22 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
                         data.push_front(money.amount_);
                     }
                 }
-                barChart->addBarSetToStackedBarSeries(item->child(index)->text(0), data);
+                bar_chart->addBarSetToStackedBarSeries(item->child(index)->text(0), data);
             }
 
-            barChart->showStackedBarChart();
+            bar_chart->showStackedBarChart();
             break;
         }
         case 4: {// click on account
-            BarChart *barChart = new BarChart(this);
-            barChart->setAttribute(Qt::WA_DeleteOnClose);
-            barChart->setTitle(pathway.join("::"));
+            BarChart *bar_chart = new BarChart(this);
+            bar_chart->setAttribute(Qt::WA_DeleteOnClose);
+            bar_chart->setTitle(pathway.join("::"));
 
             QStringList x_axis(monthly_stats_.size());
             for (int i = 0; i < monthly_stats_.size(); i++) {
-                x_axis[monthly_stats_.size() - 1 - i] = monthly_stats_.at(i).description;
+                x_axis[i] = monthly_stats_.at(i).description;
             }
-            barChart->setAxisX(x_axis);
+            bar_chart->setAxisX(x_axis);
 
             QHash<QString, QList<qreal>> y_axes;
             for (int i = 0; i < monthly_stats_.size(); i++) {
@@ -292,41 +286,43 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
                     if (!y_axes.contains(household_name)) {
                         y_axes[household_name] = QList<qreal>(monthly_stats_.size(), 0.0);
                     }
-                    y_axes[household_name][monthly_stats_.size() - 1 - i] = money.amount_;
+                    y_axes[household_name][i] = money.amount_;
                 }
             }
             for (const auto& [household_name, y_axis] : y_axes.asKeyValueRange()) {
-                barChart->addBarSet(household_name, y_axis);
+                bar_chart->addBarSet(household_name, y_axis);
+//                bar_chart->addLine(household_name, y_axis);
             }
 
-            barChart->show();
+            bar_chart->show();
             break;
         }
     }
 }
 
 void FinancialStatement::onPushButtonShowMoreClicked() {
-    int index = ui->treeWidget->columnCount() - 1;
-    if (index >= monthly_stats_.size()) {
+    int column_count = ui->treeWidget->columnCount();
+    if (column_count > monthly_stats_.size()) {
         return;
     }
+    const FinancialStat& new_month = monthly_stats_.at(monthly_stats_.size() - column_count);
 
-    ui->treeWidget->setColumnCount(index + 2);
-    ui->treeWidget->headerItem()->setText(index + 1, monthly_stats_.at(index).description);
+    ui->treeWidget->setColumnCount(column_count + 1);
+    ui->treeWidget->headerItem()->setText(column_count, new_month.description);
 
-    for (const auto& [account, household_money] : monthly_stats_.at(index).getAccounts()) {
+    for (const auto& [account, household_money] : new_month.getAccounts()) {
         QTreeWidgetItem* accountItem = getAccountItem(*account, true);
-        if (ui->comboBoxHousehold->currentText() == "All") {
-            setMoney(accountItem, index + 1, household_money.sum());
-        } else {
-            setMoney(accountItem, index + 1, household_money.data().value(ui->comboBoxHousehold->currentText()));
-        }
+        Money money = ui->comboBoxHousehold->currentText() == "All" ?
+                          household_money.sum() :
+                          household_money.data().value(ui->comboBoxHousehold->currentText());
+        money.date_ = new_month.date_time.date();
+        setMoney(accountItem, column_count, money);
     }
 
     // Must setFont after getAccountItem() because some item may not be created before that.
-    setFont(index + 1, ui->treeWidget->invisibleRootItem());
+    setFont(column_count, ui->treeWidget->invisibleRootItem());
 
-    ui->treeWidget->resizeColumnToContents(index + 1);
+    ui->treeWidget->resizeColumnToContents(column_count);
 }
 
 void FinancialStatement::onPushButtonShowAllClicked() {
@@ -335,19 +331,19 @@ void FinancialStatement::onPushButtonShowAllClicked() {
     }
 }
 
-QList<FinancialStat> FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) const {
-    QList<FinancialStat> result;
-    FinancialStat monthly_stat;
-    QDate first_transaction_date = book_.getFirstTransactionDateTime().date();
-    QDate month = QDate(first_transaction_date.year(), first_transaction_date.month(), 1);
+void FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) {
+    auto [month, monthly_stat] = getStartStateFor(end_date_time.date());
+
     QElapsedTimer timer;
     timer.start();
-    for (const Transaction& transaction : book_.queryTransactions(user_id_, TransactionFilter().toTime(end_date_time).orderByAscending())) {
+    for (const Transaction& transaction : book_.queryTransactions(user_id_, TransactionFilter().startTime(QDateTime(month, QTime(0, 0, 0)))
+                                                                                               .endTime(end_date_time)
+                                                                                               .orderByAscending())) {
         // Use `while` instead of `if` in case there was no transaction for successive months.
         while (transaction.date_time.date() >= month.addMonths(1)) {
-            monthly_stat.description = month.toString("yyyy-MM");
+            monthly_stat.description = monthly_stat.date_time.toString("yyyy-MM");
             monthly_stat.cumulateRetainedEarning();
-            result.push_front(monthly_stat);
+            monthly_stats_.push_back(monthly_stat);
 
             month = month.addMonths(1);
             monthly_stat.clear(Account::Revenue);
@@ -357,15 +353,40 @@ QList<FinancialStat> FinancialStatement::getSummaryByMonth(const QDateTime &end_
         monthly_stat.cumulateCurrencyError(transaction.date_time);  // This is the most time consuming part because this loop through all accounts in monthly_stat, which is ALL accounts in db.
         monthly_stat.cumulateTransaction(transaction);
     }
-
-    monthly_stat.description = month.toString("yyyy-MM");
+    // Push the last month summary which might be incomplete.
+    monthly_stat.description = monthly_stat.date_time.toString("yyyy-MM-dd");  // The last "incomplete" month will have date as a distinguisher.
     monthly_stat.cumulateRetainedEarning();
-    result.push_front(monthly_stat);
-    qDebug() << "Total Time used: " << timer.elapsed() / 1000.0 << "seconds";
-    return result;
+    monthly_stats_.push_back(monthly_stat);
+
+    qDebug() << "Total time used:" << timer.elapsed() / 1000.0 << "seconds";
+    refreshTableWidget();
+}
+
+QPair<QDate, FinancialStat> FinancialStatement::getStartStateFor(QDate query_date) {
+    if (!monthly_stats_.empty() && monthly_stats_.back().description.length() == 10) {
+        // Description in format "yyyy-MM-dd", which indicate this is a incomplete monthly summary.
+        monthly_stats_.pop_back();
+    }
+
+    while (!monthly_stats_.empty()) {
+        QDate last_record_date = monthly_stats_.back().date_time.date();
+        QDate start_month = QDate(last_record_date.year(), last_record_date.month(), 1).addMonths(1).addDays(-1); // Last day of this month.
+        if (start_month < query_date) {
+            FinancialStat stat = monthly_stats_.back();
+            stat.clear(Account::Revenue);
+            stat.clear(Account::Expense);
+            refreshTableWidget();
+            return {start_month.addDays(1), stat};
+        }
+        monthly_stats_.pop_back();
+    }
+
+    QDate date = book_.getFirstTransactionDateTime().date();
+    refreshTableWidget();
+    return {QDate(date.year(), date.month(), 1), FinancialStat()};
 }
 
 void FinancialStatement::on_comboBoxHousehold_currentIndexChanged(int /* index */) {
-    display();
+    refreshTableWidget();
 }
 

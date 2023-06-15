@@ -17,6 +17,7 @@ public:
 
 public slots:
     void on_pushButton_Query_clicked();
+    QPair<QDate, FinancialStat> getStartStateFor(QDate query_date);
 
 private slots:
     void onTreeWidgetItemCollapsed(QTreeWidgetItem *item);
@@ -28,21 +29,24 @@ private slots:
     void onPushButtonShowAllClicked();
 
 private:
-    Ui::FinancialStatement* ui;
 
-    Book& book_;
-    int& user_id_;
 
     void setMoney(QTreeWidgetItem* item, int column, const Money& money);
     void setFont(int column, QTreeWidgetItem* item, int depth = -1);
-    void display();
+    void refreshTableWidget();
     QTreeWidgetItem* getAccountItem(const Account& account, bool create = false); // Get or create account item.
-    QList<FinancialStat> getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0))) const;
+    void getSummaryByMonth(const QDateTime& p_endDateTime = QDateTime(QDate(2100, 12, 31), QTime(0, 0, 0)));
 
     static QFont m_financialStatementFont;
     static QFont m_tableSumFont;
     static QFont m_categorySumFont;
 
+    Ui::FinancialStatement* ui;
+
+    Book& book_;
+    int& user_id_;
+
+    int columns_to_display_ = 1;
     QList<FinancialStat> monthly_stats_;
 };
 

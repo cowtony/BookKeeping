@@ -64,7 +64,7 @@ Money Money::operator +(Money money) const {
 }
 
 Money Money::operator -(Money money) const {
-    money.date_ = date_ > money.date_? date_ : money.date_;
+    money.date_ = qMax(date_, money.date_);
     money.changeCurrency(currency_type_);
     money.amount_ = amount_ - money.amount_;
     return money;

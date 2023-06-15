@@ -81,15 +81,17 @@ double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_sy
     }
 
     QSqlQuery query(db_);
-    // Get the most recent exchange rate.
+    // Get the most recent entry.
     query.prepare(R"sql(SELECT * FROM currency_currency WHERE "Date" <= :date ORDER BY "Date" DESC LIMIT 1)sql");
     query.bindValue(":date", date);
     if (!query.exec()) {
         qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+        return 0.0 / 0.0;  // NaN.
     }
     if (query.next()) {
         if (query.value("Date").toDate() != date) {
-            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Currency not found in date" << date << "The most recent one is" << query.value("Date").toDate();
+            qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m"
+                     << "Currency not found in date" << date << "The most recent one is" << query.value("Date").toDate();
         }
         return query.value(kCurrencyToCode.value(to_symbol)).toDouble() / query.value(kCurrencyToCode.value(from_symbol)).toDouble();
     } else {
@@ -100,7 +102,7 @@ double Currency::getExchangeRate(const QDate& date, Type from_symbol, Type to_sy
 void Currency::removeInvalidCurrency() {
     // TODO: This query currently have error "QPSQL: Unable to create query".
     QSqlQuery query(db_);
-    query.prepare(R"sql(DELETE FROM currency_currency WHERE EUR IS NULL OR USD IS NULL OR CNY IS NULL OR GBP IS NULL)sql");
+    query.prepare(R"sql(DELETE FROM currency_currency WHERE "EUR" IS NULL OR "USD" IS NULL OR "CNY" IS NULL OR "GBP" IS NULL)sql");
     if (!query.exec()) {
         qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
     }

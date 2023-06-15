@@ -34,7 +34,7 @@ QVariant TransactionsModel::data(const QModelIndex &index, int role) const {
             return font;
         }
     } else if (role == Qt::BackgroundRole) {
-        if (index.row() < rowCount() - 1) {
+        if (index.row() < rowCount() - 1 && index.column() == 1) {
             // Descriptions need pay attention.
             QString description = QSqlQueryModel::data(createIndex(index.row(), 1)).toString();
             if (description.startsWith("!!!") || description.startsWith("[R]")) {

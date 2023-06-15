@@ -4,12 +4,11 @@
 #include <QMainWindow>
 #include <QtCharts>
 
-class BarChart : public QMainWindow
-{
+class BarChart : public QMainWindow {
     Q_OBJECT
 public:
     explicit BarChart(QWidget *parent = nullptr);
-    ~BarChart();
+
     void addBarSet(const QString& name, const QList<qreal>& data);
     void addLine(const QString& name, const QList<qreal>& data);
     void addBarSetToStackedBarSeries(const QString& name, const QList<qreal> &data);
@@ -24,14 +23,14 @@ signals:
 public slots:
 
 private:
-    QBarSeries *m_barSeries;
-    QLineSeries *m_lineSeries;
-    QStackedBarSeries *m_stackedBarSeries;
+    QBarSeries *bar_series_;
+    QLineSeries *line_series_;
+    QStackedBarSeries *stacked_bar_series_;
 
-    QChart *m_chart;
-    QBarCategoryAxis *m_axisX;
-    QValueAxis *m_axisY;
-    QChartView *m_chartView;
+    QChart *chart_;
+    QBarCategoryAxis *x_axis_;
+    QValueAxis *y_axis_;
+    QChartView *chart_view_;
 };
 
 #endif // BAR_CHART_H
