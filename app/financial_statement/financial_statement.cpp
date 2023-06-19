@@ -40,8 +40,11 @@ FinancialStatement::FinancialStatement(QWidget *parent)
 
 void FinancialStatement::on_pushButton_Query_clicked() {
     QApplication::setOverrideCursor(Qt::WaitCursor);
+    QElapsedTimer timer;
+    timer.start();
     getSummaryByMonth(ui->dateTimeEdit->dateTime());
     QApplication::restoreOverrideCursor();
+    qDebug() << "Total time used:" << timer.elapsed() / 1000.0 << "seconds";
     refreshTableWidget();
 }
 
@@ -103,7 +106,7 @@ void FinancialStatement::refreshTableWidget() {
     ui->treeWidget->header()->setDefaultAlignment(Qt::AlignCenter);
     ui->treeWidget->setColumnCount(1);
     ui->treeWidget->setHeaderLabels({"Name"});
-    columns_to_display_ = qMin(columns_to_display_, 12);  // Cap the column number otherwise it's taking too much time.
+//    columns_to_display_ = qMin(columns_to_display_, 12);  // Cap the column number otherwise it's taking too much time.
     for (int i = 0; i < columns_to_display_; i++) {
         onPushButtonShowMoreClicked();
     }
@@ -245,7 +248,6 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
                 sum.push_front(Money(QDate(), item->text(col)).amount_);
             }
             bar_chart->setAxisX(xAxis);
-            bar_chart->addLine(item->text(0), sum);
 
             for (int index = 0; index < item->childCount(); index++) {
                 QList<qreal> data;
@@ -264,8 +266,9 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
                 }
                 bar_chart->addBarSetToStackedBarSeries(item->child(index)->text(0), data);
             }
-
-            bar_chart->showStackedBarChart();
+            bar_chart->addStackedBarSeries();
+            bar_chart->addLine(item->text(0), sum);
+            bar_chart->show();
             break;
         }
         case 4: {// click on account
@@ -289,11 +292,11 @@ void FinancialStatement::onTreeWidgetItemClicked(QTreeWidgetItem* item, int /* c
                     y_axes[household_name][i] = money.amount_;
                 }
             }
+            bar_chart->addBarSeries();
             for (const auto& [household_name, y_axis] : y_axes.asKeyValueRange()) {
                 bar_chart->addBarSet(household_name, y_axis);
-//                bar_chart->addLine(household_name, y_axis);
+                bar_chart->addLine(household_name, y_axis);
             }
-
             bar_chart->show();
             break;
         }
@@ -326,16 +329,19 @@ void FinancialStatement::onPushButtonShowMoreClicked() {
 }
 
 void FinancialStatement::onPushButtonShowAllClicked() {
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QElapsedTimer timer;
+    timer.start();
     while (ui->treeWidget->columnCount() <= monthly_stats_.size()) {
         onPushButtonShowMoreClicked();
     }
+    QApplication::restoreOverrideCursor();
+    qDebug() << "Total time used:" << timer.elapsed() / 1000.0 << "seconds";
 }
 
 void FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) {
     auto [month, monthly_stat] = getStartStateFor(end_date_time.date());
 
-    QElapsedTimer timer;
-    timer.start();
     for (const Transaction& transaction : book_.queryTransactions(user_id_, TransactionFilter().startTime(QDateTime(month, QTime(0, 0, 0)))
                                                                                                .endTime(end_date_time)
                                                                                                .orderByAscending())) {
@@ -358,7 +364,6 @@ void FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) {
     monthly_stat.cumulateRetainedEarning();
     monthly_stats_.push_back(monthly_stat);
 
-    qDebug() << "Total time used:" << timer.elapsed() / 1000.0 << "seconds";
     refreshTableWidget();
 }
 

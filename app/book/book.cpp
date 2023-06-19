@@ -80,13 +80,13 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
                 continue;
             }
             query.prepare(R"sql(INSERT INTO book_transaction_details (transaction_id, account_id, household_id, currency_id, amount)
-                        VALUES (
-                            :transaction_id,
-                            (SELECT account_id FROM accounts_view WHERE user_id = :user_id AND type_name = :type_name AND category_name = :category_name AND account_name = :account_name),
-                            (SELECT household_id FROM book_households WHERE user_id = :user_id AND name = :household_name),
-                            (SELECT currency_id FROM currency_types WHERE Name = :currency_name),
-                            :amount
-                        ) )sql");
+                                VALUES (
+                                    :transaction_id,
+                                    (SELECT account_id FROM accounts_view WHERE user_id = :user_id AND type_name = :type_name AND category_name = :category_name AND account_name = :account_name),
+                                    (SELECT household_id FROM book_households WHERE user_id = :user_id AND name = :household_name),
+                                    (SELECT currency_id FROM currency_types WHERE Name = :currency_name),
+                                    :amount
+                                ) )sql");
             query.bindValue(":transaction_id", transaction_id);
             query.bindValue(":user_id", user_id);
             query.bindValue(":type_name", account->typeName());
@@ -217,6 +217,8 @@ Transaction Book::getTransaction(int transaction_id) const {
 }
 
 bool Book::removeTransaction(int transaction_id) {
+    Q_ASSERT(transaction_id > 0);
+
     if (!db.transaction()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();
         return false;
@@ -335,11 +337,11 @@ QString Book::moveAccount(int user_id, const Account& old_account, const Account
 
 QStringList Book::getHouseholds(int user_id) const {
     QSqlQuery query(db);
-    query.prepare(R"sql(SELECT user_id, name
+    query.prepare(R"sql(SELECT name
                         FROM   book_households
-                        WHERE  user_id = :user
+                        WHERE  user_id = :user_id
                         ORDER BY rank ASC)sql");
-    query.bindValue(":user", user_id);
+    query.bindValue(":user_id", user_id);
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
         return {};
@@ -588,7 +590,6 @@ QString Book::setInvestment(int user_id, const AssetAccount& asset, bool is_inve
                 return "ERROR: " + db.lastError().text();
             }
         }
-
     } else { // Set to true
         if (!db.transaction()) {
             qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << db.lastError();

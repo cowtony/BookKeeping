@@ -3,9 +3,6 @@
 BarChart::BarChart(QWidget *parent) : QMainWindow(parent) {
     bar_series_ = new QBarSeries();
 
-    line_series_ = new QLineSeries();
-    //    m_lineSeries->setColor(QColor(0, 0, 0));
-
     stacked_bar_series_ = new QStackedBarSeries();
 
     chart_ = new QChart();
@@ -18,13 +15,11 @@ BarChart::BarChart(QWidget *parent) : QMainWindow(parent) {
     x_axis_->setLabelsAngle(270);
     x_axis_->setTitleText("Summary by month");
 
-    y_axis_ = new QValueAxis();
-    y_axis_->setTitleText("US Dollar");
-    y_axis_->setLabelFormat("$%d");
-
     chart_view_ = new QChartView();
     chart_view_->setRenderHint(QPainter::Antialiasing);
     chart_view_->setRubberBand(QChartView::HorizontalRubberBand);
+    setCentralWidget(chart_view_);
+    resize(1280, 600);
 }
 
 void BarChart::addBarSet(const QString &name, const QList<qreal> &data) {
@@ -34,10 +29,12 @@ void BarChart::addBarSet(const QString &name, const QList<qreal> &data) {
 }
 
 void BarChart::addLine(const QString &name, const QList<qreal> &data) {
-    line_series_->clear();
-    line_series_->setName(name);
-    for (int i = 0; i < data.size(); i++)
-        line_series_->append(i, data.at(i));
+    QLineSeries* line_series = new QLineSeries();
+    line_series->setName(name);
+    for (int i = 0; i < data.size(); i++) {
+        line_series->append(i, data.at(i));
+    }
+    chart_->addSeries(line_series);
 }
 
 void BarChart::addBarSetToStackedBarSeries(const QString &name, const QList<qreal> &data) {
@@ -54,37 +51,36 @@ void BarChart::setTitle(const QString &title) {
     chart_->setTitle(title);
 }
 
-void BarChart::show() {
+void BarChart::addBarSeries() {
     chart_->addSeries(bar_series_);
-    chart_->addAxis(x_axis_, Qt::AlignBottom);
-    bar_series_->attachAxis(x_axis_);
-    chart_->addAxis(y_axis_, Qt::AlignLeft);
-    bar_series_->attachAxis(y_axis_);
-    y_axis_->applyNiceNumbers();
-    chart_view_->setChart(chart_);
-    setCentralWidget(chart_view_);
-    resize(1280, 600);
-
-    QMainWindow::show();
 }
 
-void BarChart::showStackedBarChart()
-{
+void BarChart::addStackedBarSeries() {
     chart_->addSeries(stacked_bar_series_);
-    chart_->addSeries(line_series_);
+}
 
+void BarChart::show() {
+    // Create auto scaled axis, mainly for y-axis.
+    chart_->createDefaultAxes();
+    // Delete the auto created x-axis.
+    for (auto* x_axis : chart_->axes(Qt::Horizontal)) {
+        chart_->removeAxis(x_axis);
+    }
+
+    // Use the own x-axis.
     chart_->addAxis(x_axis_, Qt::AlignBottom);
-    stacked_bar_series_->attachAxis(x_axis_);
-    line_series_->attachAxis(x_axis_);
+    for (auto* series : chart_->series()) {
+        series->attachAxis(x_axis_);
+    }
 
-    chart_->addAxis(y_axis_, Qt::AlignLeft);
-    stacked_bar_series_->attachAxis(y_axis_);
-    line_series_->attachAxis(y_axis_);
-    y_axis_->applyNiceNumbers();
+    // Fine tuning the y-axis.
+    QValueAxis* y_axis = qobject_cast<QValueAxis *>(chart_->axes(Qt::Vertical).first());
+    y_axis->setTitleText("US Dollar");
+    y_axis->setLabelFormat("$%d");
+    y_axis->applyNiceNumbers();
 
     chart_view_->setChart(chart_);
-    setCentralWidget(chart_view_);
-    resize(1280, 600);
-
     QMainWindow::show();
 }
+
+
