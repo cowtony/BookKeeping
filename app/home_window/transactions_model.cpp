@@ -55,29 +55,7 @@ void TransactionsModel::setFilter(const TransactionFilter& filter) {
 }
 
 void TransactionsModel::refresh() {
-    QStringList statements;
-    for (const auto& [account, household_money] : filter_.getAccounts()) {
-        if (!account->categoryName().isEmpty()) {
-            statements << QString(R"sql((%1 LIKE '%%2|%3%'))sql").arg(account->typeName(), account->categoryName(), account->accountName());
-        }
-    }
-
-    QString query = QString(R"sql(SELECT Timestamp, Description, Expense, Revenue, Asset, Liability, transaction_id
-                                  FROM   transactions_view
-                                  WHERE
-                                      user_id = %1
-                                      AND (Timestamp BETWEEN '%2' AND '%3')
-                                      AND (Description LIKE '%%4%')
-                                      AND (%5)
-                                  ORDER BY Timestamp DESC
-                                  LIMIT %7)sql")
-        .arg(user_id_)
-        .arg(filter_.date_time.toString(kDateTimeFormat))
-        .arg(filter_.end_date_time.toString(kDateTimeFormat))
-        .arg(filter_.description)
-        .arg(statements.empty()? "TRUE" : statements.join(filter_.use_or? " OR " : " AND "))
-        .arg(200);
-    setQuery(query, db_);
+    setQuery(Book::getQueryTransactionsQueryStr(user_id_, filter_), db_);
 
     sum_transaction_.clear();
     for (int row = 0; row < QSqlQueryModel::rowCount(); ++row) {

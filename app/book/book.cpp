@@ -112,33 +112,41 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
     return true;
 }
 
-QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter& filter) const {
+// static
+QString Book::getQueryTransactionsQueryStr(int user_id, const TransactionFilter& filter) {
     QStringList statements;
     for (const auto& [account, household_money] : filter.getAccounts()) {
         if (!account->categoryName().isEmpty()) {
-            statements << QString(R"sql((%1 LIKE '%%2|%3%'))sql").arg(account->typeName(), account->categoryName(), account->accountName());
+            statements << QString(R"sql((%1 LIKE '%%2|%3,%'))sql").arg(account->typeName(), account->categoryName(), account->accountName());
         }
     }
 
+    return QString(R"sql(SELECT Timestamp, Description, Expense, Revenue, Asset, Liability, transaction_id
+                         FROM   transactions_view
+                         WHERE  user_id = %1
+                                AND Timestamp BETWEEN '%2' AND '%3'
+                                AND Description LIKE '%%4%'
+                                AND (%5)
+                         ORDER BY Timestamp %6
+                         LIMIT  %7)sql")
+        .arg(QString::number(user_id),
+             filter.date_time.toString(kDateTimeFormat),
+             filter.end_date_time.toString(kDateTimeFormat),
+             filter.description,
+             statements.empty()? "TRUE" : statements.join(filter.use_or? " OR " : " AND "),
+             filter.ascending_order? "ASC" : "DESC",
+             QString::number(filter.limit));
+}
+
+QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter& filter) const {
     QSqlQuery query(db);
     query.prepare(QString(R"sql(SELECT *
                                 FROM   transaction_details_view
                                 WHERE  transaction_id IN (
-                                    SELECT transaction_id
-                                    FROM   transactions_view
-                                    WHERE  user_id = :user
-                                           AND Timestamp BETWEEN :start AND :end
-                                           AND Description LIKE :description
-                                           AND (%1)
-                                    LIMIT  :limit
+                                    SELECT transaction_id FROM (%1)
                                 )
-                                ORDER BY date_time %2, transaction_id %2)sql").arg(statements.empty()? "TRUE" : statements.join(filter.use_or? " OR " : " AND "),
-                           filter.ascending_order? "ASC" : "DESC"));
-    query.bindValue(":user", user_id);
-    query.bindValue(":start", filter.date_time.toString(kDateTimeFormat));
-    query.bindValue(":end",   filter.end_date_time.toString(kDateTimeFormat));
-    query.bindValue(":description", "%" + filter.description + "%");
-    query.bindValue(":limit", filter.limit);
+                                ORDER BY date_time %2, transaction_id %2)sql")
+                      .arg(getQueryTransactionsQueryStr(user_id, filter), filter.ascending_order? "ASC" : "DESC"));
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
         return {};
@@ -146,7 +154,6 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
 
     QList<Transaction> result;
     int current_transaction_id = -1;
-    // TODO: figure out a way to share the same code from getTransaction().
     Transaction transaction;
     while (query.next()) {
         if (query.value("transaction_id").toInt() != current_transaction_id) { // New transaction.
@@ -159,22 +166,7 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
             transaction.description = query.value("description").toString();
             transaction.date_time = query.value("date_time").toDateTime();
         }
-        auto account = Account::create(query.value("account_id").toInt(),
-                                       query.value("category_id").toInt(),
-                                       Account::kAccountTypeName.key(query.value("type_name").toString()),
-                                       query.value("category_name").toString(),
-                                       query.value("account_name").toString(),
-                                       "",
-                                       Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()));
-        Money money(transaction.date_time.date(),
-                    Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
-                    query.value("amount").toDouble());
-        if (account->getFinancialStatementName() == "Balance Sheet") {
-            transaction.addMoney(account, "All", money);
-        } else {
-            transaction.addMoney(account, query.value("household_name").toString(), money);
-        }
-
+        populateTransactionDataFromQuery(transaction, query);
     }
     if (current_transaction_id > 0) {
         result.push_back(transaction);
@@ -197,21 +189,8 @@ Transaction Book::getTransaction(int transaction_id) const {
     while (query.next()) {
         transaction.description = query.value("description").toString();
         transaction.date_time = query.value("date_time").toDateTime();
-        auto account = Account::create(query.value("account_id").toInt(),
-                                       query.value("category_id").toInt(),
-                                       Account::kAccountTypeName.key(query.value("type_name").toString()),
-                                       query.value("category_name").toString(),
-                                       query.value("account_name").toString(),
-                                       "",
-                                       Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()));
-        Money money(transaction.date_time.date(),
-                    Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
-                    query.value("amount").toDouble());
-        if (account->getFinancialStatementName() == "Balance Sheet") {
-            transaction.addMoney(account, "All", money);
-        } else {
-            transaction.addMoney(account, query.value("household_name").toString(), money);
-        }
+
+        populateTransactionDataFromQuery(transaction, query);
     }
     return transaction;
 }
@@ -246,90 +225,25 @@ bool Book::removeTransaction(int transaction_id) {
     return true;
 }
 
-// TODO: This need to be changed after transactions table has been migrated.
-QString Book::moveAccount(int user_id, const Account& old_account, const Account& new_account) {
-    if (old_account.accountType() != new_account.accountType()) {
-        return "Does not support move account between different account type yet.";
+QString Book::renameAccount(int user_id, const Account& old_account, const QString& account_name) {
+    if (account_name.isEmpty()) {
+        return "The new account name is empty.";
+    }
+
+    // Check duplicate:
+    if (getAccount(user_id, old_account.accountType(), old_account.categoryName(), account_name) != nullptr) {
+        return "The account with name '" + account_name + "' already exist.";
     }
 
     QSqlQuery query(db);
-    query.prepare(QString(R"sql(SELECT transaction_id, detail->'%1' AS type_detail
-                                FROM book_transactions
-                                WHERE type_detail LIKE :expression)sql").arg(old_account.typeName()));
-    query.bindValue(":expression", QString(R"(%"%1|%2":%)").arg(old_account.categoryName(), old_account.accountName()));
-    if (!query.exec()) {
+    query.prepare(QString(R"sql(UPDATE [book_accounts] SET account_name = :nm WHERE account_id = :id)sql"));
+    query.bindValue(":nm", account_name);
+    query.bindValue(":id", old_account.accountId());
+    if (query.exec()) {
+        Logging(query);
+    } else {
         qDebug() << Q_FUNC_INFO << query.lastError();
-        return "Error execute query.";
-    }
-    // Update transactions
-    while (query.next()) {
-        QString new_string = query.value("type_detail").toString().replace(QString(R"("%1|%2":)").arg(old_account.categoryName(), old_account.accountName()),
-                                                                           QString(R"("%1|%2":)").arg(new_account.categoryName(), new_account.accountName()));
-        QSqlQuery query2(db);
-        query2.prepare(QString(R"sql(UPDATE book_transactions
-                                     SET detail = json_set(detail, '$.%1', json(:new))
-                                     WHERE transaction_id = :id)sql").arg(old_account.typeName()));
-        query2.bindValue(":id", query.value("transaction_id"));
-        query2.bindValue(":new", new_string);
-        if (query2.exec()) {
-            Logging(query2);
-        } else {
-            qDebug() << Q_FUNC_INFO << query2.lastError();
-            return "Error execute query.";
-        }
-    }
-
-    // Update investment section in transactions.
-    if (old_account.accountType() == Account::Asset && IsInvestment(user_id, old_account)) {
-        query.prepare(R"sql(SELECT transaction_id, detail->'Revenue' AS revenue_detail
-                            FROM book_transactions
-                            WHERE revenue_detail LIKE :expression)sql");
-        query.bindValue(":expression", QString(R"(%"Investment|%1":%)").arg(old_account.accountName()));
-        if (!query.exec()) {
-            qDebug() << Q_FUNC_INFO << query.lastError();
-            return "Error execute query.";
-        }
-        while (query.next()) {
-            QString new_string = query.value("revenue_detail").toString().replace(QString(R"("Investment|%1":)").arg(old_account.accountName()),
-                                                                                  QString(R"("Investment|%1":)").arg(new_account.accountName()));
-            QSqlQuery query2(db);
-            query2.prepare(R"sql(UPDATE book_transactions
-                                 SET detail = json_set(detail, '$.Revenue', json(:new))
-                                 WHERE transaction_id = :id)sql");
-            query2.bindValue(":id", query.value("transaction_id"));
-            query2.bindValue(":new", new_string);
-            if (query2.exec()) {
-                Logging(query2);
-            } else {
-                qDebug() << Q_FUNC_INFO << query2.lastError();
-                return "Error execute query.";
-            }
-        }
-    }
-
-    // Update account.
-    if (accountExist(user_id, new_account)) {  // Merge account
-        // TODO: old comment is ignored.
-        query.prepare(QString(R"sql(DELETE FROM [%1] WHERE Category = :c AND Name = :n)sql").arg(old_account.typeName()));
-        query.bindValue(":oc", old_account.categoryName());
-        query.bindValue(":on", old_account.accountName());
-        query.exec();
-        // TODO: Investment force set to true.
-        if (new_account.accountType() == Account::Asset) {
-            return setInvestment(user_id, static_cast<const AssetAccount&>(new_account), true);
-        }
-    } else {  // Rename account
-        query.prepare(QString(R"sql(UPDATE %1 SET Category = :nc, Name = :nn WHERE Category = :oc AND Name = :on)sql").arg(old_account.typeName()));
-        query.bindValue(":nc", new_account.categoryName());
-        query.bindValue(":nn", new_account.accountName());
-        query.bindValue(":oc", old_account.categoryName());
-        query.bindValue(":on", old_account.accountName());
-        if (query.exec()) {
-            Logging(query);
-        } else {
-            qDebug() << Q_FUNC_INFO << query.lastError();
-            return "Error execute query.";
-        }
+        return "Error execute query." + query.lastError().text();
     }
 
     return "";  // OK status.
@@ -504,8 +418,10 @@ QList<QSharedPointer<Account>> Book::queryAllAccounts(int user_id) const {
 
 QList<QSharedPointer<Account>> Book::queryAccountNamesByLastUpdate(int user_id, Account::Type account_type, const QString& category_name, const QDateTime& date_time) const {
     QSqlQuery query(db);
-    query.prepare(R"sql(SELECT    a.account_id, d.category_id, a.account_name, a.comment, d.currency_symbol, a.is_investment, MAX(d.date_time) AS max_date_time
+    query.prepare(R"sql(SELECT    a.account_id, a.category_id, a.account_name, a.comment, c.Name AS currency_name, a.is_investment, MAX(d.date_time) AS max_date_time
                         FROM      book_accounts AS a
+                        JOIN      currency_types AS c
+                               ON a.currency_id = c.currency_id
                         LEFT JOIN transaction_details_view AS d
                                ON a.account_id = d.account_id AND
                                   d.user_id = :user_id AND
@@ -530,7 +446,7 @@ QList<QSharedPointer<Account>> Book::queryAccountNamesByLastUpdate(int user_id, 
                                   category_name,
                                   query.value("account_name").toString(),
                                   query.value("comment").toString(),
-                                  Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
+                                  Currency::kCurrencyToCode.key(query.value("currency_name").toString()),
                                   query.value("is_investment").toBool());
     }
     return result;
@@ -822,22 +738,6 @@ bool Book::removeAccount(int account_id) const {
     return true;  // TODO: if account doesn't exist, return true or false?
 }
 
-bool Book::accountExist(int user_id, const Account& account) const {
-    QSqlQuery query(db);
-    query.prepare(R"sql(SELECT *
-                        FROM   accounts_view
-                        WHERE  user_id = :user AND type_name = :type AND category_name = :cat AND account_name = :acc)sql");
-    query.bindValue(":user", user_id);
-    query.bindValue(":type", account.typeName());
-    query.bindValue(":cat", account.categoryName());
-    query.bindValue(":acc", account.accountName());
-    if (!query.exec()) {
-        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
-        return false;
-    }
-    return query.next();
-}
-
 QDateTime Book::getFirstTransactionDateTime() const {
     QDateTime dateTime;
     QSqlQuery query(R"sql(SELECT MIN(date_time) FROM book_transactions)sql", db);
@@ -916,6 +816,24 @@ QString Book::getLastExecutedQuery(const QSqlQuery& query) {
 //        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << result;
     }
     return result;
+}
+
+void Book::populateTransactionDataFromQuery(Transaction& transaction, const QSqlQuery& query) {
+    auto account = Account::create(query.value("account_id").toInt(),
+                                   query.value("category_id").toInt(),
+                                   Account::kAccountTypeName.key(query.value("type_name").toString()),
+                                   query.value("category_name").toString(),
+                                   query.value("account_name").toString(),
+                                   "",
+                                   Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()));
+    Money money(transaction.date_time.date(),
+                Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
+                query.value("amount").toDouble());
+    if (account->getFinancialStatementName() == "Balance Sheet") {
+        transaction.addMoney(account, "All", money);
+    } else {
+        transaction.addMoney(account, query.value("household_name").toString(), money);
+    }
 }
 
 bool Book::updateLoginTime(int user_id) const {

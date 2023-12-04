@@ -91,7 +91,12 @@ void HomeWindow::refreshTable() {
                                .orderByDescending()
                                .setLimit(200);
     for (int i = 0; i < kAccountTypes.size(); i++) {
+        if (name_combo_boxes_.at(i)->count() == 0) {
+            continue;  // When `name_combo_box.clear()`, this function will also be triggered.
+        }
         if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
+            filter.addAccount(name_combo_boxes_.at(i)->currentData().value<QSharedPointer<Account>>());
+        } else if (!category_combo_boxes_.at(i)->currentText().isEmpty()) {
             filter.addAccount(name_combo_boxes_.at(i)->currentData().value<QSharedPointer<Account>>());
         }
     }
@@ -107,6 +112,7 @@ void HomeWindow::onTableViewDoubleClicked(const QModelIndex &index) {
     add_transaction->setTransaction(transaction);
 }
 
+// TODO: may need to get category_id as a dummy account here as second level data.
 void HomeWindow::setCategoryComboBox() {
     for (int i = 0; i < kAccountTypes.size(); i++) {
         QComboBox *cateComboBox = category_combo_boxes_.at(i);
@@ -116,10 +122,10 @@ void HomeWindow::setCategoryComboBox() {
     }
 }
 
-void HomeWindow::accountCategoryChanged(const Account::Type& table_type,
-                                        const QString& new_category_name,
-                                        QComboBox* name_combo_box) {
+void HomeWindow::accountCategoryChanged(const Account::Type& table_type, const QString& new_category_name, QComboBox* name_combo_box) {
     name_combo_box->clear();
+    // TODO: Use correct category_id.
+    name_combo_box->addItem("", QVariant::fromValue(Account::create(-1, 999, table_type, new_category_name, "")));  // This can filter all accounts for this category.
     for (QSharedPointer<Account>& account_ptr : book.queryAccountNamesByLastUpdate(user_id, table_type, new_category_name, ui->dateEditTo->dateTime())) {
         name_combo_box->addItem(account_ptr->accountName(), QVariant::fromValue(account_ptr));
     }

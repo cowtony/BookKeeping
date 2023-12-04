@@ -202,40 +202,39 @@ bool AccountsModel::setData(const QModelIndex& index, const QVariant& value, int
                 case 3:  // Account
                     switch (index.column()) {
                         case 0: {  // Account Name column
-                            if (value.toString().isEmpty()) {
+                            QString new_account_name = value.toString();
+                            if (new_account_name.isEmpty()) {
                                 return false;
                             }
                             auto old_account = node->account();
-                            auto new_account = Account::create(-1, old_account->categoryId(), old_account->accountType(), old_account->categoryName(), value.toString());
-                            bool account_exist = book_.accountExist(user_id_, *new_account);
-
-                            if (account_exist) {  // new_account_name exist, perform merge.
+                            if (book_.getAccount(user_id_, old_account->accountType(), old_account->categoryName(), new_account_name) != nullptr) {
+                                // new_account_name exist, perform merge.
                                 if (!node->account()->comment().isEmpty()) {
                                     emit errorMessage("The account to be merged still have unempty comment.");
                                     return false;
                                 }
                                 QMessageBox message_box;
                                 message_box.setText("Do you want to merge with existing account?");
-                                message_box.setInformativeText("OldName: " + old_account->accountName() + ", NewName: " + value.toString());
+                                message_box.setInformativeText("OldName: " + old_account->accountName() + ", NewName: " + new_account_name);
                                 message_box.setStandardButtons(QMessageBox::Ok | QMessageBox::Discard);
                                 message_box.setDefaultButton(QMessageBox::Ok);
                                 switch (message_box.exec()) {
-                                    case QMessageBox::Discard:
-                                        return false;
+                                    case QMessageBox::Discard: return false;
                                 }
-                            }
-
-                            QApplication::setOverrideCursor(Qt::WaitCursor);
-                            QString error_msg = book_.moveAccount(user_id_, *old_account, *new_account);
-                            QApplication::restoreOverrideCursor();
-                            if (!error_msg.isEmpty()) {
-                                emit errorMessage(error_msg);
+                                QApplication::setOverrideCursor(Qt::WaitCursor);
+                                // TODO: Add merge account feature: book_.mergeAccount();
+                                QApplication::restoreOverrideCursor();
+                                emit errorMessage("The merge account feature has not been implemented.");
                                 return false;
-                            }
-                            if (account_exist) {
                                 removeItem(index);
-                            } else { // Simply rename.
-                                if (!node->setName(value.toString())) {
+                            } else {
+                                // Account not exist, perform rename.
+                                QString error_msg = book_.renameAccount(user_id_, *old_account, new_account_name);
+                                if (!error_msg.isEmpty()) {
+                                    emit errorMessage(error_msg);
+                                    return false;
+                                }
+                                if (!node->setName(new_account_name)) {
                                     return false;
                                 }
                             }
