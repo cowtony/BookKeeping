@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QMessageBox>
 
+#include "add_transaction/no_scroll_combo_box.h"
 #include "book/book.h"
 #include "home_window/home_window.h"
 
@@ -299,9 +300,9 @@ int AddTransaction::insertTableRow(QTableWidget* tableWidget) {
     tableWidget->insertRow(row);
     tableWidget->setRowHeight(row, 20);
 
-    QComboBox* cateComboBox = new QComboBox;
+    QComboBox* cateComboBox = new NoScrollComboBox;
     tableWidget->setCellWidget(row, 0, cateComboBox);
-    QComboBox* nameComboBox = new QComboBox;  // TODO: Add user data: QSharedPointer<Account> to the comboBox.
+    QComboBox* nameComboBox = new NoScrollComboBox;  // TODO: Add user data: QSharedPointer<Account> to the comboBox.
     tableWidget->setCellWidget(row, 1, nameComboBox);
     for (int col = 2; col < tableWidget->columnCount(); col++) {
         QLineEdit* lineEdit = new QLineEdit;

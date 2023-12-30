@@ -32,6 +32,7 @@ HEADERS += \
     account_manager/account_manager.h \
     account_manager/account_tree_node.h \
     account_manager/accounts_model.h \
+    add_transaction/no_scroll_combo_box.h \
     book/account.h \
     book/book.h \
     book/money.h \
