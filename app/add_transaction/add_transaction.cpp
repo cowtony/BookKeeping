@@ -311,8 +311,11 @@ int AddTransaction::insertTableRow(QTableWidget* tableWidget) {
         lineEdit->setDisabled(true);
     }
     connect(cateComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, tableWidget, row](){ onAccountCateChanged(tableWidget, row); });
-    cateComboBox->addItem("");
-    cateComboBox->addItems(book_.queryCategories(user_id_, table_widgets_.key(tableWidget)));
+    Account::Type accountType = table_widgets_.key(tableWidget);
+    cateComboBox->addItem("", QVariant::fromValue(Account::create(-1, -1, accountType, "", "")));
+    for (QSharedPointer<Account>& category : book_.getCategories(user_id_, accountType)) {
+        cateComboBox->addItem(category->categoryName(), QVariant::fromValue(category));
+    }
     return row;
 }
 

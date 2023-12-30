@@ -116,7 +116,12 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
 QString Book::getQueryTransactionsQueryStr(int user_id, const TransactionFilter& filter) {
     QStringList statements;
     for (const auto& [account, household_money] : filter.getAccounts()) {
-        if (!account->categoryName().isEmpty()) {
+        if (account->categoryName().isEmpty()) {
+            continue;  // Why do we need to add this?
+        }
+        if (account->accountId() == -1) {  // This is a category
+            statements << QString(R"sql((%1 LIKE '%%2|%'))sql").arg(account->typeName(), account->categoryName());
+        } else {  // This is a account
             statements << QString(R"sql((%1 LIKE '%%2|%3,%'))sql").arg(account->typeName(), account->categoryName(), account->accountName());
         }
     }
@@ -289,25 +294,6 @@ Currency::Type Book::queryCurrencyType(int user_id, Account::Type account_type, 
         return Currency::USD;
     }
     return Currency::kCurrencyToCode.key(query.value("currency_name").toString());
-}
-
-QStringList Book::queryCategories(int user_id, Account::Type account_type) const {
-    QSqlQuery query(db);
-    query.prepare(R"sql(SELECT c.category_name
-                        FROM book_account_categories AS c
-                        JOIN book_account_types      AS t ON c.account_type_id = t.account_type_id
-                        WHERE c.user_id = :user_id AND t.type_name = :type_name
-                        ORDER BY category_name ASC)sql");
-    query.bindValue(":user_id", user_id);
-    query.bindValue(":type_name", Account::kAccountTypeName.value(account_type));
-    if (!query.exec()) {
-        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
-    }
-    QStringList categories;
-    while (query.next()) {
-        categories << query.value("category_name").toString();
-    }
-    return categories;
 }
 
 QStringList Book::queryAccounts(int user_id, Account::Type account_type, const QString& category) const {
@@ -591,12 +577,31 @@ bool Book::renameCategory(int user_id, Account::Type account_type, const QString
     return true;
 }
 
+QList<QSharedPointer<Account>> Book::getCategories(int user_id, Account::Type account_type) const {
+    QSqlQuery query(db);
+    query.prepare(R"sql(SELECT *
+                        FROM book_account_categories AS c
+                        JOIN book_account_types      AS t ON c.account_type_id = t.account_type_id
+                        WHERE c.user_id = :user_id AND t.type_name = :type_name
+                        ORDER BY category_name ASC)sql");
+    query.bindValue(":user_id", user_id);
+    query.bindValue(":type_name", Account::kAccountTypeName.value(account_type));
+    if (!query.exec()) {
+        qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+    }
+    QList<QSharedPointer<Account>> categories;
+    while (query.next()) {
+        categories << Account::create(-1, query.value("category_id").toInt(), account_type, query.value("category_name").toString(), "");
+    }
+    return categories;
+}
+
 QSharedPointer<Account> Book::getCategory(int user_id, Account::Type account_type, const QString &category_name) const {
     QSqlQuery query(db);
     query.prepare(R"sql(SELECT *
                         FROM   book_account_categories AS c
                         JOIN   book_account_types      AS t ON c.account_type_id = t.account_type_id
-                        WHERE  user_id = :user_id AND type_name = :type_name AND category_name = :category_name)sql");
+                        WHERE  c.user_id = :user_id AND t.type_name = :type_name AND category_name = :category_name)sql");
     query.bindValue(":user_id", user_id);
     query.bindValue(":type_name", Account::kAccountTypeName.value(account_type));
     query.bindValue(":category_name", category_name);

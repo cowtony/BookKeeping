@@ -30,7 +30,6 @@ public:
     // Accounts
     QList<AssetAccount> getInvestmentAccounts(int user_id) const;
     Currency::Type queryCurrencyType(int user_id, Account::Type account_type, const QString& category_name, const QString& account_name) const;
-    QStringList    queryCategories  (int user_id, Account::Type account_type) const;
     QList<QSharedPointer<Account>> queryAccountNamesByLastUpdate(int user_id, Account::Type account_type, const QString& category_name, const QDateTime& date_time) const;
     QStringList getHouseholds(int user_id) const;
 
@@ -44,6 +43,7 @@ public:
     bool removeAccount (int account_id) const;
 
     // Category Management
+    QList<QSharedPointer<Account>> getCategories(int user_id, Account::Type account_type) const;
     QSharedPointer<Account> getCategory(int user_id, Account::Type account_type, const QString& category_name) const;
     QSharedPointer<Account> insertCategory(int user_id, Account::Type account_type, const QString& category_name) const;
     bool renameCategory(int user_id, Account::Type account_type, const QString& category_name, const QString& new_category_name) const;

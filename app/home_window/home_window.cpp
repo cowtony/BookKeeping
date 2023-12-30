@@ -42,7 +42,9 @@ HomeWindow::HomeWindow(QWidget *parent)
 
         auto table_type = kAccountTypes.at(i);
         // Update <name_combo_box> when <category_combo_box> changed.
-        connect(category_combo_boxes_[i], &QComboBox::currentTextChanged, this, [=](const QString& new_category_name) { accountCategoryChanged(table_type, new_category_name, name_combo_boxes_[i]); });
+        connect(category_combo_boxes_[i], &QComboBox::currentIndexChanged, this, [this, i, table_type](int /*index*/) {
+            accountCategoryChanged(table_type, category_combo_boxes_[i], name_combo_boxes_[i]);
+        });
     }
     setCategoryComboBox();
     // Put this to the last of init because this will triger on_tableView_transactions_cellChanged().
@@ -92,12 +94,14 @@ void HomeWindow::refreshTable() {
                                .setLimit(200);
     for (int i = 0; i < kAccountTypes.size(); i++) {
         if (name_combo_boxes_.at(i)->count() == 0) {
-            continue;  // When `name_combo_box.clear()`, this function will also be triggered.
+            continue;  // Skip because when `name_combo_box.clear()`, this function will also be triggered.
         }
         if (!name_combo_boxes_.at(i)->currentText().isEmpty()) {
-            filter.addAccount(name_combo_boxes_.at(i)->currentData().value<QSharedPointer<Account>>());
+            auto account = name_combo_boxes_.at(i)->currentData().value<QSharedPointer<Account>>();
+            filter.addAccount(account);
         } else if (!category_combo_boxes_.at(i)->currentText().isEmpty()) {
-            filter.addAccount(name_combo_boxes_.at(i)->currentData().value<QSharedPointer<Account>>());
+            auto category = category_combo_boxes_.at(i)->currentData().value<QSharedPointer<Account>>();
+            filter.addAccount(category);
         }
     }
     transactions_model_.setFilter(filter);
@@ -112,22 +116,27 @@ void HomeWindow::onTableViewDoubleClicked(const QModelIndex &index) {
     add_transaction->setTransaction(transaction);
 }
 
-// TODO: may need to get category_id as a dummy account here as second level data.
 void HomeWindow::setCategoryComboBox() {
     for (int i = 0; i < kAccountTypes.size(); i++) {
         QComboBox *cateComboBox = category_combo_boxes_.at(i);
         cateComboBox->clear();
-        cateComboBox->addItem("");
-        cateComboBox->addItems(book.queryCategories(user_id, kAccountTypes.at(i)));
+        cateComboBox->addItem("", QVariant::fromValue(Account::create(-1, -1, kAccountTypes.at(i), "", "")));
+        for (QSharedPointer<Account>& category : book.getCategories(user_id, kAccountTypes.at(i))) {
+            cateComboBox->addItem(category->categoryName(), QVariant::fromValue(category));
+        }
     }
 }
 
-void HomeWindow::accountCategoryChanged(const Account::Type& table_type, const QString& new_category_name, QComboBox* name_combo_box) {
+void HomeWindow::accountCategoryChanged(const Account::Type& table_type, QComboBox* category_combo_box, QComboBox* name_combo_box) {
     name_combo_box->clear();
-    // TODO: Use correct category_id.
-    name_combo_box->addItem("", QVariant::fromValue(Account::create(-1, 999, table_type, new_category_name, "")));  // This can filter all accounts for this category.
-    for (QSharedPointer<Account>& account_ptr : book.queryAccountNamesByLastUpdate(user_id, table_type, new_category_name, ui->dateEditTo->dateTime())) {
-        name_combo_box->addItem(account_ptr->accountName(), QVariant::fromValue(account_ptr));
+    QSharedPointer<Account> category = category_combo_box->currentData().value<QSharedPointer<Account>>();
+    // Add a blank account, this can filter all accounts for this category.
+    name_combo_box->addItem("", QVariant::fromValue(Account::create(-1, category->categoryId(), table_type, category->categoryName(), "")));
+    for (QSharedPointer<Account>& account : book.queryAccountNamesByLastUpdate(user_id,
+                                                                               table_type,
+                                                                               category->categoryName(),
+                                                                               ui->dateEditTo->dateTime())) {
+        name_combo_box->addItem(account->accountName(), QVariant::fromValue(account));
     }
 }
 

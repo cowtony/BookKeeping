@@ -47,7 +47,7 @@ private slots:
     void onPushButtonMergeClicked();
     void onPushButtonDeleteClicked();
 
-    void accountCategoryChanged(const Account::Type& table_type, const QString& new_category_name, QComboBox* name_combo_box);
+    void accountCategoryChanged(const Account::Type& table_type, QComboBox* category_combo_box, QComboBox* name_combo_box);
     void onTableViewDoubleClicked(const QModelIndex& index);
 
 private:
