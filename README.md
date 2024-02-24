@@ -1,6 +1,8 @@
 ## Deploy
 
-`C:\Qt\6.4.1\mingw_64\bin\windeployqt.exe C:\Users\cowto\GitHub\build-BookKeeping-Desktop_Qt_6_4_1_MinGW_64_bit-Release\BookKeeping\release\Currency.dll`
+In the Qt terminal, noramlly under "C:\Qt\6.4.1\mingw_64\bin", run:
+
+`windeployqt.exe <your_path_to_the_exe>`
 
 ## TODO
 - PreTax asset account

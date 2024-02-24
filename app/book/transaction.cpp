@@ -62,6 +62,9 @@ Money Transaction::getCheckSum() const {
 
 QStringList Transaction::validate() const {
     QStringList errorMessage;
+    if (!date_time.timeZone().isValid()) {
+        errorMessage << "Invalid TimeZone: " + date_time.timeZone().id();
+    }
     if (description.isEmpty()) {
         errorMessage << "Description is empty.";
     }

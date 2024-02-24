@@ -27,6 +27,8 @@ AddTransaction::AddTransaction(QWidget *parent)
 
     ui->comboBox_Currency->addItems(Currency::kCurrencyToCode.values());
 
+    setupTimeZoneComboBox(ui->comboBox_TimeZone);
+
     initialization();
 
     connect(ui->calendarWidget, &QCalendarWidget::selectionChanged, this, &AddTransaction::onCalendarWidgetSelectionChanged);
@@ -100,7 +102,10 @@ void AddTransaction::setTransaction(const Transaction& transaction) {
 
     transaction_id_ = transaction.id;
     // Date time
-    ui->dateTimeEdit->setDateTime(transaction.date_time);
+    QDateTime dateTime = transaction.date_time;
+    dateTime.setTimeZone(QTimeZone::systemTimeZone());
+    ui->dateTimeEdit->setDateTime(dateTime);
+    ui->comboBox_TimeZone->setCurrentText(transaction.date_time.timeZone().id());
 
     // Description
     if (transaction.description.contains("[R]")) {
@@ -117,9 +122,21 @@ void AddTransaction::setTransaction(const Transaction& transaction) {
     show();
 }
 
+// static
+// Init all Time Zone Identifiers
+void AddTransaction::setupTimeZoneComboBox(QComboBox* timeZone) {
+    for (const QByteArray &timeZoneId : QTimeZone::availableTimeZoneIds()) {
+        timeZone->addItem(QString::fromUtf8(timeZoneId));
+    }
+    timeZone->model()->sort(0);
+    timeZone->setEditable(true);
+    timeZone->setCurrentText(QTimeZone::systemTimeZoneId());
+}
+
 Transaction AddTransaction::getTransaction() {
     Transaction transaction;
     transaction.date_time = ui->dateTimeEdit->dateTime();
+    transaction.date_time.setTimeZone(QTimeZone(ui->comboBox_TimeZone->currentText().toUtf8()));
     transaction.description = ui->lineEdit_Description->text();
 
     for (QTableWidget* table_widget : {ui->tableWidget_Assets, ui->tableWidget_Expenses, ui->tableWidget_Revenues, ui->tableWidget_Liabilities}) {
@@ -152,16 +169,16 @@ Transaction AddTransaction::getTransaction() {
     return transaction;
 }
 
+/************************** Slots *********************************/
 void AddTransaction::on_pushButton_Insert_clicked() {
-    QStringList errorMsg;
-
     Transaction transaction = getTransaction();
-    errorMsg << transaction.validate();
 
+    QStringList errorMsg = transaction.validate();
     if (!errorMsg.empty()) {
         QMessageBox::warning(this, "Warning!", errorMsg.join('\n'), QMessageBox::Ok);
         return;
     }
+
     QDate earliest_date(2200, 12, 31);
     if (transaction_id_ > 0) {  // This will be a Replace action.
         QMessageBox warningMsgBox;
@@ -193,7 +210,6 @@ void AddTransaction::on_pushButton_Insert_clicked() {
     deleteLater();
 }
 
-/************************** Slots *********************************/
 void AddTransaction::onCalendarWidgetSelectionChanged() {
     ui->dateTimeEdit->setDate(ui->calendarWidget->selectedDate());
     ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));

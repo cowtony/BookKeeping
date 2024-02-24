@@ -17,13 +17,15 @@ class TransactionsModel : public QSqlQueryModel {
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
-    QVariant data(int row, int col) const;
+    QString getDisplayRoleText(int row, int col) const;
     Transaction getTransaction(int row);
     void setFilter(const TransactionFilter& filter);
 
+    const static int kTransactionIdColumnIndex = 6;
+    const static int kTimeZoneColumnIndex = 7;
+
   private:
     void refresh();
-
 
     QSqlDatabase db_;
     Book& book_;

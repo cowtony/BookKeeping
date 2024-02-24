@@ -22,6 +22,8 @@ public:
     void initialization();
     void setTransaction(const Transaction& transaction);
 
+    static void setupTimeZoneComboBox(QComboBox*);
+
 private slots:
     void onCalendarWidgetSelectionChanged();
     void onDateTimeEditDateTimeChanged(const QDateTime& date_time);

@@ -12,7 +12,7 @@ Book::Book(const QString& dbPath) {
     } else {
         db = QSqlDatabase::addDatabase("QSQLITE", "BOOK");
         db.setDatabaseName(dbPath);
-//        Q_INIT_RESOURCE(Book);
+
         QFile DDL(":/book/CreateDbBook.sql");
         if (db.open() && DDL.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QString statement;
@@ -36,8 +36,13 @@ Book::Book(const QString& dbPath) {
     reduceLoggingRows();
 
     // Some schema migration work can be done here.
-    if (false) {
-        Q_ASSERT(false);
+    if (!true) {
+        QSqlQuery query(db);
+        query.prepare(R"sql(UPDATE book_transactions SET utc_timestamp = strftime('%s', date_time))sql");
+        if (!query.exec()) {
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
+            db.rollback();
+        }
     }
 }
 
@@ -63,9 +68,11 @@ bool Book::insertTransaction(int user_id, const Transaction& transaction, bool i
 
     QSqlQuery query(db);
 
-    query.prepare(R"sql(INSERT INTO book_transactions (user_id, date_time, description) VALUES (:user_id, :dateTime, :description))sql");
+    query.prepare(R"sql(INSERT INTO book_transactions (user_id, utc_timestamp, time_zone, description)
+                        VALUES (:user_id, :timestamp, :timezone, :description) )sql");
     query.bindValue(":user_id",     user_id);
-    query.bindValue(":dateTime",    transaction.date_time.toString(kDateTimeFormat));
+    query.bindValue(":timestamp",   transaction.date_time.toSecsSinceEpoch());
+    query.bindValue(":timezone",    QString(transaction.date_time.timeZone().id()));
     query.bindValue(":description", transaction.description);
 
     if (!query.exec()) {
@@ -126,21 +133,25 @@ QString Book::getQueryTransactionsQueryStr(int user_id, const TransactionFilter&
         }
     }
 
-    return QString(R"sql(SELECT Timestamp, Description, Expense, Revenue, Asset, Liability, transaction_id
-                         FROM   transactions_view
-                         WHERE  user_id = %1
-                                AND Timestamp BETWEEN '%2' AND '%3'
-                                AND Description LIKE '%%4%'
-                                AND (%5)
-                         ORDER BY Timestamp %6
-                         LIMIT  %7)sql")
+    return QString(R"sql(SELECT  utc_timestamp AS DateTime,
+                                 description AS Description,
+                                 Expense, Revenue, Asset, Liability, transaction_id, time_zone
+                         FROM    transactions_view
+                         WHERE   user_id = %1
+                             AND utc_timestamp BETWEEN %2 AND %3
+                             AND description LIKE '%%4%'
+                             AND (%5)
+                             AND time_zone LIKE '%%8'
+                         ORDER BY utc_timestamp %6
+                         LIMIT   %7)sql")
         .arg(QString::number(user_id),
-             filter.date_time.toString(kDateTimeFormat),
-             filter.end_date_time.toString(kDateTimeFormat),
+             QString::number(filter.date_time.toSecsSinceEpoch()),
+             QString::number(filter.end_date_time.toSecsSinceEpoch()),
              filter.description,
              statements.empty()? "TRUE" : statements.join(filter.use_or? " OR " : " AND "),
              filter.ascending_order? "ASC" : "DESC",
-             QString::number(filter.limit));
+             QString::number(filter.limit),
+             filter.timeZone);
 }
 
 QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter& filter) const {
@@ -150,7 +161,7 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
                                 WHERE  transaction_id IN (
                                     SELECT transaction_id FROM (%1)
                                 )
-                                ORDER BY date_time %2, transaction_id %2)sql")
+                                ORDER BY utc_timestamp %2, transaction_id %2)sql")
                       .arg(getQueryTransactionsQueryStr(user_id, filter), filter.ascending_order? "ASC" : "DESC"));
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
@@ -169,7 +180,7 @@ QList<Transaction> Book::queryTransactions(int user_id, const TransactionFilter&
             current_transaction_id = query.value("transaction_id").toInt();
             transaction.id = current_transaction_id;
             transaction.description = query.value("description").toString();
-            transaction.date_time = query.value("date_time").toDateTime();
+            transaction.date_time = QDateTime::fromSecsSinceEpoch(query.value("utc_timestamp").toLongLong(), QTimeZone(query.value("time_zone").toByteArray()));
         }
         populateTransactionDataFromQuery(transaction, query);
     }
@@ -193,7 +204,7 @@ Transaction Book::getTransaction(int transaction_id) const {
     transaction.id = transaction_id;
     while (query.next()) {
         transaction.description = query.value("description").toString();
-        transaction.date_time = query.value("date_time").toDateTime();
+        transaction.date_time = QDateTime::fromSecsSinceEpoch(query.value("utc_timestamp").toLongLong(), QTimeZone(query.value("time_zone").toByteArray()));
 
         populateTransactionDataFromQuery(transaction, query);
     }
@@ -404,7 +415,7 @@ QList<QSharedPointer<Account>> Book::queryAllAccounts(int user_id) const {
 
 QList<QSharedPointer<Account>> Book::queryAccountNamesByLastUpdate(int user_id, Account::Type account_type, const QString& category_name, const QDateTime& date_time) const {
     QSqlQuery query(db);
-    query.prepare(R"sql(SELECT    a.account_id, a.category_id, a.account_name, a.comment, c.Name AS currency_name, a.is_investment, MAX(d.date_time) AS max_date_time
+    query.prepare(R"sql(SELECT    a.account_id, a.category_id, a.account_name, a.comment, c.Name AS currency_name, a.is_investment, MAX(d.utc_timestamp) AS max_date_time
                         FROM      book_accounts AS a
                         JOIN      currency_types AS c
                                ON a.currency_id = c.currency_id
@@ -412,13 +423,13 @@ QList<QSharedPointer<Account>> Book::queryAccountNamesByLastUpdate(int user_id, 
                                ON a.account_id = d.account_id AND
                                   d.user_id = :user_id AND
                                   d.type_name = :type_name AND
-                                  d.date_time < :date_time
+                                  d.utc_timestamp < :date_time
                         WHERE     a.category_id = (SELECT category_id FROM transaction_details_view WHERE category_name = :category_name LIMIT 1)
                         GROUP BY  a.account_id
                         ORDER BY  max_date_time DESC)sql");
     query.bindValue(":user_id", user_id);
     query.bindValue(":type_name", Account::kAccountTypeName.value(account_type));
-    query.bindValue(":date_time", date_time);
+    query.bindValue(":date_time", date_time.toSecsSinceEpoch());
     query.bindValue(":category_name", category_name);
     if (!query.exec()) {
         qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << query.lastError();
@@ -744,28 +755,37 @@ bool Book::removeAccount(int account_id) const {
 }
 
 QDateTime Book::getFirstTransactionDateTime() const {
-    QDateTime dateTime;
-    QSqlQuery query(R"sql(SELECT MIN(date_time) FROM book_transactions)sql", db);
+    QSqlQuery query(R"sql(SELECT  utc_timestamp, time_zone
+                          FROM    book_transactions
+                          WHERE   utc_timestamp = (
+                                  SELECT  MIN(utc_timestamp) FROM book_transactions
+                          )
+                          LIMIT 1)sql", db);
+
     if (query.next()) {
-        dateTime = query.value("MIN(date_time)").toDateTime();
-        if (!dateTime.isValid()) {
-            dateTime = QDateTime::currentDateTime();
+        QDateTime dateTime = QDateTime::fromSecsSinceEpoch(query.value("utc_timestamp").toLongLong(), QTimeZone(query.value("time_zone").toByteArray()));
+        if (dateTime.isValid()) {
+            return dateTime;
         }
     }
-    return dateTime;
+    return QDateTime::currentDateTime();
 }
 
-QDateTime Book::getLastTransactionDateTime() const
-{
-    QDateTime dateTime;
-    QSqlQuery query(R"sql(SELECT MAX(date_time) FROM book_transactions)sql", db);
+QDateTime Book::getLastTransactionDateTime() const {
+    QSqlQuery query(R"sql(SELECT  utc_timestamp, time_zone
+                          FROM    book_transactions
+                          WHERE   utc_timestamp = (
+                                  SELECT  MAX(utc_timestamp) FROM book_transactions
+                          )
+                          LIMIT 1)sql", db);
+
     if (query.next()) {
-        dateTime = query.value("MAX(date_time)").toDateTime();
-        if (!dateTime.isValid()) {
-            dateTime = QDateTime::currentDateTime();
+        QDateTime dateTime = QDateTime::fromSecsSinceEpoch(query.value("utc_timestamp").toLongLong(), QTimeZone(query.value("time_zone").toByteArray()));
+        if (dateTime.isValid()) {
+            return dateTime;
         }
     }
-    return dateTime;
+    return QDateTime::currentDateTime();
 }
 
 void Book::logUsageTime() {

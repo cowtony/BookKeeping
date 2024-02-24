@@ -21,7 +21,8 @@ HomeWindow::HomeWindow(QWidget *parent)
     g_currency.openDatabase();
 
     ui->tableView->setModel(&transactions_model_);
-    ui->tableView->hideColumn(6);  // hide transaction_id
+    ui->tableView->hideColumn(TransactionsModel::kTransactionIdColumnIndex);  // hide transaction_id
+    ui->tableView->hideColumn(TransactionsModel::kTimeZoneColumnIndex);  // hide time_zone
 
     // Init the filter elements.
     // Init start date.
@@ -51,6 +52,11 @@ HomeWindow::HomeWindow(QWidget *parent)
     // QLineEdit: Description Filter.
     ui->lineEditDescriptionFilter->setPlaceholderText("Description Filter");
     connect(ui->lineEditDescriptionFilter, &QLineEdit::textEdited, this, &HomeWindow::refreshTable);
+
+    ui->comboBoxTimeZone->addItem("");
+    AddTransaction::setupTimeZoneComboBox(ui->comboBoxTimeZone);
+    ui->comboBoxTimeZone->setCurrentText("");
+    connect(ui->comboBoxTimeZone, &QComboBox::currentIndexChanged, this, &HomeWindow::refreshTable);
 
     connect(ui->actionAccountManager,        &QAction::triggered, this, &HomeWindow::onActionAccountManagerTriggered);
     connect(ui->actionHouseholdManager,      &QAction::triggered, this, &HomeWindow::onActionHouseholdManagerTriggered);
@@ -92,6 +98,9 @@ void HomeWindow::refreshTable() {
                                .useAnd()
                                .orderByDescending()
                                .setLimit(200);
+
+    filter.timeZone = ui->comboBoxTimeZone->currentText();
+
     for (int i = 0; i < kAccountTypes.size(); i++) {
         if (name_combo_boxes_.at(i)->count() == 0) {
             continue;  // Skip because when `name_combo_box.clear()`, this function will also be triggered.
@@ -179,24 +188,23 @@ void HomeWindow::resizeTableView(QTableView* table_view) {
 }
 
 void HomeWindow::onPushButtonMergeClicked() {
-    QSet<int> rows;
+    QList<Transaction> transactions;
+    QStringList transactionSummary;
     for (QModelIndex index : ui->tableView->selectionModel()->selectedIndexes()) {
         if (index.isValid()) {
-            rows.insert(index.row());
+            transactions << transactions_model_.getTransaction(index.row());
+            const Transaction& transaction = transactions.back();
+            transactionSummary << transaction.date_time.toString(Qt::ISODate) + ": " + transaction.description;
         }
     }
-    if (rows.size() <= 1) {
+    if (transactions.size() <= 1) {
         QMessageBox::warning(this, "Warning", "Need to select more than one row to merge.", QMessageBox::Ok);
         return;
     }
 
     QMessageBox warningMsgBox;
     warningMsgBox.setText("Are you sure you want to merge the following transactions?");
-    for (int row : rows) {
-        warningMsgBox.setInformativeText(warningMsgBox.informativeText()
-                                         + '\n' + transactions_model_.data(row, 0).toDateTime().toString(kDateTimeFormat)
-                                         + ": " + transactions_model_.data(row, 1).toString());
-    }
+    warningMsgBox.setInformativeText(transactionSummary.join("\n"));
     warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     warningMsgBox.setDefaultButton(QMessageBox::Cancel);
     switch (warningMsgBox.exec()) {
@@ -207,8 +215,7 @@ void HomeWindow::onPushButtonMergeClicked() {
             return;
         }
         Transaction merged_transaction;
-        for (int row : rows) {
-            Transaction transaction = transactions_model_.getTransaction(row);
+        for (const Transaction& transaction : transactions) {
             earliest_date = qMin(earliest_date, transaction.date_time.date());
             merged_transaction += transaction;
             if (!book.removeTransaction(transaction.id)) {
@@ -236,40 +243,100 @@ void HomeWindow::onPushButtonMergeClicked() {
 }
 
 void HomeWindow::onPushButtonDeleteClicked() {
-    QSet<int> rows;
+    // Get selected transactions.
+    QList<Transaction> transactions;
+    QStringList transactionSummary;
     for (QModelIndex index : ui->tableView->selectionModel()->selectedIndexes()) {
         if (index.isValid()) {
-            rows.insert(index.row());
+            transactions << transactions_model_.getTransaction(index.row());
+            const Transaction& transaction = transactions.back();
+            transactionSummary << transaction.date_time.toString(Qt::ISODate) + ": " + transaction.description;
         }
     }
-    if (rows.empty()) {
+    if (transactions.empty()) {
         QMessageBox::warning(this, "Warning", "No transaction was selected.", QMessageBox::Ok);
         return;
     }
 
     QMessageBox warningMsgBox;
     warningMsgBox.setText("Are you sure you want to delete the following transactions?");
-    for (int row : rows) {
-        warningMsgBox.setInformativeText(warningMsgBox.informativeText()
-                                         + '\n' + transactions_model_.data(row, 0).toDateTime().toString(kDateTimeFormat)
-                                         + ": " + transactions_model_.data(row, 1).toString());
-    }
+    warningMsgBox.setInformativeText(transactionSummary.join("\n"));
     warningMsgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     warningMsgBox.setDefaultButton(QMessageBox::Cancel);
 
     switch (warningMsgBox.exec()) {
     case QMessageBox::Ok:
-        for (int row : rows) {
-            if (!book.removeTransaction(transactions_model_.data(row, 6).toUInt())) {
+        for (const Transaction& transaction : transactions) {
+            if (!book.removeTransaction(transaction.id)) {
                 qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m";
                 return;
             }
-            financial_statement.getStartStateFor(transactions_model_.data(row, 0).toDateTime().date());
+            financial_statement.getStartStateFor(transaction.date_time.date());
         }
         refreshTable();
         break;
     case QMessageBox::Cancel:
         return;
+    }
+}
+
+void HomeWindow::on_pushButtonChangeTimeZone_clicked() {
+    // Get selected transactions.
+    QList<Transaction> transactions;
+    QStringList transactionSummary;
+    for (QModelIndex index : ui->tableView->selectionModel()->selectedIndexes()) {
+        if (index.isValid()) {
+            transactions << transactions_model_.getTransaction(index.row());
+            const Transaction& transaction = transactions.back();
+            transactionSummary << transaction.date_time.toString(Qt::ISODate) + ": " + transaction.description;
+        }
+    }
+    if (transactions.empty()) {
+        QMessageBox::warning(this, "Warning", "No transaction was selected.", QMessageBox::Ok);
+        return;
+    }
+
+    QDialog dialog(this);  // Create the dialog
+    // Create a label with informative text
+    QLabel *infoLabel = new QLabel("Please set your time zone for:\n" + transactionSummary.join("\n"), &dialog);
+
+    // Create the combo box for time zone selection
+    QComboBox *comboBox = new QComboBox(&dialog);
+    AddTransaction::setupTimeZoneComboBox(comboBox);
+
+    // Create the dialog button box with "OK" and "Cancel" buttons
+    QDialogButtonBox *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+
+    // Connect the button box signals to the dialog slots
+    connect(buttonBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttonBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    // Create the layout and add the combo box and button box to it
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->addWidget(infoLabel);
+    layout->addWidget(comboBox);
+    layout->addWidget(buttonBox);
+
+    // Set the layout for the dialog
+    dialog.setLayout(layout);
+
+    // Execute the dialog and check the result
+    if (dialog.exec() == QDialog::Accepted) {
+        QTimeZone timeZone(comboBox->currentText().toUtf8());
+        for (Transaction transaction : transactions) {
+            qDebug() << "Before: " << transaction.date_time;
+            transaction.date_time.setTimeZone(timeZone);
+            qDebug() << "After: " << transaction.date_time;
+            book.insertTransaction(user_id, transaction);
+            book.removeTransaction(transaction.id);
+        }
+        // Handle the selected time zone ID
+        qDebug() << "Selected time zone:" << timeZone;
+        // You can now use the selected time zone ID as needed
+        refreshTable();
+        return;
+    } else {
+        qDebug() << "Time zone selection was canceled.";  // The user canceled the dialog
     }
 }
 

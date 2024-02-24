@@ -46,9 +46,12 @@ private slots:
     void onActionLogoutTriggered();
     void onPushButtonMergeClicked();
     void onPushButtonDeleteClicked();
+    void on_pushButtonChangeTimeZone_clicked();
 
     void accountCategoryChanged(const Account::Type& table_type, QComboBox* category_combo_box, QComboBox* name_combo_box);
     void onTableViewDoubleClicked(const QModelIndex& index);
+
+
 
 private:
     void resizeTableView(QTableView* table_view);

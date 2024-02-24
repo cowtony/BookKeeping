@@ -15,7 +15,7 @@ int TransactionsModel::rowCount(const QModelIndex &parent) const {
 
 QVariant TransactionsModel::data(const QModelIndex &index, int role) const {
     if (role == Qt::DisplayRole) {
-        if (index.row() == rowCount() - 1) {  // Total row.
+        if (index.row() == rowCount() - 1) {  // The sum row.
             switch (index.column()) {
             case 1: return sum_transaction_.description;
             case 2: return sum_transaction_.toString(Account::Expense);
@@ -24,11 +24,24 @@ QVariant TransactionsModel::data(const QModelIndex &index, int role) const {
             case 5: return sum_transaction_.toString(Account::Liability);
             default: return QVariant();
             }
-        } else if (index.column() <= 5 && index.column() >= 2) {
+        } else if (index.column() == 0) {
+            // Read the UTC timestamp and time zone to print time zoned local time string
+            qint64 utcTimestamp = QSqlQueryModel::data(index, role).toLongLong();
+            QDateTime dateTime = QDateTime::fromSecsSinceEpoch(utcTimestamp, QTimeZone("UTC"));
+
+            QString timeZoneId = QSqlQueryModel::data(this->index(index.row(), kTimeZoneColumnIndex), role).toString();
+            QTimeZone timeZone(timeZoneId.toUtf8());
+
+            // If the time zone ID is invalid, fall back to the system's local time zone
+            if (!timeZoneId.isEmpty() && timeZone.isValid()) {
+                dateTime = dateTime.toTimeZone(timeZone);
+            }
+            return dateTime.toString("yyyy-MM-ddTHH:mmttt");
+        } else if (index.column() >= 2 && index.column() <= 5) {
             return QSqlQueryModel::data(index).toString().replace(R"(\n)", "\n");
         }
     } else if (role == Qt::FontRole) {
-        if (index.row() == rowCount() - 1) {  // Total row.
+        if (index.row() == rowCount() - 1) {  // The sum row.
             QFont font;
             font.setBold(true);
             return font;
@@ -45,8 +58,8 @@ QVariant TransactionsModel::data(const QModelIndex &index, int role) const {
     return QSqlQueryModel::data(index, role);
 }
 
-QVariant TransactionsModel::data(int row, int col) const {
-    return data(createIndex(row, col));
+QString TransactionsModel::getDisplayRoleText(int row, int col) const {
+    return data(createIndex(row, col), Qt::DisplayRole).toString();
 }
 
 void TransactionsModel::setFilter(const TransactionFilter& filter) {
@@ -57,6 +70,7 @@ void TransactionsModel::setFilter(const TransactionFilter& filter) {
 void TransactionsModel::refresh() {
     setQuery(Book::getQueryTransactionsQueryStr(user_id_, filter_), db_);
 
+    // TODO: Try to store all the Transactions here as well, so that `getTransaction()` don't need to query one more time.
     sum_transaction_.clear();
     for (int row = 0; row < QSqlQueryModel::rowCount(); ++row) {
         sum_transaction_ += getTransaction(row);
@@ -65,6 +79,6 @@ void TransactionsModel::refresh() {
 }
 
 Transaction TransactionsModel::getTransaction(int row) {
-    return book_.getTransaction(data(createIndex(row, 6)).toInt());
+    return book_.getTransaction(data(createIndex(row, kTransactionIdColumnIndex)).toInt());
 }
 

@@ -7,8 +7,6 @@
 #include "money.h"
 #include "account.h"
 
-constexpr const char* kDateTimeFormat = "yyyy-MM-dd HH:mm";
-
 class Transaction {
 public:
     explicit Transaction(const QDateTime& date_time = QDateTime(), const QString& description = "");
@@ -59,6 +57,7 @@ struct TransactionFilter : public Transaction {
     bool use_or = false;
     bool ascending_order = true;
     int limit = 99999999;
+    QString timeZone;
 };
 
 // TODO: merge this into Transaction
