@@ -66,7 +66,6 @@ SOURCES += main.cpp \
 
 FORMS += \
     add_transaction/add_transaction.ui \
-    account_manager/account_manager.ui \
     financial_statement/financial_statement.ui \
     household_manager/household_manager.ui \
     investment_analysis/investment_analysis.ui \

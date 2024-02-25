@@ -143,7 +143,7 @@ void Currency::onNetworkReply(QNetworkReply* reply) {
     QJsonDocument jsonResponse = QJsonDocument::fromJson(jsonString.toUtf8());
     QJsonObject jsonObject = jsonResponse.object();
     if (!jsonObject.value("success").toBool()) {
-        qDebug() << jsonObject;
+        qDebug() << "\e[0;31m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << jsonObject;
         return;
     }
     QDateTime dateTime;

@@ -1,6 +1,6 @@
 #include "account_manager.h"
-#include "ui_account_manager.h"
 
+#include <QBoxLayout>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QDropEvent>
@@ -9,39 +9,53 @@
 #include "book/book.h"
 
 AccountManager::AccountManager(QWidget* parent)
-    : QMainWindow(parent),
-      ui(new Ui::AccountManager),
+    : QDialog(parent),
       book_(static_cast<HomeWindow*>(parent)->book),
       user_id_(static_cast<HomeWindow*>(parent)->user_id),
       account_model_(parent) {
-    ui->setupUi(this);
 
-    ui->treeView->setModel(&account_model_);
-    ui->gridLayout->addWidget(ui->treeView, 0, 0, 1, 2);
-
+    this->setWindowTitle("Account Manager");
     account_model_.setupCategoriesAndAccounts(book_.queryAllCategories(user_id_), book_.queryAllAccounts(user_id_));
-    ui->treeView->setDragDropMode(QAbstractItemView::InternalMove);
-    ui->treeView->setSelectionMode(QAbstractItemView::SingleSelection);
-    ui->treeView->setDropIndicatorShown(true);
-    ui->treeView->setColumnWidth(0, 200);
-
     connect(&account_model_, &AccountsModel::errorMessage, this, &AccountManager::onReceiveErrorMessage);
-    connect(&account_model_, &AccountsModel::dataChanged,  static_cast<HomeWindow*>(parent), &HomeWindow::refreshTable);
-    connect(&account_model_, &AccountsModel::dataChanged,  static_cast<HomeWindow*>(parent), &HomeWindow::setCategoryComboBox);
-    connect(&account_model_, &AccountsModel::rowsInserted, static_cast<HomeWindow*>(parent), &HomeWindow::setCategoryComboBox);
-    connect(&account_model_, &AccountsModel::rowsMoved,    static_cast<HomeWindow*>(parent), &HomeWindow::setCategoryComboBox);
-    connect(&account_model_, &AccountsModel::rowsRemoved,  static_cast<HomeWindow*>(parent), &HomeWindow::setCategoryComboBox);
-    connect(ui->treeView->selectionModel(), &QItemSelectionModel::currentChanged, this, &AccountManager::onCurrentItemChanged);
+
+    // Create the tree view
+    treeView_ = new QTreeView(this);
+    treeView_->setModel(&account_model_);
+    treeView_->setDragDropMode(QAbstractItemView::InternalMove);
+    treeView_->setSelectionMode(QAbstractItemView::SingleSelection);
+    treeView_->setDropIndicatorShown(true);
+    treeView_->setColumnWidth(0, 200);
+    connect(treeView_->selectionModel(), &QItemSelectionModel::currentChanged, this, &AccountManager::onCurrentItemChanged);
+
+    // Create the add button
+    pushButton_Add_ = new QPushButton("Add", this);
+    connect(pushButton_Add_, &QPushButton::clicked, this, &AccountManager::on_pushButton_Add_clicked);
+
+    // Create the delete button
+    pushButton_Delete_ = new QPushButton("Delete", this);
+    connect(pushButton_Delete_, &QPushButton::clicked, this, &AccountManager::on_pushButton_Delete_clicked);
+
+    // Create a layout for the buttons
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(pushButton_Add_);
+    buttonLayout->addStretch(); // This will push the buttons to the left and right
+    buttonLayout->addWidget(pushButton_Delete_);
+    // Create a main layout and add widgets to it
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->addWidget(treeView_);
+    mainLayout->addLayout(buttonLayout);
+    // Set the dialog's layout
+    setLayout(mainLayout);
+    setMinimumSize(600, 400);
 }
 
 AccountManager::~AccountManager() {
-    delete ui;
 }
 
 void AccountManager::onCurrentItemChanged(const QModelIndex& current, const QModelIndex& /* previous */) {
     AccountTreeNode* node = AccountsModel::getItem(current);
-    ui->pushButton_Add   ->setEnabled(node->depth() < 3);  // Can add under account type or category.
-    ui->pushButton_Delete->setEnabled(node->depth() == 3 || (node->depth() == 2 && node->childCount() == 0));  // Can delete an account or empty category.
+    pushButton_Add_   ->setEnabled(node->depth() < 3);  // Can add under account type or category.
+    pushButton_Delete_->setEnabled(node->depth() == 3 || (node->depth() == 2 && node->childCount() == 0));  // Can delete an account or empty category.
 }
 
 void AccountManager::onReceiveErrorMessage(const QString& message) {
@@ -49,7 +63,7 @@ void AccountManager::onReceiveErrorMessage(const QString& message) {
 }
 
 void AccountManager::on_pushButton_Add_clicked() {
-    AccountTreeNode* item = AccountsModel::getItem(ui->treeView->currentIndex());
+    AccountTreeNode* item = AccountsModel::getItem(treeView_->currentIndex());
     switch (item->depth()) {
         case 1: {  // Account type level: Add a category
             bool ok;
@@ -64,7 +78,7 @@ void AccountManager::on_pushButton_Add_clicked() {
             }
             QSharedPointer<Account> category = book_.insertCategory(user_id_, item->accountType(), category_name);
             if (category) {
-                account_model_.appendRow(ui->treeView->currentIndex(), category_name, category);
+                account_model_.appendRow(treeView_->currentIndex(), category_name, category);
             } else {
                 QMessageBox::warning(this, "Insert Failed", item->name() + ": " + category_name, QMessageBox::Ok);
             }
@@ -78,8 +92,8 @@ void AccountManager::on_pushButton_Add_clicked() {
             }
             QSharedPointer<Account> account = book_.insertAccount(user_id_, item->accountType(), item->accountGroup(), account_name);
             if (account) {
-                account_model_.appendRow(ui->treeView->currentIndex(), account_name, account);
-                onCurrentItemChanged(ui->treeView->currentIndex(), ui->treeView->currentIndex());
+                account_model_.appendRow(treeView_->currentIndex(), account_name, account);
+                onCurrentItemChanged(treeView_->currentIndex(), treeView_->currentIndex());
             } else {
                 QMessageBox::warning(this, "Insert Failed", item->name() + ": " + account_name, QMessageBox::Ok);
             }
@@ -92,7 +106,7 @@ void AccountManager::on_pushButton_Add_clicked() {
 }
 
 void AccountManager::on_pushButton_Delete_clicked() {
-    AccountTreeNode* item = AccountsModel::getItem(ui->treeView->currentIndex());
+    AccountTreeNode* item = AccountsModel::getItem(treeView_->currentIndex());
     if (item->depth() == 1) {
         QMessageBox::warning(this, "Warning", "Cannot delete the whole account type.", QMessageBox::Ok);
         return;
@@ -111,6 +125,6 @@ void AccountManager::on_pushButton_Delete_clicked() {
             return;
         }
     }
-    account_model_.removeItem(ui->treeView->currentIndex());
-    onCurrentItemChanged(ui->treeView->currentIndex(), ui->treeView->currentIndex());
+    account_model_.removeItem(treeView_->currentIndex());
+    onCurrentItemChanged(treeView_->currentIndex(), treeView_->currentIndex());
 }

@@ -13,7 +13,7 @@ HomeWindow::HomeWindow(QWidget *parent)
   : QMainWindow(parent),
     book("Book.db"),
     user_id(book.getLastLoggedInUserId()),
-    account_manager(this), household_manager(this), financial_statement(this),
+    household_manager(this), financial_statement(this),
     ui(new Ui::HomeWindow),
     transactions_model_(this) {
 
@@ -47,7 +47,7 @@ HomeWindow::HomeWindow(QWidget *parent)
             accountCategoryChanged(table_type, category_combo_boxes_[i], name_combo_boxes_[i]);
         });
     }
-    setCategoryComboBox();
+    initCategoryComboBox();
     // Put this to the last of init because this will triger on_tableView_transactions_cellChanged().
     // QLineEdit: Description Filter.
     ui->lineEditDescriptionFilter->setPlaceholderText("Description Filter");
@@ -125,14 +125,16 @@ void HomeWindow::onTableViewDoubleClicked(const QModelIndex &index) {
     add_transaction->setTransaction(transaction);
 }
 
-void HomeWindow::setCategoryComboBox() {
+void HomeWindow::initCategoryComboBox() {
     for (int i = 0; i < kAccountTypes.size(); i++) {
         QComboBox *cateComboBox = category_combo_boxes_.at(i);
+        cateComboBox->blockSignals(true);
         cateComboBox->clear();
         cateComboBox->addItem("", QVariant::fromValue(Account::create(-1, -1, kAccountTypes.at(i), "", "")));
         for (QSharedPointer<Account>& category : book.getCategories(user_id, kAccountTypes.at(i))) {
             cateComboBox->addItem(category->categoryName(), QVariant::fromValue(category));
         }
+        cateComboBox->blockSignals(false);
     }
 }
 
@@ -346,6 +348,14 @@ void HomeWindow::onActionAddTransactionTriggered() {
     addTransaction->show();
 }
 
+void HomeWindow::onActionAccountManagerTriggered() {
+    AccountManager accountManager(this);
+
+    accountManager.exec();
+    initCategoryComboBox();
+    refreshTable();
+}
+
 void HomeWindow::onActionInvestmentAnalysisTriggered() {
     InvestmentAnalysis* investment_analysis = new InvestmentAnalysis(this);
     investment_analysis->setAttribute(Qt::WA_DeleteOnClose);
@@ -386,7 +396,7 @@ void HomeWindow::onActionLoginTriggered() {
     book.updateLoginTime(user_id);
     // TODO: Use signal / slot for user_id_ changed event.
     household_manager.model_.setFilter(QString("user_id = %1").arg(user_id));
-    setCategoryComboBox();
+    initCategoryComboBox();
     refreshTable();
 }
 

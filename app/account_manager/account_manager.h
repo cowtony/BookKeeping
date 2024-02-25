@@ -1,7 +1,7 @@
 #ifndef ACCOUNT_MANAGER_H
 #define ACCOUNT_MANAGER_H
 
-#include <QMainWindow>
+#include <QDialog>
 #include <QTreeWidgetItem>
 #include <QPushButton>
 
@@ -12,7 +12,7 @@ namespace Ui {
 class AccountManager;
 }
 
-class AccountManager : public QMainWindow {
+class AccountManager : public QDialog {
     Q_OBJECT
 public:
     explicit AccountManager(QWidget *parent);
@@ -25,10 +25,11 @@ private slots:
     void on_pushButton_Add_clicked();
     void on_pushButton_Delete_clicked();
 
-signals:
-
 private:
-    Ui::AccountManager* ui;
+    QTreeView *treeView_;
+    QPushButton *pushButton_Add_;
+    QPushButton *pushButton_Delete_;
+
     Book& book_;
     int& user_id_;
 

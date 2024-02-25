@@ -23,13 +23,11 @@ public:
 
     Book book;
     int user_id;
-    AccountManager     account_manager;
     HouseholdManager   household_manager;
     FinancialStatement financial_statement;
 
 public slots:
     void refreshTable();  // Show all filtered transactions.
-    void setCategoryComboBox();
 
 protected:
     virtual void resizeEvent(QResizeEvent* event) override;
@@ -37,7 +35,7 @@ protected:
 
 private slots:
     void onActionAddTransactionTriggered();
-    void onActionAccountManagerTriggered()     { account_manager.show(); }
+    void onActionAccountManagerTriggered();
     void onActionHouseholdManagerTriggered()   { household_manager.show(); }
     void onActionFinancialStatementTriggered() { financial_statement.show(); }
     void onActionInvestmentAnalysisTriggered();
@@ -51,9 +49,8 @@ private slots:
     void accountCategoryChanged(const Account::Type& table_type, QComboBox* category_combo_box, QComboBox* name_combo_box);
     void onTableViewDoubleClicked(const QModelIndex& index);
 
-
-
 private:
+    void initCategoryComboBox();
     void resizeTableView(QTableView* table_view);
 
     Ui::HomeWindow* ui;

@@ -68,7 +68,9 @@ void TransactionsModel::setFilter(const TransactionFilter& filter) {
 }
 
 void TransactionsModel::refresh() {
-    setQuery(Book::getQueryTransactionsQueryStr(user_id_, filter_), db_);
+    QString queryString = Book::getQueryTransactionsQueryStr(user_id_, filter_);
+    qDebug().noquote() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Dashboard query string:\n                        " << queryString;
+    setQuery(queryString, db_);
 
     // TODO: Try to store all the Transactions here as well, so that `getTransaction()` don't need to query one more time.
     sum_transaction_.clear();

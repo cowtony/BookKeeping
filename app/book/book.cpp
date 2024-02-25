@@ -26,7 +26,7 @@ Book::Book(const QString& dbPath) {
             }
             DDL.close();
         } else {
-            qDebug() << Q_FUNC_INFO << "Database not opened or CreateDatabase.txt not opened";
+            qDebug() << "\e[0;32m" << __FILE__ << "line" << __LINE__ << Q_FUNC_INFO << ":\e[0m" << "Database not opened or CreateDatabase.txt not opened";
             return;
         }
     }
@@ -127,9 +127,9 @@ QString Book::getQueryTransactionsQueryStr(int user_id, const TransactionFilter&
             continue;  // Why do we need to add this?
         }
         if (account->accountId() == -1) {  // This is a category
-            statements << QString(R"sql((%1 LIKE '%%2|%'))sql").arg(account->typeName(), account->categoryName());
+            statements << QString(R"sql((%1 LIKE "%%2|%"))sql").arg(account->typeName(), account->categoryName());
         } else {  // This is a account
-            statements << QString(R"sql((%1 LIKE '%%2|%3,%'))sql").arg(account->typeName(), account->categoryName(), account->accountName());
+            statements << QString(R"sql((%1 LIKE "%%2|%3,%"))sql").arg(account->typeName(), account->categoryName(), account->accountName());
         }
     }
 
@@ -139,9 +139,9 @@ QString Book::getQueryTransactionsQueryStr(int user_id, const TransactionFilter&
                          FROM    transactions_view
                          WHERE   user_id = %1
                              AND utc_timestamp BETWEEN %2 AND %3
-                             AND description LIKE '%%4%'
+                             AND description LIKE "%%4%"
                              AND (%5)
-                             AND time_zone LIKE '%%8'
+                             AND time_zone LIKE "%%8"
                          ORDER BY utc_timestamp %6
                          LIMIT   %7)sql")
         .arg(QString::number(user_id),
