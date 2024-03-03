@@ -65,12 +65,14 @@ class FinancialStat : public Transaction {
 public:
     explicit FinancialStat();
 
+    QDate utcDate_;
+
     // Getters:
     virtual HouseholdMoney getHouseholdMoney(Account::Type account_type, const QString& category_name, const QString& account_name) const override;
     virtual QList<QPair<QSharedPointer<Account>, HouseholdMoney>> getAccounts() const override;
 
     void cumulateRetainedEarning();
-    void cumulateCurrencyError(const QDateTime& new_date_time);  // Change date so that the currencyError is calculated and counted.
+    void cumulateCurrencyError(const QDate& newUtcDate);  // Change date so that the currencyError is calculated and counted.
     void cumulateTransaction(const Transaction& transaction);
 
 private:

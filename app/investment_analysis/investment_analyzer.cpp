@@ -80,11 +80,11 @@ double InvestmentAnalyzer::calculateIRR(const QList<Money>& history, const Money
   double log2_rate = 0.0;
 
   // Find out if the NPV increase while ROI increase?
-  bool monotonic_increase = calculateValueForDate(history, 0.0, current_asset.date_) <
-                            calculateValueForDate(history, 0.01, current_asset.date_);
+  bool monotonic_increase = calculateValueForDate(history, 0.0, current_asset.utcDate) <
+                            calculateValueForDate(history, 0.01, current_asset.utcDate);
 
   while (true) {
-    Money temp_npv = calculateValueForDate(history, log2_rate, current_asset.date_);
+    Money temp_npv = calculateValueForDate(history, log2_rate, current_asset.utcDate);
 
     // Return if found a accurate enough ROI.
     if (qFabs((temp_npv - current_asset).amount_) < kTolerance) {
@@ -111,21 +111,21 @@ double InvestmentAnalyzer::calculateIRR(const QList<Money>& history, const Money
 // This is depends on how history is ordered and negative values inside.
 // Can be Future Value (FV) or Net Present Value (NPV).
 Money InvestmentAnalyzer::calculateValueForDate(const QList<Money>& history, double log2_rate, const QDate& date) {
-  Money ret(QDate(), Currency::USD, 0.00);
-  for (Money money : history) {
-    ret += money * (qPow(2.0, log2_rate * money.date_.daysTo(date)));
-  }
-  return ret;
+    Money ret(QDate(), Currency::USD, 0.00);
+    for (Money money : history) {
+        ret += money * (qPow(2.0, log2_rate * money.utcDate.daysTo(date)));
+    }
+    return ret;
 }
 
 // static
 double InvestmentAnalyzer::calculateAPR(const QMap<QDate, double>& returnHistory) {
-  double log2_AROI = 0.0;
-  QDate previousDate(1990, 05, 25);
-  for (const QDate& date : returnHistory.keys()) {
-    log2_AROI += previousDate.daysTo(date) * returnHistory.value(date);
-    previousDate = date;
-  }
-  log2_AROI /= returnHistory.firstKey().daysTo(returnHistory.lastKey()) / 365.0;
-  return qPow(2.0, log2_AROI);
+    double log2_AROI = 0.0;
+    QDate previousDate(1990, 05, 25);
+    for (const QDate& date : returnHistory.keys()) {
+        log2_AROI += previousDate.daysTo(date) * returnHistory.value(date);
+        previousDate = date;
+    }
+    log2_AROI /= returnHistory.firstKey().daysTo(returnHistory.lastKey()) / 365.0;
+    return qPow(2.0, log2_AROI);
 }

@@ -47,7 +47,7 @@ void Transaction::clear(Account::Type tableType) {
 }
 
 Money Transaction::getCheckSum() const {
-    Money sum(date_time.date());
+    Money sum(date_time.toUTC().date());
     for (const auto& [account, household_money] : getAccounts()) {
         for (const auto& [household, money] : household_money.data().asKeyValueRange()) {
             if (account->accountType() == Account::Expense || account->accountType() == Account::Asset) {
@@ -234,7 +234,8 @@ TransactionFilter& TransactionFilter::setLimit(int lim) {
 }
 
 //////////////////// Financial Summary /////////////////////////////
-FinancialStat::FinancialStat() : Transaction() {}
+FinancialStat::FinancialStat()
+    : Transaction() {}
 
 HouseholdMoney FinancialStat::getHouseholdMoney(Account::Type account_type, const QString& category_name, const QString& account_name) const {
     if (account_type == Account::Equity && category_name == "Retained Earnings" && account_name == "Retained Earning") {
@@ -273,14 +274,15 @@ void FinancialStat::cumulateRetainedEarning() {
     }
 }
 
-void FinancialStat::cumulateCurrencyError(const QDateTime& new_date_time) {
+// The QDateTime here is aligned to use SystemTimeZone.
+void FinancialStat::cumulateCurrencyError(const QDate& newUtcDate) {
     // Skip when next transaction is the same day of current transaction.
-    if (date_time.date() == new_date_time.date()) {
+    if (utcDate_ == newUtcDate) {
         return;
     }
 
-    Money before(date_time.date(), currency_error_.currency());
-    Money after(new_date_time.date(), currency_error_.currency());
+    Money before(utcDate_, currency_error_.currency());
+    Money after(newUtcDate, currency_error_.currency());
 
     for (Account::Type account_type : {Account::Asset, Account::Liability}) {
         for (const auto& [acount, household_money] : Transaction::getAccounts(account_type)) {
@@ -299,7 +301,7 @@ void FinancialStat::cumulateCurrencyError(const QDateTime& new_date_time) {
         }
     }
     currency_error_ += after - before;
-    date_time = new_date_time;
+    utcDate_ = newUtcDate;
 }
 
 void FinancialStat::cumulateTransaction(const Transaction& transaction) {

@@ -7,9 +7,9 @@
 #include "home_window/home_window.h"
 #include "bar_chart.h"
 
-QFont FinancialStatement::m_financialStatementFont = QFont("Times New Roman", 14, 1, false);
-QFont FinancialStatement::m_tableSumFont = QFont("Times New Roman", 12, 1, false);
-QFont FinancialStatement::m_categorySumFont;
+QFont FinancialStatement::kFinancialStatementFont = QFont("Times New Roman", 14, 1, false);
+QFont FinancialStatement::kTableSumFont = QFont("Times New Roman", 12, 1, false);
+QFont FinancialStatement::kCategorySumFont;
 
 FinancialStatement::FinancialStatement(QWidget *parent)
     : QMainWindow(parent),
@@ -23,11 +23,11 @@ FinancialStatement::FinancialStatement(QWidget *parent)
 
     ui->comboBoxHousehold->addItems(QStringList() << "All" << book_.getHouseholds(user_id_));
 
-    m_financialStatementFont.setBold(true);
-    m_financialStatementFont.setUnderline(true);
-    m_tableSumFont.setBold(true);
-    m_tableSumFont.setUnderline(true);
-    m_categorySumFont.setBold(true);
+    kFinancialStatementFont.setBold(true);
+    kFinancialStatementFont.setUnderline(true);
+    kTableSumFont.setBold(true);
+    kTableSumFont.setUnderline(true);
+    kCategorySumFont.setBold(true);
 
     connect(ui->treeWidget, &QTreeWidget::itemCollapsed, this, &FinancialStatement::onTreeWidgetItemCollapsed);
     connect(ui->treeWidget, &QTreeWidget::itemExpanded,  this, &FinancialStatement::onTreeWidgetItemExpanded);
@@ -53,7 +53,7 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money
         return;
     }
 
-    const Money difference = money - Money(money.date_, item->text(column));
+    const Money difference = money - Money(money.utcDate, item->text(column));
 
     item->setText(column, money);
     if (money.amount_ < 0) {
@@ -64,7 +64,7 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money
 
     // Recursivly update parent sum:
     if (item->parent() != nullptr) {
-        const Money parentMoney(money.date_, item->parent()->text(column));
+        const Money parentMoney(money.utcDate, item->parent()->text(column));
 
         if (item->text(0) == "Expense" || item->text(0) == "Liability") {
             setMoney(item->parent(), column, parentMoney - difference);
@@ -79,13 +79,13 @@ void FinancialStatement::setMoney(QTreeWidgetItem* item, int column, const Money
 void FinancialStatement::setFont(int column, QTreeWidgetItem* item, int depth) {
     switch (depth) {
     case 0:
-        item->setFont(column, m_financialStatementFont);
+        item->setFont(column, kFinancialStatementFont);
         break;
     case 1:
-        item->setFont(column, m_tableSumFont);
+        item->setFont(column, kTableSumFont);
         break;
     case 2:
-        item->setFont(column, m_categorySumFont);
+        item->setFont(column, kCategorySumFont);
         break;
     case 3:
         break;
@@ -114,86 +114,86 @@ void FinancialStatement::refreshTableWidget() {
 }
 
 QTreeWidgetItem* FinancialStatement::getAccountItem(const Account& account, bool create) {
-  // Find or create same financial statement item:
-  QTreeWidgetItem *statementItem = nullptr;
-  for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
-    if (ui->treeWidget->topLevelItem(i)->text(0) == account.getFinancialStatementName()) {
-      statementItem = ui->treeWidget->topLevelItem(i);
-      break;
+    // Find or create same financial statement item:
+    QTreeWidgetItem *statementItem = nullptr;
+    for (int i = 0; i < ui->treeWidget->topLevelItemCount(); i++) {
+        if (ui->treeWidget->topLevelItem(i)->text(0) == account.getFinancialStatementName()) {
+            statementItem = ui->treeWidget->topLevelItem(i);
+            break;
+        }
     }
-  }
-  if (statementItem == nullptr) {
-    if (create) {
-      statementItem = new QTreeWidgetItem(ui->treeWidget, {account.getFinancialStatementName()});
-      statementItem->setFont(0, m_financialStatementFont);
-    } else {
-      return nullptr;
+    if (statementItem == nullptr) {
+        if (create) {
+            statementItem = new QTreeWidgetItem(ui->treeWidget, {account.getFinancialStatementName()});
+            statementItem->setFont(0, kFinancialStatementFont);
+        } else {
+            return nullptr;
+        }
     }
-  }
 
-  // Find or create same table:
-  QTreeWidgetItem *tableItem = nullptr;
-  for (int i = 0; i < statementItem->childCount(); i++) {
-    if (statementItem->child(i)->text(0) == account.typeName()) {
-      tableItem = statementItem->child(i);
-      break;
+    // Find or create same table:
+    QTreeWidgetItem *tableItem = nullptr;
+    for (int i = 0; i < statementItem->childCount(); i++) {
+        if (statementItem->child(i)->text(0) == account.typeName()) {
+            tableItem = statementItem->child(i);
+            break;
+        }
     }
-  }
-  if (tableItem == nullptr) {
-    if (create) {
-      tableItem = new QTreeWidgetItem(statementItem, {account.typeName()});
-      tableItem->setFont(0, m_tableSumFont);
-    } else {
-      return nullptr;
+    if (tableItem == nullptr) {
+        if (create) {
+            tableItem = new QTreeWidgetItem(statementItem, {account.typeName()});
+            tableItem->setFont(0, kTableSumFont);
+        } else {
+            return nullptr;
+        }
     }
-  }
 
-  // Find or create same category:
-  QTreeWidgetItem *categoryItem = nullptr;
-  for (int i = 0; i < tableItem->childCount(); i++) {
-    if (tableItem->child(i)->text(0) == account.categoryName()) {
-      categoryItem = tableItem->child(i);
-      break;
+    // Find or create same category:
+    QTreeWidgetItem *categoryItem = nullptr;
+    for (int i = 0; i < tableItem->childCount(); i++) {
+        if (tableItem->child(i)->text(0) == account.categoryName()) {
+            categoryItem = tableItem->child(i);
+            break;
+        }
     }
-  }
-  if (categoryItem == nullptr) {
-    if (create) {
-      categoryItem = new QTreeWidgetItem(tableItem, {account.categoryName()});
-      categoryItem->setFont(0, m_categorySumFont);
-    } else {
-      return nullptr;
+    if (categoryItem == nullptr) {
+        if (create) {
+            categoryItem = new QTreeWidgetItem(tableItem, {account.categoryName()});
+            categoryItem->setFont(0, kCategorySumFont);
+        } else {
+            return nullptr;
+        }
     }
-  }
 
-  // Find or create same account:
-  QTreeWidgetItem *accountItem = nullptr;
-  for (int i = 0; i < categoryItem->childCount(); i++) {
-    if (categoryItem->child(i)->text(0) == account.accountName()) {
-      accountItem = categoryItem->child(i);
-      break;
+    // Find or create same account:
+    QTreeWidgetItem *accountItem = nullptr;
+    for (int i = 0; i < categoryItem->childCount(); i++) {
+        if (categoryItem->child(i)->text(0) == account.accountName()) {
+            accountItem = categoryItem->child(i);
+            break;
+        }
     }
-  }
-  if (accountItem == nullptr) {
-    if (create) {
-      accountItem = new QTreeWidgetItem(categoryItem, {account.accountName()});
-    } else {
-      return nullptr;
+    if (accountItem == nullptr) {
+        if (create) {
+            accountItem = new QTreeWidgetItem(categoryItem, {account.accountName()});
+        } else {
+            return nullptr;
+        }
     }
-  }
 
-  return accountItem;
+    return accountItem;
 }
 
 void FinancialStatement::onTreeWidgetItemCollapsed(QTreeWidgetItem* /* item */) {
-  for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
-    ui->treeWidget->resizeColumnToContents(i);
-  }
+    for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
+        ui->treeWidget->resizeColumnToContents(i);
+    }
 }
 
 void FinancialStatement::onTreeWidgetItemExpanded(QTreeWidgetItem* /* item */) {
-  for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
-    ui->treeWidget->resizeColumnToContents(i);
-  }
+    for (int i = 0; i < ui->treeWidget->columnCount(); i++) {
+        ui->treeWidget->resizeColumnToContents(i);
+    }
 }
 
 void FinancialStatement::onPushButtonExportClicked() {
@@ -318,7 +318,7 @@ void FinancialStatement::onPushButtonShowMoreClicked() {
         Money money = ui->comboBoxHousehold->currentText() == "All" ?
                           household_money.sum() :
                           household_money.data().value(ui->comboBoxHousehold->currentText());
-        money.date_ = new_month.date_time.date();
+        money.utcDate = new_month.utcDate_;
         setMoney(accountItem, column_count, money);
     }
 
@@ -340,14 +340,14 @@ void FinancialStatement::onPushButtonShowAllClicked() {
 }
 
 void FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) {
-    auto [month, monthly_stat] = getStartStateFor(end_date_time.date());
+    auto [month, monthly_stat] = getStartStateFor(end_date_time.toUTC().date());
 
-    for (const Transaction& transaction : book_.queryTransactions(user_id_, TransactionFilter().startTime(QDateTime(month, QTime(0, 0, 0)))
+    for (const Transaction& transaction : book_.queryTransactions(user_id_, TransactionFilter().startTime(QDateTime(month, QTime(0, 0, 0), QTimeZone::utc()))
                                                                                                .endTime(end_date_time)
                                                                                                .orderByAscending())) {
         // Use `while` instead of `if` in case there was no transaction for successive months.
-        while (transaction.date_time.date() >= month.addMonths(1)) {
-            monthly_stat.description = monthly_stat.date_time.toString("yyyy-MM");
+        while (transaction.date_time.toUTC().date() >= month.addMonths(1)) {
+            monthly_stat.description = monthly_stat.utcDate_.toString("yyyy-MM");
             monthly_stat.cumulateRetainedEarning();
             monthly_stats_.push_back(monthly_stat);
 
@@ -356,11 +356,11 @@ void FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) {
             monthly_stat.clear(Account::Expense);
         }
 
-        monthly_stat.cumulateCurrencyError(transaction.date_time);  // This is the most time consuming part because this loop through all accounts in monthly_stat, which is ALL accounts in db.
+        monthly_stat.cumulateCurrencyError(transaction.date_time.toUTC().date());  // This is the most time consuming part because this loop through all accounts in monthly_stat, which is ALL accounts in db.
         monthly_stat.cumulateTransaction(transaction);
     }
     // Push the last month summary which might be incomplete.
-    monthly_stat.description = monthly_stat.date_time.toString("yyyy-MM-dd");  // The last "incomplete" month will have date as a distinguisher.
+    monthly_stat.description = monthly_stat.utcDate_.toString("yyyy-MM-dd");  // The last "incomplete" month will have date as a distinguisher.
     monthly_stat.cumulateRetainedEarning();
     monthly_stats_.push_back(monthly_stat);
 
@@ -374,7 +374,7 @@ QPair<QDate, FinancialStat> FinancialStatement::getStartStateFor(QDate query_dat
     }
 
     while (!monthly_stats_.empty()) {
-        QDate last_record_date = monthly_stats_.back().date_time.date();
+        QDate last_record_date = monthly_stats_.back().utcDate_;
         QDate start_month = QDate(last_record_date.year(), last_record_date.month(), 1).addMonths(1).addDays(-1); // Last day of this month.
         if (start_month < query_date) {
             FinancialStat stat = monthly_stats_.back();
@@ -386,7 +386,7 @@ QPair<QDate, FinancialStat> FinancialStatement::getStartStateFor(QDate query_dat
         monthly_stats_.pop_back();
     }
 
-    QDate date = book_.getFirstTransactionDateTime().date();
+    QDate date = book_.getFirstTransactionDateTime().toUTC().date();
     refreshTableWidget();
     return {QDate(date.year(), date.month(), 1), FinancialStat()};
 }

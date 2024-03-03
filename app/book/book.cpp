@@ -851,7 +851,7 @@ void Book::populateTransactionDataFromQuery(Transaction& transaction, const QSql
                                    query.value("account_name").toString(),
                                    "",
                                    Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()));
-    Money money(transaction.date_time.date(),
+    Money money(transaction.date_time.toUTC().date(),
                 Currency::kCurrencyToSymbol.key(query.value("currency_symbol").toString()),
                 query.value("amount").toDouble());
     if (account->getFinancialStatementName() == "Balance Sheet") {

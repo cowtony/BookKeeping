@@ -121,7 +121,7 @@ void Currency::fillEmptyDate(const QDate& start_date) {
     while (query.next()) {
         existing_date.insert(query.value("Date").toDate());
     }
-    for (QDate date = start_date; date < QDate::currentDate(); date = date.addDays(1)) {
+    for (QDate date = start_date; date < QDateTime::currentDateTimeUtc().date(); date = date.addDays(1)) {
         if (!existing_date.contains(date)) {
             // access_key:
             // "077dbea3a01e2c601af7d870ea30191c"  // mu.niu.525@gmail.com   19900525

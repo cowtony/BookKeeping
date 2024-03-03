@@ -27,6 +27,7 @@ public:
 private slots:
     void onCalendarWidgetSelectionChanged();
     void onDateTimeEditDateTimeChanged(const QDateTime& date_time);
+    void on_comboBox_TimeZone_currentTextChanged(const QString &arg1);
     void on_lineEdit_Description_editingFinished();
     void onAccountCateChanged(QTableWidget* table_widget, int row);
     void on_pushButton_Split_clicked();

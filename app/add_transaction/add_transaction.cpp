@@ -139,6 +139,7 @@ Transaction AddTransaction::getTransaction() {
     transaction.date_time.setTimeZone(QTimeZone(ui->comboBox_TimeZone->currentText().toUtf8()));
     transaction.description = ui->lineEdit_Description->text();
 
+    QDate utcDate = transaction.date_time.toUTC().date();
     for (QTableWidget* table_widget : {ui->tableWidget_Assets, ui->tableWidget_Expenses, ui->tableWidget_Revenues, ui->tableWidget_Liabilities}) {
         for (int row = 0; row < table_widget->rowCount() - 1; ++row) {
             QComboBox *nameComboBox = static_cast<QComboBox*>(table_widget->cellWidget(row, 1));
@@ -149,11 +150,11 @@ Transaction AddTransaction::getTransaction() {
 
             auto account = nameComboBox->currentData().value<QSharedPointer<Account>>();
             Q_ASSERT(account);
-            HouseholdMoney household_money(ui->dateTimeEdit->date(), account->currencyType());
+            HouseholdMoney household_money(utcDate, account->currencyType());
             for (int col = 2; col < table_widget->columnCount(); col++) {
                 QLineEdit *line_edit = static_cast<QLineEdit*>(table_widget->cellWidget(row, col));
                 QString household = account->getFinancialStatementName() == "Balance Sheet"? "All" : table_widget->horizontalHeaderItem(col)->text();
-                Money money(ui->dateTimeEdit->date(), line_edit->text(), account->currencyType());
+                Money money(utcDate, line_edit->text(), account->currencyType());
                 if (!line_edit->text().isEmpty()) {
                     line_edit->setText(money);
                     if (money.amount_ < 0) {
@@ -211,13 +212,22 @@ void AddTransaction::on_pushButton_Insert_clicked() {
 }
 
 void AddTransaction::onCalendarWidgetSelectionChanged() {
-    ui->dateTimeEdit->setDate(ui->calendarWidget->selectedDate());
+    ui->dateTimeEdit->setDate(ui->calendarWidget->selectedDate());  // This will trigger `onDateTimeEditDateTimeChanged()`
     ui->dateEdit_nextTransaction->setDate(ui->calendarWidget->selectedDate().addMonths(1));
-    ui->label_Currency->setText("Currency: " + QString::number(g_currency.getExchangeRate(ui->dateTimeEdit->date(), Currency::USD, Currency::CNY)));
 }
 
-void AddTransaction::onDateTimeEditDateTimeChanged(const QDateTime& date_time) {  // This may not necessary
+void AddTransaction::onDateTimeEditDateTimeChanged(const QDateTime& date_time) {
     ui->calendarWidget->setSelectedDate(date_time.date());
+
+    QDateTime dateTime(ui->dateTimeEdit->dateTime());
+    dateTime.setTimeZone(QTimeZone(ui->comboBox_TimeZone->currentText().toUtf8()));
+    ui->label_Currency->setText("Currency: " + QString::number(g_currency.getExchangeRate(dateTime.toUTC().date(), Currency::USD, Currency::CNY)));
+}
+
+void AddTransaction::on_comboBox_TimeZone_currentTextChanged(const QString &timeZoneId) {
+    QDateTime dateTime(ui->dateTimeEdit->dateTime());
+    dateTime.setTimeZone(QTimeZone(ui->comboBox_TimeZone->currentText().toUtf8()));
+    ui->label_Currency->setText("Currency: " + QString::number(g_currency.getExchangeRate(dateTime.toUTC().date(), Currency::USD, Currency::CNY)));
 }
 
 void AddTransaction::on_lineEdit_Description_editingFinished() {

@@ -4,11 +4,11 @@
 #include "currency/currency.h"
 
 /****************** Money ****************************/
-Money::Money(const QDate& date, Currency::Type currency, double amount)
-    : date_(date), amount_(amount), currency_type_(currency) {}
+Money::Money(const QDate& utcDate, Currency::Type currency, double amount)
+    : utcDate(utcDate), amount_(amount), currency_type_(currency) {}
 
-Money::Money(const QDate& date, QString money_str, Currency::Type currency_type)
-    : date_(date), amount_(0.00), currency_type_(currency_type) {
+Money::Money(const QDate& utcDate, QString money_str, Currency::Type currency_type)
+    : utcDate(utcDate), amount_(0.00), currency_type_(currency_type) {
     if (money_str.isEmpty()) {
         return;
     }
@@ -47,24 +47,24 @@ double Money::getRoundedAmount() const {
 }
 
 Money Money::operator -() const {
-    return Money(date_, currency_type_, -amount_);
+    return Money(utcDate, currency_type_, -amount_);
 }
 
 Money Money::operator /(int val) const {
     if (val == 0)
         qDebug() << Q_FUNC_INFO << val;
-    return Money(date_, currency_type_, amount_ / val);
+    return Money(utcDate, currency_type_, amount_ / val);
 }
 
 Money Money::operator +(Money money) const {
-    money.date_ = qMax(date_, money.date_);
+    money.utcDate = qMax(utcDate, money.utcDate);
     money.changeCurrency(currency_type_);  // Align to existing currency type.
     money.amount_ += amount_;
     return money;
 }
 
 Money Money::operator -(Money money) const {
-    money.date_ = qMax(date_, money.date_);
+    money.utcDate = qMax(utcDate, money.utcDate);
     money.changeCurrency(currency_type_);
     money.amount_ = amount_ - money.amount_;
     return money;
@@ -95,7 +95,7 @@ Money::operator QString() const {
 }
 
 Money& Money::changeCurrency(Currency::Type new_currency_type) {
-    amount_ *= g_currency.getExchangeRate(date_, currency_type_, new_currency_type);
+    amount_ *= g_currency.getExchangeRate(utcDate, currency_type_, new_currency_type);
     currency_type_ = new_currency_type;
     return *this;
 }
@@ -111,17 +111,17 @@ bool Money::isZero() const {
 }
 
 /*************** HouseholdMoney ********************/
-HouseholdMoney::HouseholdMoney(const QDate& date, Currency::Type type)
-    : currency_type_(type), date_(date) {}
+HouseholdMoney::HouseholdMoney(const QDate& utcDate, Currency::Type type)
+    : currency_type_(type), utcDate_(utcDate) {}
 
 HouseholdMoney::HouseholdMoney(const QString& household, const Money& money) {
     data_[household] = money;
-    date_ = money.date_;
+    utcDate_ = money.utcDate;
     currency_type_ = money.currency();
 }
 
 Money HouseholdMoney::sum() const {
-    Money result(date_, currency_type_);
+    Money result(utcDate_, currency_type_);
     for (const auto& [_, money] : data_.asKeyValueRange()) {
         result += money;
     }

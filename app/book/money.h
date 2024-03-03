@@ -7,10 +7,10 @@ const int PERSON_COUNT = 2;
 
 class Money {
 public:
-    explicit Money(const QDate& date = QDate(1990, 05, 25), Currency::Type currency = Currency::USD, double amount = 0.00);
-    explicit Money(const QDate& date, QString money_str, Currency::Type currency = Currency::USD);  // Valid Input: 123.5 -123.5 (123.5) USD123.50 $123.50 -USD123.50 -$123.50 ($123.50)
+    explicit Money(const QDate& utcDate = QDate(1990, 05, 25), Currency::Type currency = Currency::USD, double amount = 0.00);
+    explicit Money(const QDate& utcDate, QString money_str, Currency::Type currency = Currency::USD);  // Valid Input: 123.5 -123.5 (123.5) USD123.50 $123.50 -USD123.50 -$123.50 ($123.50)
 
-    QDate  date_;
+    QDate  utcDate;
     double amount_;
 
     Money  operator -() const;
@@ -38,7 +38,7 @@ private:
 
 class HouseholdMoney {
 public:
-    explicit HouseholdMoney(const QDate& date = QDate(1990, 05, 25), Currency::Type type = Currency::USD);
+    explicit HouseholdMoney(const QDate& utcDate = QDate(1990, 05, 25), Currency::Type type = Currency::USD);
     explicit HouseholdMoney(const QString& household, const Money& money);
 
     // Getters:
@@ -57,7 +57,7 @@ public:
 
 private:
     Currency::Type currency_type_;
-    QDate  date_;
+    QDate utcDate_;
     QHash<QString, Money> data_;
 };
 

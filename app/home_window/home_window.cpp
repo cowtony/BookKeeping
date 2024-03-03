@@ -368,8 +368,7 @@ void HomeWindow::onActionTransactionValidationTriggered() {
     // Query ALL transactions.
     for (const Transaction& transaction : book.queryTransactions(user_id)) {
         if (!transaction.validate().empty()) {
-            errorMessage += transaction.date_time.toString("yyyy/MM/dd HH:mm:ss") + ": ";
-            errorMessage += transaction.description + '\n';
+            errorMessage += transaction.date_time.toString(Qt::ISODate) + ": " + transaction.description + '\n';
             errorMessage += "\t" + transaction.validate().join("; ") + "\n\n";
         }
     }
