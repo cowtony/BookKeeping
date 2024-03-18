@@ -200,8 +200,9 @@ void AddTransaction::on_pushButton_Insert_clicked() {
     book_.insertTransaction(user_id_, transaction);
     if (ui->checkBox_RecursiveTransaction->isChecked()) {
         transaction.date_time = ui->dateEdit_nextTransaction->dateTime();
+        transaction.date_time.setTimeZone(QTimeZone(ui->comboBox_TimeZone->currentText().toUtf8()));
         transaction.description = "[R]" + ui->lineEdit_Description->text();
-        book_.insertTransaction(user_id_, transaction, /*ignore_error=*/true);
+        book_.insertTransaction(user_id_, transaction, /* ignore_error=*/true);
         earliest_date = qMin(earliest_date, transaction.date_time.date());
     }
 
@@ -224,7 +225,7 @@ void AddTransaction::onDateTimeEditDateTimeChanged(const QDateTime& date_time) {
     ui->label_Currency->setText("Currency: " + QString::number(g_currency.getExchangeRate(dateTime.toUTC().date(), Currency::USD, Currency::CNY)));
 }
 
-void AddTransaction::on_comboBox_TimeZone_currentTextChanged(const QString &timeZoneId) {
+void AddTransaction::on_comboBox_TimeZone_currentTextChanged(const QString& /* timeZoneId */) {
     QDateTime dateTime(ui->dateTimeEdit->dateTime());
     dateTime.setTimeZone(QTimeZone(ui->comboBox_TimeZone->currentText().toUtf8()));
     ui->label_Currency->setText("Currency: " + QString::number(g_currency.getExchangeRate(dateTime.toUTC().date(), Currency::USD, Currency::CNY)));
