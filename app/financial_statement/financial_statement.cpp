@@ -339,7 +339,7 @@ void FinancialStatement::onPushButtonShowAllClicked() {
     qDebug() << "Total time used:" << timer.elapsed() / 1000.0 << "seconds";
 }
 
-void FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) {
+void FinancialStatement::getSummaryByMonth(const QDateTime& end_date_time) {
     auto [month, monthly_stat] = getStartStateFor(end_date_time.toUTC().date());
 
     for (const Transaction& transaction : book_.queryTransactions(user_id_, TransactionFilter().startTime(QDateTime(month, QTime(0, 0, 0), QTimeZone::utc()))
@@ -367,7 +367,7 @@ void FinancialStatement::getSummaryByMonth(const QDateTime &end_date_time) {
     refreshTableWidget();
 }
 
-QPair<QDate, FinancialStat> FinancialStatement::getStartStateFor(QDate query_date) {
+QPair<QDate, FinancialStat> FinancialStatement::getStartStateFor(QDate utc_date) {
     if (!monthly_stats_.empty() && monthly_stats_.back().description.length() == 10) {
         // Description in format "yyyy-MM-dd", which indicate this is a incomplete monthly summary.
         monthly_stats_.pop_back();
@@ -376,7 +376,7 @@ QPair<QDate, FinancialStat> FinancialStatement::getStartStateFor(QDate query_dat
     while (!monthly_stats_.empty()) {
         QDate last_record_date = monthly_stats_.back().utcDate_;
         QDate start_month = QDate(last_record_date.year(), last_record_date.month(), 1).addMonths(1).addDays(-1); // Last day of this month.
-        if (start_month < query_date) {
+        if (start_month < utc_date) {
             FinancialStat stat = monthly_stats_.back();
             stat.clear(Account::Revenue);
             stat.clear(Account::Expense);

@@ -36,7 +36,7 @@ private slots:
     void on_checkBox_RecursiveTransaction_stateChanged(int arg1);
 
 signals:
-    void insertTransactionFinished(QDate modified_date);
+    void insertTransactionFinished(QDate earliest_modified_utc_date);
 
 private:
     int insertTableRow(QTableWidget *tableWidget);

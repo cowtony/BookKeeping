@@ -329,8 +329,9 @@ void HomeWindow::on_pushButtonChangeTimeZone_clicked() {
             qDebug() << "Before: " << transaction.date_time;
             transaction.date_time.setTimeZone(timeZone);
             qDebug() << "After: " << transaction.date_time;
-            book.insertTransaction(user_id, transaction);
-            book.removeTransaction(transaction.id);
+            if (book.insertTransaction(user_id, transaction, /* ignore_error=*/true)) {
+                book.removeTransaction(transaction.id);
+            }
         }
         // Handle the selected time zone ID
         qDebug() << "Selected time zone:" << timeZone;

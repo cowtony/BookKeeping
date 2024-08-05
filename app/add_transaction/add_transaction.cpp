@@ -180,7 +180,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
         return;
     }
 
-    QDate earliest_date(2200, 12, 31);
+    QDateTime earliest_modified_datetime(QDate(2200, 12, 31), QTime(23, 59, 59));
     if (transaction_id_ > 0) {  // This will be a Replace action.
         QMessageBox warningMsgBox;
         warningMsgBox.setText("You are trying to replace a transaction");
@@ -189,7 +189,7 @@ void AddTransaction::on_pushButton_Insert_clicked() {
         warningMsgBox.setDefaultButton(QMessageBox::Cancel);
         switch ( warningMsgBox.exec()) {
         case QMessageBox::Ok:
-            earliest_date = qMin(earliest_date, book_.getTransaction(transaction_id_).date_time.date());
+            earliest_modified_datetime = qMin(earliest_modified_datetime, book_.getTransaction(transaction_id_).date_time);
             book_.removeTransaction(transaction_id_);
             break;
         case QMessageBox::Cancel:
@@ -197,16 +197,18 @@ void AddTransaction::on_pushButton_Insert_clicked() {
         }
     }
 
-    book_.insertTransaction(user_id_, transaction);
+    book_.insertTransaction(user_id_, transaction, /* ignore_error=*/true);
+    earliest_modified_datetime = qMin(earliest_modified_datetime, transaction.date_time);
+
     if (ui->checkBox_RecursiveTransaction->isChecked()) {
         transaction.date_time = ui->dateEdit_nextTransaction->dateTime();
         transaction.date_time.setTimeZone(QTimeZone(ui->comboBox_TimeZone->currentText().toUtf8()));
         transaction.description = "[R]" + ui->lineEdit_Description->text();
         book_.insertTransaction(user_id_, transaction, /* ignore_error=*/true);
-        earliest_date = qMin(earliest_date, transaction.date_time.date());
+        earliest_modified_datetime = qMin(earliest_modified_datetime, transaction.date_time);
     }
 
-    emit insertTransactionFinished(earliest_date);
+    emit insertTransactionFinished(earliest_modified_datetime.toUTC().date());
     close();
     destroy();
     deleteLater();

@@ -44,7 +44,8 @@ HEADERS += \
     home_window/home_window.h \
     household_manager/household_manager.h \
     investment_analysis/investment_analysis.h \
-    investment_analysis/investment_analyzer.h
+    investment_analysis/investment_analyzer.h \
+    utils/scoped_logger.h
 
 SOURCES += main.cpp \
     add_transaction/add_transaction.cpp \
